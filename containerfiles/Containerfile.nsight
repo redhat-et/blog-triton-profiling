@@ -42,7 +42,7 @@ RUN python${PYTHON_VERSION} -m pip install \
     nvcc4jupyter \
     nvtx \
     pandas \
-    triton && \
+    torch && \
     python${PYTHON_VERSION} -m pip cache purge
 
 WORKDIR /workspace

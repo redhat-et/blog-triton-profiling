@@ -28,6 +28,7 @@ RUN dnf -y config-manager --add-repo https://developer.download.nvidia.com/compu
     cuda-nvtx-${CUDA_PACKAGE_VERSION} \
     cudnn \
     gcc \
+    libcusparselt0 \
     libnccl \
     libxkbfile \
     python${PYTHON_VERSION}-devel \
@@ -51,7 +52,7 @@ RUN python${PYTHON_VERSION} -m pip install \
     nvcc4jupyter \
     nvtx \
     pandas \
-    triton && \
+    torch && \
     python${PYTHON_VERSION} -m pip cache purge
 
 WORKDIR /workspace
