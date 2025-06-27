@@ -2,7 +2,14 @@ IMAGE_REPO ?= triton-profiling
 IMAGE_NAME ?= triton-profiling
 CUDA_RELEASE ?= 12-8
 WORKSPACE ?= $(PWD)/workspace
+NOTEBOOK_PORT ?= 8080
 
+
+# Jupyter Notebook arguments
+define notebook_args
+	-e NOTEBOOK_PORT=$(NOTEBOOK_PORT) \
+	-p $(NOTEBOOK_PORT):$(NOTEBOOK_PORT)
+endef
 
 # Podman Run
 define podman_run
@@ -35,6 +42,7 @@ define podman-build
 	$(eval $@_CONTAINERFILE = $(2))
 	podman build \
 	--build-arg "CUDA_RELEASE=$(CUDA_RELEASE)" \
+	--build-arg "NOTEBOOK_PORT=$(NOTEBOOK_PORT)" \
 	-t $(IMAGE_REPO)/$(IMAGE_NAME)-${$@_IMAGE_NAME_PREFIX}:$(CUDA_RELEASE) \
 	-f ${$@_CONTAINERFILE} .
 endef
@@ -75,7 +83,7 @@ nsight-compute:
 # Run a Jupyter Notebook Server (no-CUDA)
 .PHONY: nsight-jupyter
 nsight-jupyter:
-	@$(call nsight-run, "start_jupyter")
+	$(podman_run) $(notebook_args) $(IMAGE_REPO)/$(IMAGE_NAME)-cuda:$(CUDA_RELEASE) start_jupyter
 
 # Open a shell in the NVIDIA Nsight container (no-CUDA)
 .PHONY: nsight-console
@@ -103,7 +111,7 @@ cuda-compute:
 # Run a Jupyter Notebook Server
 .PHONY: cuda-jupyter
 cuda-jupyter:
-	@$(call cuda-run, "start_jupyter")
+	$(podman_run) $(notebook_args) $(cuda_args) $(IMAGE_REPO)/$(IMAGE_NAME)-cuda:$(CUDA_RELEASE) start_jupyter
 
 # Open a shell in the NVIDIA Nsight container (CUDA support)
 .PHONY: cuda-console

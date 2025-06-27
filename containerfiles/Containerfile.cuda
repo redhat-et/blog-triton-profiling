@@ -56,7 +56,9 @@ RUN python${PYTHON_VERSION} -m pip install \
 
 WORKDIR /workspace
 
+ARG NOTEBOOK_PORT=8080
 COPY --chmod=0755 containerfiles/start_jupyter.sh /usr/local/bin/start_jupyter
+EXPOSE ${NOTEBOOK_PORT}
 
 COPY --chmod=0755 containerfiles/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

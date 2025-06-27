@@ -17,7 +17,5 @@ else
     printf "NVIDIA Nsight Compute\n"
     printf "\tncu\t\t\tCompute CLI\n"
     printf "\tncu-ui\t\t\tCompute UI\n"
-    printf "Jupyter Notebook\n"
-    printf "\tstart_jupyter\n"
     exec /bin/bash
 fi
