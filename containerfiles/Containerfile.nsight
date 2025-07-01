@@ -1,26 +1,16 @@
-ARG NAME=nsight-profiling
-ARG VERSION=12.8.0
-ARG IMAGE=quay.io/centos/centos:9
-
-FROM ${IMAGE}
-
-LABEL com.github.containers.toolbox="true" \
-    name="$NAME-toolbox" \
-    version="$VERSION" \
-    usage="This image is meant to be used with the toolbox(1) command" \
-    summary="CentOS Stream 9 image for Nsight Profiling 101"
+FROM  quay.io/centos/centos:9
 
 ARG PYTHON_VERSION=3.12
 ENV PYTHON_VERSION=${PYTHON_VERSION}
-
-ARG CUDA_PACKAGE_VERSION=12-8
+ARG CUDA_RELEASE=12-8
 
 RUN dnf -y config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo && \
     dnf -y update && \
     dnf -y install \
-    cuda-nsight-${CUDA_PACKAGE_VERSION} \
-    cuda-nsight-systems-${CUDA_PACKAGE_VERSION} \
-    cuda-nsight-compute-${CUDA_PACKAGE_VERSION} \
+    cuda-nsight-${CUDA_RELEASE} \
+    cuda-nsight-systems-${CUDA_RELEASE} \
+    cuda-nsight-compute-${CUDA_RELEASE} \
+    glibc-locale-source \
     libxkbfile \
     python${PYTHON_VERSION}-devel \
     python${PYTHON_VERSION} \
@@ -30,6 +20,9 @@ RUN dnf -y config-manager --add-repo https://developer.download.nvidia.com/compu
     vim \
     xcb-util-cursor && \
     dnf clean all
+
+ENV LC_ALL=en_US.UTF-8
+RUN localedef -i en_US -f UTF-8 en_US.UTF-8
 
 RUN export COMPUTE_VERSION=$(ls /opt/nvidia/nsight-compute); \
     alternatives --install /usr/local/bin/ncu ncu "/opt/nvidia/nsight-compute/${COMPUTE_VERSION}/ncu" 100 && \
