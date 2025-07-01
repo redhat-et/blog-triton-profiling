@@ -72,22 +72,22 @@ endef
 
 # Run the NVIDIA Nsight Systems UI (no-CUDA)
 .PHONY: nsight-systems
-nsight-systems:
+nsight-systems: nsight-image
 	@$(call nsight-run, "nsys-ui")
 
 # Run the NVIDIA Nsight Compute UI (no-CUDA)
 .PHONY: nsight-compute
-nsight-compute:
+nsight-compute: nsight-image
 	@$(call nsight-run, "ncu-ui")
 
 # Run a Jupyter Notebook Server (no-CUDA)
 .PHONY: nsight-jupyter
-nsight-jupyter:
-	$(podman_run) $(notebook_args) $(IMAGE_REPO)/$(IMAGE_NAME)-cuda:$(CUDA_RELEASE) start_jupyter
+nsight-jupyter: nsight-image
+	$(podman_run) $(notebook_args) $(IMAGE_REPO)/$(IMAGE_NAME)-nsight:$(CUDA_RELEASE) start_jupyter
 
 # Open a shell in the NVIDIA Nsight container (no-CUDA)
 .PHONY: nsight-console
-nsight-console:
+nsight-console: nsight-image
 	@$(call nsight-run, "")
 
 
@@ -96,24 +96,22 @@ define cuda-run
 	$(podman_run) $(cuda_args) $(IMAGE_REPO)/$(IMAGE_NAME)-cuda:$(CUDA_RELEASE) $(1)
 endef
 
-
 # Run the NVIDIA Nsight Systems UI (w/CUDA)
 .PHONY: cuda-systems
-cuda-systems:
+cuda-systems: cuda-image
 	@$(call cuda-run, "nsys-ui")
 
 # Run the NVIDIA Nsight Systems UI (w/CUDA)
 .PHONY: cuda-compute
-cuda-compute:
+cuda-compute: cuda-image
 	@$(call cuda-run, "ncu-ui")
-
 
 # Run a Jupyter Notebook Server
 .PHONY: cuda-jupyter
-cuda-jupyter:
+cuda-jupyter: cuda-image
 	$(podman_run) $(notebook_args) $(cuda_args) $(IMAGE_REPO)/$(IMAGE_NAME)-cuda:$(CUDA_RELEASE) start_jupyter
 
 # Open a shell in the NVIDIA Nsight container (CUDA support)
 .PHONY: cuda-console
-cuda-console:
+cuda-console: cuda-image
 	@$(call cuda-run, "")
