@@ -1,20 +1,11 @@
 IMAGE_REPO ?= triton-profiling
-IMAGE_NAME ?= triton-profiling
+CUDA_IMAGE_NAME ?= cuda-profiling
 CUDA_RELEASE ?= 12-8
 WORKSPACE ?= $(PWD)/workspace
 
 
-# Podman build
-define podman-build
-	podman build \
-	--build-arg "CUDA_RELEASE=$(CUDA_RELEASE)" \
-	--build-arg "NOTEBOOK_PORT=$(NOTEBOOK_PORT)" \
-	-t $(IMAGE_REPO)/$(IMAGE_NAME)-$(1):$(CUDA_RELEASE) \
-	-f $(2) .
-endef
-
 # Podman Run
-define podman_run
+define podman_run_cuda
 	podman run -it --rm \
 	--privileged \
 	--cap-add=SYS_ADMIN \
@@ -29,14 +20,8 @@ define podman_run
 	--ipc host \
 	-v "${WORKSPACE}:/workspace:Z" \
 	$(1) \
-	$(IMAGE_REPO)/$(IMAGE_NAME)-$(2):$(CUDA_RELEASE) \
-	$(3)
-endef
-
-# Podman Runtime Jupyter Notebook arguments
-define notebook_args
-	-e NOTEBOOK_PORT=$(NOTEBOOK_PORT) \
-	-p $(NOTEBOOK_PORT):$(NOTEBOOK_PORT)
+	$(IMAGE_REPO)/$(CUDA_IMAGE_NAME):$(CUDA_RELEASE) \
+	$(2)
 endef
 
 # Podman Runtime CUDA GPU arguments
@@ -45,63 +30,71 @@ define cuda_args
 	--security-opt label=disable
 endef
 
+# Podman Runtime Jupyter Notebook arguments
+define notebook_args
+	-e NOTEBOOK_PORT=$(NOTEBOOK_PORT) \
+	-p $(NOTEBOOK_PORT):$(NOTEBOOK_PORT)
+endef
 
-# NVIDIA Nsight Profiling image without CUDA support
-.PHONY: nsight-image
-nsight-image: containerfiles/Containerfile.nsight
-	@$(call podman-build,nsight,$<)
+
+# Build NVIDIA Nsight profiling image
+.PHONY: cuda-image
+cuda-image: NOTEBOOK_PORT ?= 8888
+cuda-image: containerfiles/Containerfile.cuda
+	podman build \
+	--build-arg "CUDA_RELEASE=$(CUDA_RELEASE)" \
+	--build-arg "NOTEBOOK_PORT=$(NOTEBOOK_PORT)" \
+	-t $(IMAGE_REPO)/$(CUDA_IMAGE_NAME):$(CUDA_RELEASE) \
+	-f $< .
+
 
 # Generate the NVIDIA CDI for the container toolkit
 .PHONY: nvidia-cdi
 nvidia-cdi:
 	sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
 
-# Run the NVIDIA Nsight Systems UI (no-CUDA)
+
+# Run the NVIDIA Nsight Systems UI (with no-GPU support)
 .PHONY: nsight-systems
-nsight-systems: nsight-image
-	$(call podman_run,,nsight,nsys-ui)
+nsight-systems: cuda-image
+	$(call podman_run_cuda,,nsys-ui)
 
-# Run the NVIDIA Nsight Compute UI (no-CUDA)
+# Run the NVIDIA Nsight Compute UI (with no-GPU support)
 .PHONY: nsight-compute
-nsight-compute: nsight-image
-	$(call podman_run,, nsight,ncu-ui)
+nsight-compute: cuda-image
+	$(call podman_run_cuda,,ncu-ui)
 
-# Run a Jupyter Notebook Server (no-CUDA)
+# Run a Jupyter Notebook Server (with no-GPU support)
 .PHONY: nsight-jupyter
 nsight-jupyter: NOTEBOOK_PORT ?= 8888
-nsight-jupyter: nsight-image
-	$(call podman_run,$(notebook_args),nsight,start_jupyter)
-	$(podman_run) $(notebook_args) $(IMAGE_REPO)/$(IMAGE_NAME)-nsight:$(CUDA_RELEASE) start_jupyter
+nsight-jupyter: cuda-image
+	$(call podman_run_cuda,$(notebook_args),start_jupyter)
 
-# Open a shell in the NVIDIA Nsight container (no-CUDA)
+# Open a shell in the NVIDIA Nsight container (with no-GPU support)
 .PHONY: nsight-console
 nsight-console: NOTEBOOK_PORT ?= 8889
-nsight-console: nsight-image
-	$(call podman_run,$(notebook_args),nsight,)
+nsight-console: cuda-image
+	$(call podman_run_cuda,$(notebook_args),)
 
-# NVIDIA Nsight Profiling image with CUDA support
-.PHONY: cuda-image
-cuda-image: containerfiles/Containerfile.cuda
-	@$(call podman-build,cuda,$<)
 
-# Run the NVIDIA Nsight Systems UI (w/CUDA)
+# Run the NVIDIA Nsight Systems UI (with GPU support)
 .PHONY: cuda-systems
 cuda-systems: cuda-image
-	$(call podman_run,$(cuda_args),cuda,nsys-ui)
+	$(call podman_run_cuda,$(cuda_args),nsys-ui)
 
-# Run the NVIDIA Nsight Systems UI (w/CUDA)
+# Run the NVIDIA Nsight Systems UI (with GPU support)
 .PHONY: cuda-compute
 cuda-compute: cuda-image
-	$(call podman_run,$(cuda_args),cuda,ncu-ui)
+	$(call podman_run_cuda,$(cuda_args),ncu-ui)
 
-# Run a Jupyter Notebook Server
+# Run a Jupyter Notebook Server (with GPU support)
 .PHONY: cuda-jupyter
 cuda-jupyter: NOTEBOOK_PORT ?= 8888
 cuda-jupyter: cuda-image
-	$(call podman_run,$(cuda_args) $(notebook_args),cuda,start_jupyter)
+	$(call podman_run_cuda,$(cuda_args)$(notebook_args),start_jupyter)
 
-# Open a shell in the NVIDIA Nsight container (CUDA support)
+# Open a shell in the NVIDIA Nsight container (with GPU support)
 .PHONY: cuda-console
 cuda-console: NOTEBOOK_PORT ?= 8889
 cuda-console: cuda-image
-	$(call podman_run,$(cuda_args) $(notebook_args),cuda,)
+	$(call podman_run_cuda,$(cuda_args)$(notebook_args),)

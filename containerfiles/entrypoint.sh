@@ -17,5 +17,9 @@ else
     printf "NVIDIA Nsight Compute\n"
     printf "\tncu\t\t\tCompute CLI\n"
     printf "\tncu-ui\t\t\tCompute UI\n"
+    printf "Jupyter Notebook\n"
+    printf "\tstart_jupyter\t\tStart a Jupyter Notebook server\n"
+    printf "\t\t\t\tSet NOTEBOOK_PORT to specify the http port used\n"
+    printf "\t\t\t\tDefault is %s\n" "${NOTEBOOK_PORT}"
     exec /bin/bash
 fi

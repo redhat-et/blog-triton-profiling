@@ -38,19 +38,14 @@ RUN export COMPUTE_VERSION=$(ls /opt/nvidia/nsight-compute); \
     alternatives --install /usr/local/bin/ncu ncu "/opt/nvidia/nsight-compute/${COMPUTE_VERSION}/ncu" 100 && \
     alternatives --install /usr/local/bin/ncu-ui ncu-ui "/opt/nvidia/nsight-compute/${COMPUTE_VERSION}/ncu-ui" 100
 
-RUN python${PYTHON_VERSION} -m pip install \
-    jupyter \
-    jupyterlab-nvidia-nsight \
-    matplotlib \
-    nvcc4jupyter \
-    nvtx \
-    pandas \
-    torch && \
-    python${PYTHON_VERSION} -m pip cache purge
+COPY containerfiles/requirements.txt /requirements.txt
+RUN python${PYTHON_VERSION} -m pip install -r /requirements.txt && \
+    python${PYTHON_VERSION} -m pip cache purge && \
+    rm -f /requirements.txt
 
 WORKDIR /workspace
 
-ARG NOTEBOOK_PORT=8080
+ARG NOTEBOOK_PORT=8888
 COPY --chmod=0755 containerfiles/start_jupyter.sh /usr/local/bin/start_jupyter
 EXPOSE ${NOTEBOOK_PORT}
 
