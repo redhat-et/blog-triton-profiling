@@ -98,3 +98,8 @@ cuda-jupyter: cuda-image
 cuda-console: NOTEBOOK_PORT ?= 8889
 cuda-console: cuda-image
 	$(call podman_run_cuda,$(cuda_args)$(notebook_args),)
+
+
+.PHONY: clean
+clean:
+	rm -rf workspace/.ipynb_checkpoints
