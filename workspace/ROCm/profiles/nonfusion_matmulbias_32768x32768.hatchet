@@ -9,10 +9,10 @@
                     "type": "function"
                 },
                 "metrics": {
-                    "count": 1043,
+                    "count": 1044,
                     "device_id": "0",
                     "device_type": "HIP",
-                    "time (ns)": 51260645
+                    "time (ns)": 51216460
                 }
             },
             {
@@ -22,12 +22,12 @@
                     "type": "function"
                 },
                 "metrics": {
-                    "bytes": 1391654338560,
-                    "count": 648,
+                    "bytes": 1389506723840,
+                    "count": 647,
                     "device_id": "0",
                     "device_type": "HIP",
-                    "flops16": 1391569403904.0,
-                    "time (ns)": 806546492
+                    "flops16": 1389421920256.0,
+                    "time (ns)": 809386146
                 }
             },
             {
@@ -37,12 +37,12 @@
                     "type": "function"
                 },
                 "metrics": {
-                    "bytes": 1359440117760,
-                    "count": 633,
+                    "bytes": 1363735347200,
+                    "count": 635,
                     "device_id": "0",
                     "device_type": "HIP",
-                    "flops16": 1359357149184.0,
-                    "time (ns)": 791780704
+                    "flops16": 1363652116480.0,
+                    "time (ns)": 802368571
                 }
             },
             {
@@ -57,7 +57,7 @@
                     "device_id": "0",
                     "device_type": "HIP",
                     "flops16": 1.196268651020288e+15,
-                    "time (ns)": 4244616840
+                    "time (ns)": 4298777983
                 }
             }
         ],

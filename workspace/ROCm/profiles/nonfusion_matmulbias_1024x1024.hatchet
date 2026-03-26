@@ -9,10 +9,10 @@
                     "type": "function"
                 },
                 "metrics": {
-                    "count": 21264,
+                    "count": 21301,
                     "device_id": "0",
                     "device_type": "HIP",
-                    "time (ns)": 889389031
+                    "time (ns)": 890019519
                 }
             },
             {
@@ -22,12 +22,12 @@
                     "type": "function"
                 },
                 "metrics": {
-                    "bytes": 26124816384,
-                    "count": 12433,
+                    "bytes": 26408484864,
+                    "count": 12568,
                     "device_id": "0",
                     "device_type": "HIP",
-                    "flops16": 26073890816.0,
-                    "time (ns)": 44651775
+                    "flops16": 26357006336.0,
+                    "time (ns)": 44832325
                 }
             },
             {
@@ -37,12 +37,12 @@
                     "type": "function"
                 },
                 "metrics": {
-                    "bytes": 26124816384,
-                    "count": 12433,
+                    "bytes": 25948311552,
+                    "count": 12349,
                     "device_id": "0",
                     "device_type": "HIP",
-                    "flops16": 26073890816.0,
-                    "time (ns)": 47389090
+                    "flops16": 25897730048.0,
+                    "time (ns)": 46622585
                 }
             },
             {
@@ -52,12 +52,12 @@
                     "type": "function"
                 },
                 "metrics": {
-                    "bytes": 10745806848,
-                    "count": 1708,
+                    "bytes": 10708058112,
+                    "count": 1702,
                     "device_id": "0",
                     "device_type": "HIP",
-                    "flops16": 3667902070784.0,
-                    "time (ns)": 38672021
+                    "flops16": 3655017168896.0,
+                    "time (ns)": 38179656
                 }
             }
         ],

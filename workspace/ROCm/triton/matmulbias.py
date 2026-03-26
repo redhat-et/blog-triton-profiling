@@ -270,7 +270,7 @@ def get_rtol():
 
 def show_profile(profile_name):
     import triton.profiler.viewer as proton_viewer
-    metric_names = ["time/ms", "tflop16/s"]
+    metric_names = ["time/ms", "flop16/s"]
     file_name = f"profiles/{profile_name}.hatchet"
     tree, metrics = proton_viewer.parse(metric_names, file_name)
 
@@ -280,11 +280,12 @@ def show_profile(profile_name):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--profile", action="store_true")
-    parser.add_argument("--verify", action="store_true")
-    parser.add_argument("--M", default=1024, type=int, help="M size of the input matrices. Default: %(default)d")
-    parser.add_argument("--N", default=1024, type=int, help="N size of the input matrices. Default: %(default)d")
-    parser.add_argument("kernel", choices=["fusion", "nonfusion"])
+    parser.add_argument("--profile", action="store_true", help="run the proton profiler")
+    parser.add_argument("--trace", action="store_true", help="enable python tracing for the proton profiler")
+    parser.add_argument("--verify", action="store_true", help="run a torch version of the kernel and compare the results")
+    parser.add_argument("--M", default=1024, type=int, help="M size of the input matrices, default: %(default)d")
+    parser.add_argument("--N", default=1024, type=int, help="N size of the input matrices, default: %(default)d")
+    parser.add_argument("kernel", choices=["fusion", "nonfusion"], help="select which version of the kernel to run")
     args = parser.parse_args()
 
     # Test matrices
@@ -296,8 +297,13 @@ if __name__ == "__main__":
     bias = torch.randn(N, device='cuda', dtype=torch.float16)
 
     if args.profile:
+        if args.trace:
+            context = "python"
+        else:
+            context = "shadow"
+
         print(f"Profiling the {args.kernel} matmulbias kernel (input size M:{args.M} N:{args.N}) ...")
-        proton.start(f"profiles/{args.kernel}_matmulbias_{args.M}x{args.N}", hook="triton")
+        proton.start(f"profiles/{args.kernel}_matmulbias_{args.M}x{args.N}", context=context, hook="triton")
     else:
         print(f"Running the {args.kernel} matmulbias kernel (input size M:{args.M} N:{args.N}) ...")
 

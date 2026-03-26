@@ -12,7 +12,7 @@
                     "count": 12,
                     "device_id": "0",
                     "device_type": "HIP",
-                    "time (ns)": 557466
+                    "time (ns)": 557385
                 }
             },
             {
@@ -27,7 +27,7 @@
                     "device_id": "0",
                     "device_type": "HIP",
                     "flops16": 1.196268651020288e+15,
-                    "time (ns)": 4250545366
+                    "time (ns)": 4268003315
                 }
             }
         ],

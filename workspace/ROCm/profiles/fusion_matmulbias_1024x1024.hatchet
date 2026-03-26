@@ -9,10 +9,10 @@
                     "type": "function"
                 },
                 "metrics": {
-                    "count": 1347,
+                    "count": 1351,
                     "device_id": "0",
                     "device_type": "HIP",
-                    "time (ns)": 56559274
+                    "time (ns)": 56705648
                 }
             },
             {
@@ -22,12 +22,12 @@
                     "type": "function"
                 },
                 "metrics": {
-                    "bytes": 10594811904,
-                    "count": 1684,
+                    "bytes": 10626269184,
+                    "count": 1689,
                     "device_id": "0",
                     "device_type": "HIP",
-                    "flops16": 3616362463232.0,
-                    "time (ns)": 39399390
+                    "flops16": 3627099881472.0,
+                    "time (ns)": 39338252
                 }
             }
         ],
