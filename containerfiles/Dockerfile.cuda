@@ -14,7 +14,7 @@ RUN dnf -y install 'dnf-command(config-manager)' && \
     /usr/bin/crb enable && \
     dnf -y update && \
     dnf -y install libglvnd-opengl libxkbfile python${PYTHON_VERSION}-devel \
-    python${PYTHON_VERSION}-pip qt5-qtwayland xcb-util-cursor && \
+    python${PYTHON_VERSION}-pip qt5-qtwayland xcb-util-cursor vim && \
     dnf clean all && rm -rf /var/cache/dnf
 
 # Install Jupyter Notebook dependencies
