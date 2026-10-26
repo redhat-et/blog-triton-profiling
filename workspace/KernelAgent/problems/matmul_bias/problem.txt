@@ -1,0 +1,37 @@
+Implement a fused matrix multiplication with bias addition as a Triton kernel.
+
+Wrapper signature (must be defined at the top level of kernel.py):
+    def kernel_function(A, B, bias):
+
+Inputs:
+- A: 2D tensor of shape (M, K), dtype float16 or bfloat16, contiguous, on CUDA
+- B: 2D tensor of shape (K, N), dtype float16 or bfloat16, contiguous, on CUDA
+- bias: 1D tensor of shape (N,), same dtype as A, on CUDA
+
+Output:
+- 2D tensor of shape (M, N), same dtype as A, containing (A @ B) + bias,
+  with the bias broadcast additively over every row
+
+Requirements:
+- Compute the matrix multiplication inside one or more @triton.jit kernels and
+  accumulate in float32 (use tl.dot with an fp32 accumulator)
+- The wrapper kernel_function must allocate the output tensor, launch the
+  Triton kernel(s), and return the output tensor
+- Handle arbitrary M, K, N, including sizes that are not multiples of the
+  chosen block sizes (mask boundary loads and stores)
+- Support both float16 and bfloat16 inputs
+- Do NOT use torch.matmul / torch.mm / torch.bmm / torch.einsum, cuBLAS,
+  cuSolver, or any PyTorch compute op to produce the result; only Triton
+  kernels may perform the computation (allocating tensors with torch.empty
+  or torch.zeros is allowed)
+- Wrap the matmul @triton.jit kernel in @triton.autotune with a small
+  (about 4-8 entries) config space of triton.Config objects that sweeps
+  BLOCK_M, BLOCK_N, BLOCK_K and num_warps/num_stages for good performance
+  on the target GPU: @GPU_TARGET@
+- Build the grid from the selected config (for example
+  grid = lambda meta: ... using meta["BLOCK_M"] and meta["BLOCK_N"]) so the
+  autotuner's choice actually takes effect, and key the autotuner on the
+  shape inputs (M, N, K)
+- Keep the config space small enough to compile and tune quickly on this
+  GPU and within its shared-memory limit; a config that cannot launch is
+  silently scored as infinity by the autotuner
