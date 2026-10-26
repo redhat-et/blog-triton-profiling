@@ -1,0 +1,10 @@
+# Build constraints for the KernelAgent wheel build (kernelagent-builder
+# stage of containerfiles/Dockerfile.cuda), passed to `uv build
+# --build-constraints` so the PEP 517 build environment (setuptools,
+# wheel) is pinned and the wheel built from a given KERNELAGENT_REV +
+# patch set is reproducible instead of tracking whatever setuptools was
+# latest on the day of the build.
+#
+# Bump policy and validation: see AGENTS.md.
+setuptools==84.0.0
+wheel==0.48.0

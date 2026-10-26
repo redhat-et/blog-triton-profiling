@@ -1,23 +1,83 @@
+# Unified NVIDIA container: Triton profiling (Nsight Systems/Compute CLIs
+# and UIs, Proton, Jupyter) plus agentic Triton kernel generation with
+# KernelAgent. Every NVIDIA make target — cuda-*, nsight-* (no GPU passed
+# through), and kernelagent-* — runs this same image; the make targets
+# select the workspace mount and the entrypoint workflow
+# (CONTAINER_WORKFLOW=cuda|kernelagent).
+#
+# KernelAgent is built into the image, pinned and verified, through four
+# stages:
+#
+#   runtime-base         system packages, CUDA repo, Nsight, uv
+#   python-base          /workspace venv with the locked Python
+#                        environment (requirements.lock)
+#   kernelagent-builder  clone KERNELAGENT_UPSTREAM at exactly
+#                        KERNELAGENT_REV, apply the compatibility patches
+#                        from containerfiles/kernelagent/patches/, build a
+#                        wheel (nothing else from this stage ships)
+#   runtime (final)      the locked python-base environment plus the
+#                        builder's wheel, installed --no-deps through a
+#                        temporary build-stage mount, the image's CLI
+#                        helpers and problem specs, and an
+#                        installed-package validation gate
+#
+# A given KERNELAGENT_REV therefore always builds the same KernelAgent
+# source (the builder verifies git rev-parse HEAD against the pin) and,
+# through requirements.lock, the same Python dependency set it was tested
+# with — a fresh clone of this repository reproduces the tested image
+# with no local KernelAgent source. The stage order keeps the heavy core
+# (EPEL base, CUDA repo, Nsight links, locked venv) in stable layers up
+# front, so a KERNELAGENT_REV or patch bump only rebuilds the builder and
+# final stages, never the CUDA or dependency layers. What went into an
+# image is recorded in the kernelagent-upstream / kernelagent-rev image
+# labels.
+#
+# The committed lock is generated and tested for the default
+# configuration: CUDA 12.9 (cu129 torch index), Python 3.12, linux x86_64.
+# Other CUDA or Python versions need their own regenerated lock — the
+# build fails on the torch pin otherwise (see
+# containerfiles/kernelagent/requirements.in).
+#
+# LLM backends (runtime, not build targets): the entrypoint derives
+# LLM_BACKEND from OPENAI_MODEL and OPENAI_BASE_URL for the kernelagent
+# workflow; the image sets no default backend.
+#   openai    — OpenAI API or any OpenAI-compatible server (OPENAI_BASE_URL)
+#   anthropic — Anthropic API (ANTHROPIC_API_KEY)
+
+# Defaults for every overridable build argument, visible to all stages
+# (each stage re-declares the ones it uses; an in-stage ARG without a
+# default inherits the value passed on the command line or the default
+# recorded here).
 ARG EPEL_VERSION=9
-
-FROM quay.io/centos/centos:${EPEL_VERSION}
-
-ARG CUDA_VERSION=12-8
-ARG EPEL_VERSION
+ARG CUDA_VERSION=12-9
 ARG PYTHON_VERSION=3.12
+ARG WORKSPACE=/workspace
+ARG KERNELAGENT_UPSTREAM=https://github.com/meta-pytorch/KernelAgent.git
+ARG KERNELAGENT_REV=e0647170da36ef9b059ac0bd3d60103aa4ed378b
 
-# Install EPEL repo and software
+FROM quay.io/centos/centos:${EPEL_VERSION} AS runtime-base
+
+ARG CUDA_VERSION
+ARG EPEL_VERSION
+ARG PYTHON_VERSION
+ARG WORKSPACE
+
+# Install EPEL repo and software (git is needed to clone and patch the
+# KernelAgent source in the builder stage)
 ARG EPEL_REPO=https://dl.fedoraproject.org/pub/epel/epel-release-latest-${EPEL_VERSION}.noarch.rpm
 RUN dnf -y install 'dnf-command(config-manager)' && \
 	dnf -y config-manager --set-enabled crb && \
 	dnf -y install ${EPEL_REPO} && \
     /usr/bin/crb enable && \
     dnf -y update && \
-    dnf -y install libglvnd-opengl libxkbfile python${PYTHON_VERSION}-devel \
-    python${PYTHON_VERSION}-pip qt5-qtwayland xcb-util-cursor vim && \
+    dnf -y install git libglvnd-opengl libxkbfile qt5-qtwayland \
+    vim xcb-util-cursor python${PYTHON_VERSION}-devel \
+    python${PYTHON_VERSION}-pip && \
     dnf clean all && rm -rf /var/cache/dnf
 
-# Install Jupyter Notebook dependencies
+# Install Jupyter notebook PDF-export dependencies: nbconvert --to pdf
+# (and Jupyter's "Download as PDF") shells out to pandoc and XeLaTeX,
+# which the Python environment does not provide.
 RUN dnf -y install pandoc texlive-adjustbox \
     texlive-collection-fontsrecommended texlive-eurosym texlive-fontspec \
     texlive-grffile texlive-jknapltx texlive-metafont texlive-parskip \
@@ -25,58 +85,181 @@ RUN dnf -y install pandoc texlive-adjustbox \
     texlive-ulem texlive-unicode-math texlive-xetex && \
     dnf clean all && rm -rf /var/cache/dnf
 
-# Create the /workspace directory and set permissions
-ARG WORKSPACE=/workspace
-WORKDIR $WORKSPACE
-RUN python${PYTHON_VERSION} -m pip install uv && \
-    uv venv --python ${PYTHON_VERSION} --seed $WORKSPACE && \
-    echo "unset BASH_ENV PROMPT_COMMAND ENV" >> ${WORKSPACE}/bin/activate
-
-# Install python dependencies
-RUN uv pip install jupyter jupyterlab-nvidia-nsight llnl-hatchet nvtx
-
-# Install CUDA SDK, Profiling and Debug Tools
+# Install the core CUDA SDK and Profiling Tools
 # FIX: cuda-nsight-systems pulls in too new of a version of the nsight-systems package
 #      nsys errors out when run stating what version it needs
 RUN dnf -y config-manager --add-repo \
 	https://developer.download.nvidia.com/compute/cuda/repos/rhel${EPEL_VERSION}/x86_64/cuda-rhel${EPEL_VERSION}.repo && \
 	dnf -y install cuda-minimal-build-$CUDA_VERSION \
-	cuda-libraries-devel-$CUDA_VERSION cuda-nvml-devel-$CUDA_VERSION \
-	cublasmp cuda-cupti-$CUDA_VERSION \
-	cuda-gdb-$CUDA_VERSION cuda-nsight-$CUDA_VERSION \
+	cuda-nvml-devel-$CUDA_VERSION cuda-cupti-$CUDA_VERSION \
 	cuda-nsight-compute-$CUDA_VERSION cuda-nsight-systems-$CUDA_VERSION \
 	nsight-systems-2024.6.2 && \
     dnf clean all && rm -rf /var/cache/dnf
 
-# Create a symlink to the installed version of CUDA
-RUN COMPUTE_VERSION=$(ls /opt/nvidia/nsight-compute); \
+# Create symlinks to the installed versions of the Nsight CLI tools, and
+# wrappers for the UIs. The toolkit wrappers under /usr/local/cuda/bin
+# demand the exact nsight-systems release matching the toolkit (2025.1.3
+# for CUDA 12-9), which the pinned nsight-systems package below does not
+# provide, so the alternatives links must win in PATH (see the PATH entry
+# below). The CLIs use those links directly; the UIs go through
+# nsight-ui-launch, which isolates Nsight's embedded Python from the
+# workspace venv for every launch path (make target, container command,
+# or typing the name in a shell).
+COPY --chmod=0755 containerfiles/nsight-ui-launch.sh /usr/local/bin/nsight-ui-launch
+RUN set -eux; \
+	COMPUTE_VERSION=$(ls /opt/nvidia/nsight-compute); \
 	alternatives --install /usr/local/bin/ncu ncu \
 	"/opt/nvidia/nsight-compute/${COMPUTE_VERSION}/ncu" 100; \
-	alternatives --install /usr/local/bin/ncu-ui ncu-ui \
-	"/opt/nvidia/nsight-compute/${COMPUTE_VERSION}/ncu-ui" 100
+	NSYS_BIN=$(ls /opt/nvidia/nsight-systems/*/bin/nsys | head -n1); \
+	alternatives --install /usr/local/bin/nsys nsys "${NSYS_BIN}" 100; \
+	NCU_UI_BIN="/opt/nvidia/nsight-compute/${COMPUTE_VERSION}/ncu-ui"; \
+	NSYS_UI_BIN="$(dirname "${NSYS_BIN}")/nsys-ui"; \
+	test -x "${NCU_UI_BIN}"; \
+	test -x "${NSYS_UI_BIN}"; \
+	for ui in "ncu-ui:${NCU_UI_BIN}" "nsys-ui:${NSYS_UI_BIN}"; do \
+		name=${ui%%:*}; \
+		real=${ui#*:}; \
+		rm -f "/usr/local/bin/${name}" "/usr/local/bin/${name}.bin"; \
+		printf '#!/bin/bash\nexec /usr/local/bin/nsight-ui-launch "%s" "$@"\n' \
+			"${real}" > "/usr/local/bin/${name}"; \
+		chmod 0755 "/usr/local/bin/${name}"; \
+		ln -sf "/usr/local/bin/${name}" "/usr/local/bin/${name}.bin"; \
+	done
 
-# Install torch (release or nightly if available)
+# Create the /workspace directory and set permissions, and install uv
+# into the system Python (used by every later stage, and available to
+# users of the finished image).
+WORKDIR $WORKSPACE
+RUN python${PYTHON_VERSION} -m pip install uv
+
+# Nsight Compute embeds CPython and reinitializes it while closing the UI.
+# That interpreter scans this base-image site-packages directory, but its
+# reduced codec registry cannot decode setuptools' .pth file as utf-8-sig.
+# The hook is unnecessary for Nsight; the workspace venv has its own copy.
+RUN rm -f /lib/python${PYTHON_VERSION}/site-packages/distutils-precedence.pth
+
+# Applies to every later stage's network-using RUN step (the lock install
+# and the wheel build) and to uv usage at runtime.
+ENV UV_HTTP_TIMEOUT=60
+
+# Locked shared Python environment: the /workspace venv with torch,
+# triton, the profiling and notebook stack, and every KernelAgent runtime
+# dependency, all at the versions recorded in requirements.lock (see that
+# file's header for how it is regenerated). KernelAgent's own wheel is
+# built against this environment and installed into it in the runtime
+# stage.
+FROM runtime-base AS python-base
+
+ARG PYTHON_VERSION
+ARG WORKSPACE
+ARG CUDA_VERSION
+# uv, like pip, gives extra indexes priority over the default one; with
+# the cuXXX torch index as the extra, torch resolves to its CUDA build
+# from there while every other package resolves from PyPI.
 ARG PIP_TORCH_INDEX_URL=https://download.pytorch.org/whl
-RUN TORCH_CUDA_VERSION="$(echo "$CUDA_VERSION" | sed -e 's/\([0-9]*\)[.-]\([0-9]\)/\1\2/')"; \
-    if curl -o /dev/null -s -f -r 0-0 "${PIP_TORCH_INDEX_URL}/cu${TORCH_CUDA_VERSION}"; then \
-        echo "Installing torch cuda release"; \
-        uv pip install --index-url="${PIP_TORCH_INDEX_URL}/cu${TORCH_CUDA_VERSION}" torch; \
-    elif curl -o /dev/null -s -f -r 0-0 "${PIP_TORCH_INDEX_URL}/nightly/cu${TORCH_CUDA_VERSION}"; then \
-        echo "Installing torch cuda nightly"; \
-        uv pip install --index-url="${PIP_TORCH_INDEX_URL}/nightly/cu${TORCH_CUDA_VERSION}" torch; \
-    else \
-        echo "ERROR: No torch backend available for CUDA ${TORCH_CUDA_VERSION}"; \
-        exit 1; \
-    fi
-    
+COPY containerfiles/kernelagent/requirements.in containerfiles/kernelagent/requirements.lock /tmp/ka-python/
+RUN set -eux; \
+	TORCH_CUDA_VERSION="$(echo "$CUDA_VERSION" | sed -e 's/\([0-9]*\)[.-]\([0-9]\)/\1\2/')"; \
+	uv venv --python ${PYTHON_VERSION} --seed $WORKSPACE; \
+	echo "unset BASH_ENV PROMPT_COMMAND ENV" >> ${WORKSPACE}/bin/activate; \
+	uv pip install --python ${WORKSPACE}/bin/python \
+		--extra-index-url "${PIP_TORCH_INDEX_URL}/cu${TORCH_CUDA_VERSION}" \
+		-r /tmp/ka-python/requirements.lock; \
+	rm -rf /tmp/ka-python
+
+# Build the pinned KernelAgent revision into a wheel. The clone and
+# everything it produces stays in this stage: the final image only
+# receives the built wheel (mounted temporarily for its install RUN).
+# PROVENANCE of the installed package lives in the image labels
+# (kernelagent-upstream, kernelagent-rev) and in this repository's
+# committed patches and dependency lock.
+FROM python-base AS kernelagent-builder
+
+ARG WORKSPACE
+ARG KERNELAGENT_UPSTREAM
+ARG KERNELAGENT_REV
+COPY containerfiles/kernelagent/patches/ /tmp/ka-patches/
+COPY containerfiles/kernelagent/build-constraints.txt /tmp/ka-build-constraints.txt
+RUN --mount=type=cache,target=/root/.cache/uv set -eux; \
+	case "${KERNELAGENT_REV}" in \
+		*[!0-9a-f]*|'') \
+			echo "ERROR: KERNELAGENT_REV must be a 40-character commit SHA, got '${KERNELAGENT_REV}'" >&2; \
+			exit 1 ;; \
+		????????????????????????????????????????) ;; \
+		*) \
+			echo "ERROR: KERNELAGENT_REV must be a 40-character commit SHA, got '${KERNELAGENT_REV}'" >&2; \
+			exit 1 ;; \
+	esac; \
+	git init --quiet /tmp/ka-src; \
+	git -C /tmp/ka-src remote add origin "${KERNELAGENT_UPSTREAM}"; \
+	git -C /tmp/ka-src fetch --quiet --depth 1 origin "${KERNELAGENT_REV}"; \
+	git -C /tmp/ka-src checkout --quiet --detach FETCH_HEAD; \
+	test "$(git -C /tmp/ka-src rev-parse HEAD)" = "${KERNELAGENT_REV}"; \
+	for p in /tmp/ka-patches/*.patch; do \
+		if git -C /tmp/ka-src apply --check -R "${p}" 2>/dev/null; then \
+			echo "already applied: ${p}"; \
+		elif git -C /tmp/ka-src apply --check "${p}" 2>/dev/null; then \
+			echo "applying: ${p}"; \
+			git -C /tmp/ka-src apply "${p}"; \
+		else \
+			echo "ERROR: ${p} does not apply to the KernelAgent source" >&2; \
+			exit 1; \
+		fi; \
+	done; \
+	uv build --wheel --python ${WORKSPACE}/bin/python \
+		--build-constraints /tmp/ka-build-constraints.txt \
+		--out-dir /tmp/ka-wheels /tmp/ka-src
+
+# Final image: the locked python-base environment plus the builder's
+# KernelAgent wheel, the image's CLI helpers and problem specs, and a
+# validation gate over the installed package.
+FROM python-base AS runtime
+
+ARG PYTHON_VERSION
+ARG WORKSPACE
+ARG KERNELAGENT_UPSTREAM
+ARG KERNELAGENT_REV
 ARG NOTEBOOK_PORT=8888
+
+LABEL kernelagent-upstream="${KERNELAGENT_UPSTREAM}" \
+      kernelagent-rev="${KERNELAGENT_REV}"
+
+# Install the builder's wheel into the locked environment. The bind
+# mount exposes the builder stage's wheel directory to this single RUN
+# step only (read-only): the wheel archive never lands in a final-image
+# layer, and --no-deps keeps the locked dependency set untouched.
+RUN --mount=type=bind,from=kernelagent-builder,source=/tmp/ka-wheels,target=/tmp/ka-wheels \
+	uv pip install --python ${WORKSPACE}/bin/python \
+		--no-deps /tmp/ka-wheels/kernelagent-*.whl
+
+COPY --chmod=0755 workspace/KernelAgent/scripts/generate-kernel.py \
+    workspace/KernelAgent/scripts/profile-kernel.py \
+    workspace/KernelAgent/scripts/experiment-kernels.py \
+    workspace/KernelAgent/scripts/report-experiment.py \
+    workspace/KernelAgent/scripts/verify-llm.py \
+    workspace/KernelAgent/scripts/ka_common.py \
+    /usr/local/bin/
+COPY workspace/KernelAgent/problems/ /workspace/user/problems/
+
+# Validation gate: the finished environment is dependency-consistent and
+# the KernelAgent wheel works as installed — imports, prompt and NCU
+# templates, the RAG optimization database, no leaked builder paths, CLIs
+# and problem specs in place. No GPU, LLM, or network involved. See
+# check_install.py.
+COPY containerfiles/kernelagent/check_install.py /tmp/ka-check_install.py
+RUN set -eux; \
+	uv pip check --python ${WORKSPACE}/bin/python; \
+	${WORKSPACE}/bin/python /tmp/ka-check_install.py \
+		--workspace ${WORKSPACE}; \
+	rm -f /tmp/ka-check_install.py
+
 EXPOSE ${NOTEBOOK_PORT}
 
 ENV BASH_ENV=${WORKSPACE}/bin/activate \
     ENV=${WORKSPACE}/bin/activate \
     LANG=en_US.UTF-8 \
     LC_ALL=C.UTF-8 \
-    PATH=${WORKSPACE}/bin:/usr/local/cuda/bin:$PATH \
+    PATH=${WORKSPACE}/bin:/usr/local/bin:/usr/local/cuda/bin:$PATH \
     PIP_PREFIX=$WORKSPACE \
     PROMPT_COMMAND=". ${WORKSPACE}/bin/activate" \
     PYTHON_VERSION=$PYTHON_VERSION \
@@ -84,10 +267,12 @@ ENV BASH_ENV=${WORKSPACE}/bin/activate \
     PYTHONPATH=${WORKSPACE}/lib/python${PYTHON_VERSION}/site-packages \
     NOTEBOOK_PORT=${NOTEBOOK_PORT} \
     TRITON_HOME=$WORKSPACE \
-    UV_HTTP_TIMEOUT=60 \
     WORKSPACE=$WORKSPACE \
     CUDA_HOME=/usr/local/cuda \
-    XDG_CACHE_HOME=$WORKSPACE
+    XDG_CACHE_HOME=$WORKSPACE \
+    PROBLEMS_HOME=/workspace/user/problems \
+    RESULTS_MOUNT=/workspace/user/results \
+    PROFILES_HOME=/workspace/user/profiles
 
 WORKDIR ${WORKSPACE}/user
 

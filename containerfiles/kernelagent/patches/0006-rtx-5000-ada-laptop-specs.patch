@@ -1,0 +1,51 @@
+From 4408deeb535276d482a1be1a610251cf75c3c6a5 Mon Sep 17 00:00:00 2001
+From: KernelSmith <kernelsmith@localhost>
+Date: Thu, 22 Oct 2026 09:37:24 -0400
+Subject: [PATCH 6/6] Ship RTX 5000 Ada Generation Laptop GPU specs in the catalog
+
+The pinned catalog has no entry for "NVIDIA RTX 5000 Ada Generation
+Laptop GPU", this repository's target laptop, so get_gpu_specs() returns
+None and optimization falls back to name-only specs: the bottleneck and
+optimization prompts carry no peak bandwidth/FLOPs figures for it.
+
+Add the entry with the boost-clock reference peaks already documented for
+this GPU in workspace/KernelAgent/README.md: 76 SMs, 576 GB/s, 42.6
+TFLOPS FP32/FP16/BF16, 16 GB GDDR6. The key is the exact CUDA and
+nvidia-smi device name, because lookups are exact-name membership.
+KA_GPU_SPECS_FILE still takes precedence, so an operator can override
+these figures or add another uncatalogued GPU without a rebuild.
+---
+ .../diagnose_prompt/gpu_specs_database.py       | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs_database.py b/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs_database.py
+index 0c984b4..492d208 100644
+--- a/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs_database.py
++++ b/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs_database.py
+@@ -181,6 +181,23 @@ _GPU_SPECS_DATABASE: dict[str, dict[str, object]] = {
+         "form_factor": "PCIe",
+         "tdp_w": 360,
+     },
++    # NVIDIA RTX 5000 Ada Generation Laptop GPU (this repo's target laptop)
++    "NVIDIA RTX 5000 Ada Generation Laptop GPU": {
++        "name": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
++        "architecture": "Ada Lovelace",
++        "peak_fp32_tflops": 42.6,
++        "peak_fp16_tflops": 42.6,
++        "peak_bf16_tflops": 42.6,
++        "peak_memory_bw_gbps": 576,
++        "sm_count": 76,
++        "max_threads_per_sm": 1536,
++        "l1_cache_kb": 128,
++        "l2_cache_mb": 64,
++        "memory_gb": 16,
++        "memory_type": "GDDR6",
++        "form_factor": "Laptop",
++        "tdp_w": 175,
++    },
+ }
+ 
+ # Make database read-only to prevent accidental modification
+-- 
+2.56.0
+

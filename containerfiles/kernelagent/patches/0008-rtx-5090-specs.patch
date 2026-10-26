@@ -1,0 +1,52 @@
+From 345817c444275fd4d9fa057dad2db4c5180256ad Mon Sep 17 00:00:00 2001
+From: KernelSmith <kernelsmith@localhost>
+Date: Thu, 22 Oct 2026 18:55:08 -0400
+Subject: [PATCH 8/8] Ship RTX 5090 desktop specs in the catalog
+
+The pinned catalog has no entry for "NVIDIA GeForce RTX 5090", the
+desktop Blackwell part this repository now targets, so get_gpu_specs()
+returns None and optimization falls back to name-only specs: the
+bottleneck and optimization prompts carry no peak bandwidth/FLOPs
+figures for it.
+
+Add the entry with the desktop reference peaks: 170 SMs, 1792 GB/s,
+104.8 TFLOPS FP32/FP16/BF16 under the catalog's non-tensor-core GeForce
+convention, 32 GB GDDR7, 96 MB L2, 575 W. The key includes "GeForce"
+because lookups are exact-name membership and CUDA/nvidia-smi report
+NVIDIA GeForce RTX 5090. KA_GPU_SPECS_FILE still takes precedence, so an
+operator can override these figures without a rebuild.
+---
+ .../diagnose_prompt/gpu_specs_database.py       | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs_database.py b/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs_database.py
+index 492d208..348b571 100644
+--- a/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs_database.py
++++ b/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs_database.py
+@@ -198,6 +198,23 @@ _GPU_SPECS_DATABASE: dict[str, dict[str, object]] = {
+         "form_factor": "Laptop",
+         "tdp_w": 175,
+     },
++    # NVIDIA GeForce RTX 5090 (desktop, Blackwell)
++    "NVIDIA GeForce RTX 5090": {
++        "name": "NVIDIA GeForce RTX 5090",
++        "architecture": "Blackwell",
++        "peak_fp32_tflops": 104.8,
++        "peak_fp16_tflops": 104.8,
++        "peak_bf16_tflops": 104.8,
++        "peak_memory_bw_gbps": 1792,
++        "sm_count": 170,
++        "max_threads_per_sm": 1536,
++        "l1_cache_kb": 128,
++        "l2_cache_mb": 96,
++        "memory_gb": 32,
++        "memory_type": "GDDR7",
++        "form_factor": "PCIe",
++        "tdp_w": 575,
++    },
+ }
+ 
+ # Make database read-only to prevent accidental modification
+-- 
+2.56.0
+
