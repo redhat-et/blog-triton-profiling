@@ -1,3 +1,10 @@
+"""Matmul + bias Triton kernels from the ROCm blog post.
+
+The fusion path of this file is also vendored as a KernelAgent baseline at
+workspace/KernelAgent/problems/matmul_bias/baselines/rocm_blog_fusion.py
+(renamed to kernel_function, dtype-follows-input; see that file's docstring).
+Keep the kernel body here and the baseline copy in sync when either changes.
+"""
 import argparse
 import torch
 
@@ -266,7 +273,9 @@ def get_rtol():
         elif target.arch == "gfx942":
             return 1e-2
     else:
-        return 0
+        # NVIDIA GPUs: same fp16 accumulation tolerance as the ROCm targets —
+        # returning 0 here made --verify report "Differ" on CUDA.
+        return 1e-2
 
 def show_profile(profile_name):
     import triton.profiler.viewer as proton_viewer
