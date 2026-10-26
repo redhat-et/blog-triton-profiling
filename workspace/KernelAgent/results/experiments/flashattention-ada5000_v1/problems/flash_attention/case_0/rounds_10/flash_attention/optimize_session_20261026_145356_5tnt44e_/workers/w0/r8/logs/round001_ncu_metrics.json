@@ -1,0 +1,40 @@
+{
+  "metrics": {
+    "_flash_attention": {
+      "sm__cycles_active.avg": 173006.92,
+      "sm__warps_active.avg.pct_of_peak_sustained_active": 8.34,
+      "launch__occupancy_limit_blocks": 24,
+      "launch__occupancy_limit_registers": 3,
+      "launch__occupancy_limit_shared_mem": 1,
+      "launch__registers_per_thread": 129,
+      "sm__inst_executed.sum": 8517632,
+      "sm__inst_executed_pipe_tensor.avg.pct_of_peak_sustained_active": 7.97,
+      "dram__bytes_read.sum": 6834816,
+      "dram__bytes_write.sum": 84096,
+      "dram__throughput.avg.pct_of_peak_sustained_elapsed": 13.71,
+      "dram__bytes.sum.per_second": 52581712062.26,
+      "gpu__dram_throughput.avg.pct_of_peak_sustained_elapsed": 13.71,
+      "launch__shared_mem_per_block_allocated": 78848,
+      "l1tex__t_sector_hit_rate.pct": 0,
+      "l1tex__throughput.avg.pct_of_peak_sustained_active": 32.4,
+      "lts__t_sector_hit_rate.pct": 95.05,
+      "lts__throughput.avg.pct_of_peak_sustained_active": 39.88,
+      "sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed": 29.63,
+      "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct": 100,
+      "smsp__warp_issue_stalled_short_scoreboard_per_warp_active.pct": 13.85,
+      "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct": 12.36,
+      "smsp__warp_issue_stalled_barrier_per_warp_active.pct": 11.95,
+      "smsp__warp_issue_stalled_branch_resolving_per_warp_active.pct": 0.12,
+      "smsp__sass_average_branch_targets_threads_uniform.pct": 100,
+      "sm__throughput.avg.pct_of_peak_sustained_elapsed": 29.63,
+      "gpu__compute_memory_throughput.avg.pct_of_peak_sustained_elapsed": 36.09
+    }
+  },
+  "metadata": {
+    "kernel_file": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_10/flash_attention/optimize_session_20261026_145356_5tnt44e_/workers/w0/r8/artifacts/kernel_round_1_sol.py",
+    "problem_file": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_10/flash_attention/optimize_session_20261026_145356_5tnt44e_/problem.py",
+    "round_num": 1,
+    "timestamp": "2026-10-26T15:12:59.267073Z",
+    "ncu_version": "2025.2.1.0"
+  }
+}

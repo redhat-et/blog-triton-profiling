@@ -1,0 +1,66 @@
+[
+  {
+    "category": "memory",
+    "summary": "The cache-backed memory path limits performance, rather than DRAM bandwidth or compute throughput.",
+    "reasoning": "Memory SOL is 71.35% versus 38.7% compute SOL. L2 throughput reaches 75.21% with a 95.62% hit rate, while DRAM throughput is only 16.32%. Long-scoreboard stalls of 61.98% indicate substantial waits for memory dependencies.",
+    "root_causes": [
+      {
+        "cause": "Global loads use only half of each transferred sector, increasing traffic through the cache hierarchy.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global-load sector utilization is only 50%, indicating inefficient transaction utilization."
+          },
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 75.21,
+            "interpretation": "L2 is heavily utilized, making excess cache traffic costly."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Specialize operand loading and tile layouts for A/B strides so adjacent lanes access contiguous elements along each operand's unit-stride dimension; validate improved sector utilization.",
+            "rationale": "Better coalescing reduces sectors transferred per useful byte and relieves pressure on the cache-backed memory path."
+          }
+        ]
+      },
+      {
+        "cause": "Insufficient latency hiding leaves warps waiting on operand loads.",
+        "evidence": [
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 61.98,
+            "interpretation": "Outstanding memory dependencies dominate warp issue stalls."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 54.42,
+            "interpretation": "Moderate occupancy limits the pool of warps available to hide memory latency."
+          },
+          {
+            "metric": "launch__occupancy_limit_shared_mem",
+            "value": 7,
+            "interpretation": "Shared memory imposes a tighter block-residency limit than registers, whose limit is 9 blocks."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Extend autotuning to jointly sweep num_stages and BLOCK_K, selecting the configuration that reduces long-scoreboard stalls without excessive shared-memory residency loss.",
+            "rationale": "Balancing load/compute overlap against resident warps can hide operand-fetch latency more effectively."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Specialize operand loading and tile layouts for A/B strides so adjacent lanes access contiguous elements along each operand's unit-stride dimension; validate improved sector utilization.",
+        "rationale": "Better coalescing reduces sectors transferred per useful byte and relieves pressure on the cache-backed memory path."
+      },
+      {
+        "fix": "Extend autotuning to jointly sweep num_stages and BLOCK_K, selecting the configuration that reduces long-scoreboard stalls without excessive shared-memory residency loss.",
+        "rationale": "Balancing load/compute overlap against resident warps can hide operand-fetch latency more effectively."
+      }
+    ]
+  }
+]

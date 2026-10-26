@@ -1,0 +1,56 @@
+[
+  {
+    "category": "memory",
+    "summary": "The profiled integer-fill kernel is limited by DRAM write bandwidth, not compute.",
+    "reasoning": "DRAM throughput reaches 86.47% (~486.5 GB/s), while SM throughput is only 4.15% and active-warp occupancy is 90.17%. These metrics identify a bandwidth bottleneck. However, the measured kernel is at::vectorized_elementwise_kernel with FillFunctor<int>, not the supplied Triton attention kernel; this diagnosis cannot be attributed to attention without profiling its actual launch.",
+    "root_causes": [
+      {
+        "cause": "The standalone fill generates substantial global-memory write traffic.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 225550080,
+            "interpretation": "Approximately 225.6 MB of writes dominate the measured DRAM traffic."
+          },
+          {
+            "metric": "dram__bytes_read.sum",
+            "value": 2811520,
+            "interpretation": "Reads are only approximately 2.8 MB, confirming a strongly write-dominated workload."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Locate the profiled integer-fill allocation or initialization and remove it if every element is overwritten before being read.",
+            "rationale": "Eliminating a redundant initialization removes its entire write pass; verify full overwrite coverage before using uninitialized storage."
+          }
+        ]
+      },
+      {
+        "cause": "Materializing a low-compute fill as a separate kernel exposes the bandwidth cost of writing an intermediate buffer.",
+        "evidence": [
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 86.47,
+            "interpretation": "The external-memory interface is already highly utilized."
+          },
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 4.15,
+            "interpretation": "The fill performs little computation relative to its memory traffic."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 90.17,
+            "interpretation": "High occupancy makes insufficient resident warps an unlikely primary limitation."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "If initialization is required, fuse the default-value handling into the buffer's producer or consumer where semantics permit, rather than materializing a separate filled intermediate.",
+            "rationale": "Fusion can avoid an intermediate global-memory write pass; increasing arithmetic throughput alone will not accelerate this bandwidth-bound fill."
+          }
+        ]
+      }
+    ]
+  }
+]

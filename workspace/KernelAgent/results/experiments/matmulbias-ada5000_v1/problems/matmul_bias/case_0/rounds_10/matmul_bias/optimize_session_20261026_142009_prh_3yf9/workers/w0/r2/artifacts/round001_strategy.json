@@ -1,0 +1,61 @@
+[
+  {
+    "category": "memory",
+    "summary": "Cache-side memory throughput and load stalls limit the matmul, rather than DRAM bandwidth or compute.",
+    "reasoning": "Memory SOL is 70.14% versus 38.53% compute throughput. L2 throughput reaches 74.96% with a 95.79% hit rate, while DRAM throughput is only 15.24%, locating pressure primarily in the cache-backed load path.",
+    "root_causes": [
+      {
+        "cause": "Partial utilization of global-load sectors increases memory traffic per useful operand byte.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global loads use only half of the bytes in each sector on average."
+          },
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 74.96,
+            "interpretation": "Substantial L2 throughput makes inefficient transactions a likely contributor to memory pressure."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Tune operand load layouts and tile dimensions so adjacent lanes access adjacent elements along each operand's stride-1 dimension.",
+            "rationale": "Improved coalescing and sector utilization can reduce cache traffic for the same useful operand data."
+          }
+        ]
+      },
+      {
+        "cause": "Operand-load latency is insufficiently hidden across K-loop iterations.",
+        "evidence": [
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 62.21,
+            "interpretation": "Warps spend a large fraction of active cycles waiting on dependencies from L1TEX-path operations."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 53.65,
+            "interpretation": "Moderate achieved occupancy limits the pool of warps available to hide load latency."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Autotune Triton's num_stages for the K loop, benchmarking additional software-pipeline stages while monitoring shared-memory usage and occupancy.",
+            "rationale": "Overlapping future operand loads with current dot products can reduce exposed load waits, provided additional buffering does not excessively reduce occupancy."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Tune operand load layouts and tile dimensions so adjacent lanes access adjacent elements along each operand's stride-1 dimension.",
+        "rationale": "Improved coalescing and sector utilization can reduce cache traffic for the same useful operand data."
+      },
+      {
+        "fix": "Autotune Triton's num_stages for the K loop, benchmarking additional software-pipeline stages while monitoring shared-memory usage and occupancy.",
+        "rationale": "Overlapping future operand loads with current dot products can reduce exposed load waits, provided additional buffering does not excessively reduce occupancy."
+      }
+    ]
+  }
+]

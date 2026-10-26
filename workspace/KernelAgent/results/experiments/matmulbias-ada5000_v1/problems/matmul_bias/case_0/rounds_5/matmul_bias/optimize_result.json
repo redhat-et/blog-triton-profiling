@@ -1,0 +1,37 @@
+{
+  "problem": "matmul_bias",
+  "case": 0,
+  "case_spec": "(1024, 1024, 1024, 'float16')",
+  "model": "gpt-6.1-sol",
+  "llm_backend": "openai",
+  "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "selected_gpu_ids": [
+    0
+  ],
+  "optimizer_gpu_ids": [
+    0
+  ],
+  "workers": 1,
+  "strategy": "greedy",
+  "rounds": 5,
+  "source_kernel_path": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_5/matmul_bias/final_kernel.py",
+  "source_kernel_snapshot": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_5/matmul_bias/optimize_session_20261026_141010_8iffwhsx/source_kernel.py",
+  "source_kernel_sha256": "5ba2fb340021645983fbd0519bd2c31b1829979724947b7f27b005b98da9f3bd",
+  "session_dir": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_5/matmul_bias/optimize_session_20261026_141010_8iffwhsx",
+  "elapsed_s": 579.1,
+  "manager_result": {
+    "best_time_ms": 0.024960548877716066,
+    "total_rounds": 5,
+    "initial_kernel_time_ms": 0.04046446966993458,
+    "pytorch_baseline_ms": 0.025108480136841537,
+    "pytorch_compile_ms": 0.025460800100117923
+  },
+  "generated_at": "2026-10-26T14:19:51.173276",
+  "source_case_ms": 0.0403,
+  "candidate_case_ms": 0.0253,
+  "success": true,
+  "reason": null,
+  "optimized_kernel_path": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_5/matmul_bias/optimized_kernel.py",
+  "optimized_kernel_sha256": "e71fe54ed298b313df7d04c170a5ac2c8c4acc9ff7559be753704e006216fa5d",
+  "speedup": 1.593
+}

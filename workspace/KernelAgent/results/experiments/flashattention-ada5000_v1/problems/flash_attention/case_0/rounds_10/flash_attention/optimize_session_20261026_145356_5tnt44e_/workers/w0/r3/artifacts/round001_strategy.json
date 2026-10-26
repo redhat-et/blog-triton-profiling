@@ -1,0 +1,61 @@
+[
+  {
+    "category": "memory",
+    "summary": "The profiled integer-fill kernel is limited by write bandwidth; these metrics do not characterize the supplied Triton attention kernel.",
+    "reasoning": "DRAM throughput reaches 81.22% while compute throughput is only 4.32%. Active-warp occupancy is 84.35%, arguing against occupancy as the primary limiter. The recorded kernel is at::FillFunctor<int>, not _flash_attention_kernel.",
+    "root_causes": [
+      {
+        "cause": "Bulk initialization writes dominate memory traffic.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 226044800,
+            "interpretation": "Writes account for approximately 96.9% of measured DRAM traffic."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 81.22,
+            "interpretation": "The measured fill already consumes most sustained DRAM bandwidth."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Trace this fill operation and eliminate it if its destination is fully overwritten before being read.",
+            "rationale": "Removing redundant initialization saves approximately 226 MB of measured writes. The supplied attention kernel already uses torch.empty and writes every valid output element, so first identify the actual allocation responsible."
+          }
+        ]
+      },
+      {
+        "cause": "A standalone constant fill performs little computation per byte and cannot amortize its memory traffic.",
+        "evidence": [
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 4.32,
+            "interpretation": "Compute resources are largely unused by this memory-intensive operation."
+          },
+          {
+            "metric": "dram__bytes.sum.per_second",
+            "value": 456952369014.79,
+            "interpretation": "The operation streams approximately 457 GB/s despite its low compute demand."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "If initialization is required, fuse the fill semantics into the actual producer or consumer, initializing values only where needed.",
+            "rationale": "Fusion can avoid a separate full-buffer write pass; increasing arithmetic throughput or occupancy would not address the measured bandwidth limit."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Trace this fill operation and eliminate it if its destination is fully overwritten before being read.",
+        "rationale": "Removing redundant initialization saves approximately 226 MB of measured writes. The supplied attention kernel already uses torch.empty and writes every valid output element, so first identify the actual allocation responsible."
+      },
+      {
+        "fix": "If initialization is required, fuse the fill semantics into the actual producer or consumer, initializing values only where needed.",
+        "rationale": "Fusion can avoid a separate full-buffer write pass; increasing arithmetic throughput or occupancy would not address the measured bandwidth limit."
+      }
+    ]
+  }
+]

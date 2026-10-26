@@ -1,0 +1,51 @@
+[
+  {
+    "category": "memory",
+    "summary": "The measured integer-fill kernel is limited by DRAM write bandwidth.",
+    "reasoning": "DRAM throughput reaches 81.22% (456.95 GB/s), while SM throughput is only 4.32%; occupancy is high at 84.35%. These metrics describe an ATen FillFunctor<int> kernel, not the supplied Triton attention kernel, so they do not establish the attention kernel's bottleneck.",
+    "root_causes": [
+      {
+        "cause": "Bulk initialization generates predominantly DRAM writes.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 226044800,
+            "interpretation": "Writes account for approximately 96.9% of measured DRAM traffic."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 81.22,
+            "interpretation": "High DRAM utilization identifies bandwidth as the primary constraint."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Trace the profiled fill's destination and remove initialization for elements guaranteed to be overwritten before use.",
+            "rationale": "Avoiding unnecessary initialization directly removes bandwidth-consuming stores; preserve initialization wherever existing values are required."
+          }
+        ]
+      },
+      {
+        "cause": "A standalone fill performs little computation per byte and requires a separate memory pass.",
+        "evidence": [
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 4.32,
+            "interpretation": "Compute utilization is low despite high DRAM throughput, consistent with a low-arithmetic-intensity fill."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 84.35,
+            "interpretation": "High active-warp occupancy argues against insufficient occupancy as the primary limitation."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Where initialization is necessary, fuse it into the first consuming or producing kernel when semantics permit.",
+            "rationale": "Generating initial values within the consuming operation can eliminate the standalone fill pass and its intermediate global-memory traffic."
+          }
+        ]
+      }
+    ]
+  }
+]

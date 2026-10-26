@@ -1,0 +1,51 @@
+[
+  {
+    "category": "memory",
+    "summary": "The profiled integer-fill kernel is DRAM-bandwidth-bound; these metrics do not characterize the Triton attention kernel.",
+    "reasoning": "DRAM throughput reaches 83.13% versus 4.32% SM throughput, with 87.71% active-warp occupancy. Traffic is dominated by writes. The recorded kernel is at::vectorized_elementwise_kernel with FillFunctor<int>, not _flash_attention_kernel.",
+    "root_causes": [
+      {
+        "cause": "Bulk output writes dominate the measured kernel's memory traffic.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 226839168,
+            "interpretation": "Writes account for approximately 97.9% of measured DRAM bytes."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 83.13,
+            "interpretation": "High DRAM utilization identifies bandwidth as the primary constraint."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Trace the filled allocation and remove or shrink its initialization if downstream operations overwrite those elements before reading them.",
+            "rationale": "Eliminating unnecessary writes directly reduces the dominant bandwidth cost."
+          }
+        ]
+      },
+      {
+        "cause": "A standalone integer-fill pass performs little computation per byte transferred.",
+        "evidence": [
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 4.32,
+            "interpretation": "Compute throughput is low, consistent with the recorded FillFunctor<int> operation."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 87.71,
+            "interpretation": "High active-warp occupancy argues against insufficient occupancy as the primary limitation."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "If initialization is required, fuse it into the first consuming operation where semantics permit; profile _flash_attention_kernel separately before changing its tile configuration.",
+            "rationale": "Fusion can avoid a separate initialization pass, while isolating the attention kernel prevents applying fill-kernel conclusions to unrelated code."
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,51 @@
+[
+  {
+    "category": "memory",
+    "summary": "The profiled integer-fill kernel is limited by DRAM write bandwidth.",
+    "reasoning": "DRAM throughput reaches 86.47% of sustained peak (486.49 GB/s), while SM throughput is only 4.15%. Active-warp occupancy is 90.17%, so low occupancy is not the primary limitation. These metrics describe a PyTorch FillFunctor<int> kernel, not the supplied Triton attention kernel; they do not establish the attention kernel's bottleneck.",
+    "root_causes": [
+      {
+        "cause": "Bulk initialization generates predominantly DRAM write traffic.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 225550080,
+            "interpretation": "Writes constitute approximately 98.8% of the measured DRAM traffic."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 86.47,
+            "interpretation": "DRAM bandwidth is already close to saturation."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Locate the profiled integer-buffer initialization and eliminate it if every element is overwritten before being read.",
+            "rationale": "Removing a redundant fill avoids its full-buffer writes rather than attempting to accelerate an already bandwidth-efficient operation."
+          }
+        ]
+      },
+      {
+        "cause": "A standalone fill performs little computation per byte written, providing insufficient arithmetic intensity to become compute-bound.",
+        "evidence": [
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 4.15,
+            "interpretation": "Compute resources are lightly utilized during this fill operation."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 90.17,
+            "interpretation": "High active-warp occupancy indicates that insufficient resident work is not the main explanation for low compute utilization."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "If initialization is required, fuse it into the buffer's producer or consumer where semantics permit, avoiding the separate full-buffer fill pass.",
+            "rationale": "Combining initialization with useful processing can remove intermediate memory traffic; merely increasing occupancy would not address the measured bandwidth limit."
+          }
+        ]
+      }
+    ]
+  }
+]

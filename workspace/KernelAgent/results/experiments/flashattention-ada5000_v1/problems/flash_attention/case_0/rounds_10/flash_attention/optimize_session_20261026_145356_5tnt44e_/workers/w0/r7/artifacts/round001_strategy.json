@@ -1,0 +1,61 @@
+[
+  {
+    "category": "memory",
+    "summary": "The profiled fill kernel is DRAM-bandwidth-bound; these metrics do not establish the attention kernel's bottleneck.",
+    "reasoning": "DRAM throughput reaches 83.13% of sustained peak (467.7 GB/s), versus 4.32% SM throughput. Active-warp occupancy is 87.71%, so underutilization is not the primary limitation. The reported kernel is at::vectorized_elementwise_kernel with FillFunctor<int>, not _flash_attention_kernel.",
+    "root_causes": [
+      {
+        "cause": "Bulk destination writes dominate the measured fill kernel's memory traffic.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 226839168,
+            "interpretation": "Writes account for approximately 97.9% of measured DRAM bytes."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 83.13,
+            "interpretation": "High DRAM utilization identifies bandwidth as the limiting resource."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Locate the integer-buffer fill and eliminate it if every element is overwritten before being read.",
+            "rationale": "Removing a redundant initialization avoids the dominant write traffic; verify correctness before removing it."
+          }
+        ]
+      },
+      {
+        "cause": "The measured operation materializes initialization in a standalone fill pass rather than producing values in their consuming operation.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_read.sum",
+            "value": 4978816,
+            "interpretation": "Low read traffic relative to writes is consistent with standalone initialization."
+          },
+          {
+            "metric": "sm__inst_executed_pipe_tensor.avg.pct_of_peak_sustained_active",
+            "value": 0.0,
+            "interpretation": "Together with the FillFunctor<int> kernel name, this confirms the metrics should not be attributed to the supplied attention dot products."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "If initialization is required, investigate fusing it into the actual consumer, and profile that consumer separately to verify the benefit.",
+            "rationale": "Fusion can avoid a separate full-buffer write pass when semantics permit; attention-specific tuning requires an actual _flash_attention_kernel capture."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Locate the integer-buffer fill and eliminate it if every element is overwritten before being read.",
+        "rationale": "Removing a redundant initialization avoids the dominant write traffic; verify correctness before removing it."
+      },
+      {
+        "fix": "If initialization is required, investigate fusing it into the actual consumer, and profile that consumer separately to verify the benefit.",
+        "rationale": "Fusion can avoid a separate full-buffer write pass when semantics permit; attention-specific tuning requires an actual _flash_attention_kernel capture."
+      }
+    ]
+  }
+]

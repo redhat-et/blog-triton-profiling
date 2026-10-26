@@ -1,0 +1,63 @@
+2026-10-26 14:10:12,078 - OptimizationManager - INFO - OptimizationManager initialized: strategy=greedy, workers=1, gpus=[0]
+2026-10-26 14:10:12,078 - OptimizationManager - INFO - ================================================================================
+2026-10-26 14:10:12,078 - OptimizationManager - INFO - STARTING OPTIMIZATION
+2026-10-26 14:10:12,078 - OptimizationManager - INFO - ================================================================================
+2026-10-26 14:10:12,079 - OptimizationManager - INFO - GreedyStrategy initialized with 1 worker
+2026-10-26 14:10:14,426 - OptimizationManager - INFO - Initial kernel passed correctness verification
+2026-10-26 14:10:15,890 - OptimizationManager - INFO - ⏳ Waiting for benchmark lock (worker -1)...
+2026-10-26 14:10:15,891 - OptimizationManager - INFO - 🔓 Acquired benchmark lock (worker -1)
+2026-10-26 14:10:16,240 - OptimizationManager - INFO - 🔒 Released benchmark lock (worker -1)
+2026-10-26 14:10:16,240 - OptimizationManager - INFO - PyTorch baseline: 0.0251ms
+2026-10-26 14:10:16,240 - OptimizationManager - INFO - ⏳ Waiting for benchmark lock (worker -1)...
+2026-10-26 14:10:16,240 - OptimizationManager - INFO - 🔓 Acquired benchmark lock (worker -1)
+2026-10-26 14:10:25,393 - OptimizationManager - INFO - 🔒 Released benchmark lock (worker -1)
+2026-10-26 14:10:25,393 - OptimizationManager - INFO - PyTorch compile baseline: 0.0255ms
+2026-10-26 14:10:25,393 - OptimizationManager - INFO - ⏳ Waiting for benchmark lock (worker -1)...
+2026-10-26 14:10:25,394 - OptimizationManager - INFO - 🔓 Acquired benchmark lock (worker -1)
+2026-10-26 14:10:28,363 - OptimizationManager - INFO - 🔒 Released benchmark lock (worker -1)
+2026-10-26 14:10:28,367 - OptimizationManager - INFO - Initial kernel time: 0.0405ms
+2026-10-26 14:10:28,367 - OptimizationManager - INFO - 
+2026-10-26 14:10:28,367 - OptimizationManager - INFO - ==================== ROUND 1/5 ====================
+2026-10-26 14:10:28,809 - OptimizationManager - INFO - Created NCU wrapper: /workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_5/matmul_bias/optimize_session_20261026_141010_8iffwhsx/baseline_profiles/ncu_wrapper.py
+2026-10-26 14:10:28,809 - OptimizationManager - INFO - [Round 1] Waiting for profiling semaphore...
+2026-10-26 14:10:28,809 - OptimizationManager - INFO - [Round 1] Acquired profiling semaphore
+2026-10-26 14:10:28,809 - OptimizationManager - INFO - [Round 1] NCU profiling attempt 1/2...
+2026-10-26 14:10:35,348 - OptimizationManager - INFO - ✅ NCU profiling completed for round 1
+2026-10-26 14:10:35,348 - OptimizationManager - INFO - Baseline profiled for parent initial: memory-bound, 70.8% SOL
+2026-10-26 14:11:56,752 - OptimizationManager - INFO - Round 1: 1/1 workers succeeded (1 results received)
+2026-10-26 14:11:56,752 - OptimizationManager - INFO - New best: 0.0250ms (nan% improvement)
+2026-10-26 14:11:56,753 - OptimizationManager - INFO - Round 1 best: worker 0 at 0.0250 ms
+2026-10-26 14:11:56,753 - OptimizationManager - INFO - 
+2026-10-26 14:11:56,753 - OptimizationManager - INFO - ==================== ROUND 2/5 ====================
+2026-10-26 14:11:56,753 - OptimizationManager - INFO - Created NCU wrapper: /workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_5/matmul_bias/optimize_session_20261026_141010_8iffwhsx/baseline_profiles/ncu_wrapper.py
+2026-10-26 14:11:56,753 - OptimizationManager - INFO - [Round 2] Waiting for profiling semaphore...
+2026-10-26 14:11:56,753 - OptimizationManager - INFO - [Round 2] Acquired profiling semaphore
+2026-10-26 14:11:56,753 - OptimizationManager - INFO - [Round 2] NCU profiling attempt 1/2...
+2026-10-26 14:12:06,837 - OptimizationManager - INFO - ✅ NCU profiling completed for round 2
+2026-10-26 14:12:06,837 - OptimizationManager - INFO - Baseline profiled for parent r1_w0: memory-bound, 64.9% SOL
+2026-10-26 14:13:35,246 - OptimizationManager - INFO - Round 2: 1/1 workers succeeded (1 results received)
+2026-10-26 14:13:35,247 - OptimizationManager - INFO - No improvement (1/5)
+2026-10-26 14:13:35,247 - OptimizationManager - INFO - Round 2 best: worker 0 at 0.0250 ms
+2026-10-26 14:13:35,247 - OptimizationManager - INFO - 
+2026-10-26 14:13:35,247 - OptimizationManager - INFO - ==================== ROUND 3/5 ====================
+2026-10-26 14:16:18,578 - OptimizationManager - INFO - Round 3: 1/1 workers succeeded (1 results received)
+2026-10-26 14:16:18,578 - OptimizationManager - INFO - No improvement (2/5)
+2026-10-26 14:16:18,579 - OptimizationManager - INFO - Round 3 best: worker 0 at 0.0250 ms
+2026-10-26 14:16:18,579 - OptimizationManager - INFO - 
+2026-10-26 14:16:18,579 - OptimizationManager - INFO - ==================== ROUND 4/5 ====================
+2026-10-26 14:18:07,106 - OptimizationManager - INFO - Round 4: 1/1 workers succeeded (1 results received)
+2026-10-26 14:18:07,106 - OptimizationManager - INFO - No improvement (3/5)
+2026-10-26 14:18:07,107 - OptimizationManager - INFO - Round 4 best: worker 0 at 0.0250 ms
+2026-10-26 14:18:07,107 - OptimizationManager - INFO - 
+2026-10-26 14:18:07,107 - OptimizationManager - INFO - ==================== ROUND 5/5 ====================
+2026-10-26 14:19:51,171 - OptimizationManager - INFO - Round 5: 1/1 workers succeeded (1 results received)
+2026-10-26 14:19:51,172 - OptimizationManager - INFO - No improvement (4/5)
+2026-10-26 14:19:51,172 - OptimizationManager - INFO - Round 5 best: worker 0 at 0.0250 ms
+2026-10-26 14:19:51,172 - OptimizationManager - INFO - Strategy signaled termination
+2026-10-26 14:19:51,172 - OptimizationManager - INFO - 
+2026-10-26 14:19:51,172 - OptimizationManager - INFO - ================================================================================
+2026-10-26 14:19:51,172 - OptimizationManager - INFO - OPTIMIZATION COMPLETE
+2026-10-26 14:19:51,172 - OptimizationManager - INFO - ================================================================================
+2026-10-26 14:19:51,173 - OptimizationManager - INFO - Best time: 0.0250ms
+2026-10-26 14:19:51,173 - OptimizationManager - INFO - Speedup vs initial kernel: 1.62x
+2026-10-26 14:19:51,173 - OptimizationManager - INFO - Speedup vs PyTorch eager: 1.01x

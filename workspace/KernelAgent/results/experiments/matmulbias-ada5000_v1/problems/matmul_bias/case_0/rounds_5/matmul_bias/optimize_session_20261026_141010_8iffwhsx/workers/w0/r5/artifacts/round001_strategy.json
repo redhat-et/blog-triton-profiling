@@ -1,0 +1,76 @@
+[
+  {
+    "category": "memory",
+    "summary": "Cache-side memory pressure and poorly hidden load latency limit matmul throughput.",
+    "reasoning": "Memory SOL is 64.89%, versus 52.2% compute SOL. L2 throughput reaches 71.13%, while DRAM throughput is only 19.56%, indicating a cache-side bottleneck rather than external-memory bandwidth saturation. Long-scoreboard stalls of 37.17% show substantial waiting on memory dependencies.",
+    "root_causes": [
+      {
+        "cause": "Low global-load sector utilization increases cache traffic per useful operand byte.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global loads use only half the available bytes per sector."
+          },
+          {
+            "metric": "lts__t_sector_hit_rate.pct",
+            "value": 93.51,
+            "interpretation": "Most requests hit L2, making cache traffic more relevant than DRAM traffic."
+          },
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 71.13,
+            "interpretation": "L2 is the most heavily utilized reported memory level."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Specialize operand loading for the actual A/B strides, mapping adjacent lanes onto contiguous elements and selecting tile dimensions that improve sector utilization.",
+            "rationale": "More useful bytes per sector reduce L1/L2 request pressure without increasing arithmetic work; validate against the reported 50% utilization."
+          }
+        ]
+      },
+      {
+        "cause": "Low active occupancy limits the ability to hide operand-load latency, with register and shared-memory allocations constraining residency.",
+        "evidence": [
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 26.69,
+            "interpretation": "Few active warps are available to execute while other warps await data."
+          },
+          {
+            "metric": "launch__registers_per_thread",
+            "value": 85,
+            "interpretation": "High register usage contributes to residency pressure."
+          },
+          {
+            "metric": "launch__occupancy_limit_shared_mem",
+            "value": 5,
+            "interpretation": "Shared-memory allocation limits residency to five blocks per SM; the register limit is also five."
+          },
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 37.17,
+            "interpretation": "Warps frequently wait for global/local-memory dependencies."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Extend autotuning with smaller output tiles and lower-stage variants, selecting configurations that reduce register/shared-memory footprints without sacrificing latency-hiding benefits.",
+            "rationale": "Higher residency can provide more independent warps to cover load latency; benchmark because smaller tiles reduce reuse and fewer stages reduce prefetch overlap."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Specialize operand loading for the actual A/B strides, mapping adjacent lanes onto contiguous elements and selecting tile dimensions that improve sector utilization.",
+        "rationale": "More useful bytes per sector reduce L1/L2 request pressure without increasing arithmetic work; validate against the reported 50% utilization."
+      },
+      {
+        "fix": "Extend autotuning with smaller output tiles and lower-stage variants, selecting configurations that reduce register/shared-memory footprints without sacrificing latency-hiding benefits.",
+        "rationale": "Higher residency can provide more independent warps to cover load latency; benchmark because smaller tiles reduce reuse and fewer stages reduce prefetch overlap."
+      }
+    ]
+  }
+]

@@ -1,0 +1,331 @@
+--- flash_attention/generated
++++ flash_attention/rounds_10
+@@ -1,175 +1,185 @@
+-import math
+-
+ import torch
+ import triton
+ import triton.language as tl
+ 
+ 
+ @triton.jit
+-def _flash_attention_kernel(
+-    q_ptr,
+-    k_ptr,
+-    v_ptr,
+-    out_ptr,
+-    S,
+-    stride_qb,
+-    stride_qh,
+-    stride_qs,
+-    stride_qd,
+-    stride_kb,
+-    stride_kh,
+-    stride_ks,
+-    stride_kd,
+-    stride_vb,
+-    stride_vh,
+-    stride_vs,
+-    stride_vd,
+-    H: tl.constexpr,
++def _attention_blocks(
++    q, K, V, base, rows, m, l, acc,
++    begin, end,
++    SEQ: tl.constexpr,
+     HEAD_DIM: tl.constexpr,
++    BLOCK_M: tl.constexpr,
++    BLOCK_N: tl.constexpr,
++    MASK_CAUSAL: tl.constexpr,
++):
++    cols = tl.arange(0, BLOCK_N)
++    dims = tl.arange(0, HEAD_DIM)
++    scale: tl.constexpr = 1.4426950408889634 * HEAD_DIM ** -0.5
++
++    k_ptrs = K + base + dims[:, None] + cols[None, :] * HEAD_DIM
++    v_ptrs = V + base + cols[:, None] * HEAD_DIM + dims[None, :]
++
++    for start in tl.range(begin, end, BLOCK_N):
++        start = tl.multiple_of(start, BLOCK_N)
++        keys = start + cols
++
++        if SEQ % BLOCK_N == 0:
++            k = tl.load(k_ptrs + start * HEAD_DIM)
++            v = tl.load(v_ptrs + start * HEAD_DIM)
++        else:
++            k = tl.load(
++                k_ptrs + start * HEAD_DIM,
++                mask=keys[None, :] < SEQ,
++                other=0,
++            )
++            v = tl.load(
++                v_ptrs + start * HEAD_DIM,
++                mask=keys[:, None] < SEQ,
++                other=0,
++            )
++
++        scores = tl.dot(q, k) * scale
++
++        if SEQ % BLOCK_N != 0:
++            scores = tl.where(keys[None, :] < SEQ, scores, -float("inf"))
++        if MASK_CAUSAL:
++            scores = tl.where(
++                keys[None, :] <= rows[:, None],
++                scores,
++                -float("inf"),
++            )
++
++        next_m = tl.maximum(m, tl.max(scores, axis=1))
++        p = tl.exp2(scores - next_m[:, None])
++        alpha = tl.exp2(m - next_m)
++        block_l = tl.sum(p, axis=1)
++
++        acc = acc * alpha[:, None]
++        acc = tl.dot(p.to(q.dtype), v, acc)
++        l = l * alpha + block_l
++        m = next_m
++
++    return m, l, acc
++
++
++@triton.autotune(
++    configs=[
++        triton.Config(
++            {"BLOCK_M": 32, "BLOCK_N": 64},
++            num_warps=2,
++            num_stages=3,
++        ),
++        triton.Config(
++            {"BLOCK_M": 32, "BLOCK_N": 128},
++            num_warps=4,
++            num_stages=3,
++        ),
++        triton.Config(
++            {"BLOCK_M": 64, "BLOCK_N": 64},
++            num_warps=2,
++            num_stages=3,
++        ),
++        triton.Config(
++            {"BLOCK_M": 64, "BLOCK_N": 64},
++            num_warps=4,
++            num_stages=3,
++        ),
++        triton.Config(
++            {"BLOCK_M": 64, "BLOCK_N": 128},
++            num_warps=4,
++            num_stages=3,
++        ),
++        triton.Config(
++            {"BLOCK_M": 128, "BLOCK_N": 32},
++            num_warps=4,
++            num_stages=3,
++        ),
++        triton.Config(
++            {"BLOCK_M": 128, "BLOCK_N": 64},
++            num_warps=4,
++            num_stages=3,
++        ),
++        triton.Config(
++            {"BLOCK_M": 128, "BLOCK_N": 64},
++            num_warps=8,
++            num_stages=2,
++        ),
++    ],
++    key=["SEQ", "HEAD_DIM", "BATCH_HEADS", "CAUSAL"],
++)
++@triton.jit
++def _flash_attention(
++    Q, K, V, O,
++    SEQ: tl.constexpr,
++    HEAD_DIM: tl.constexpr,
++    BATCH_HEADS: tl.constexpr,
+     CAUSAL: tl.constexpr,
+     BLOCK_M: tl.constexpr,
+     BLOCK_N: tl.constexpr,
+ ):
+-    # Each program handles a block of query rows for one batch/head pair.
+-    pid_m = tl.program_id(0)
+-    pid_bh = tl.program_id(1)
+-    batch = pid_bh // H
+-    head = pid_bh % H
++    query_block = tl.program_id(0)
++    batch_head = tl.program_id(1)
++    base = batch_head * SEQ * HEAD_DIM
+ 
+-    offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+-    offs_n = tl.arange(0, BLOCK_N)
+-    offs_d = tl.arange(0, HEAD_DIM)
++    rows = query_block * BLOCK_M + tl.arange(0, BLOCK_M)
++    dims = tl.arange(0, HEAD_DIM)
++    q_ptrs = Q + base + rows[:, None] * HEAD_DIM + dims[None, :]
+ 
+-    q_base = batch * stride_qb + head * stride_qh
+-    k_base = batch * stride_kb + head * stride_kh
+-    v_base = batch * stride_vb + head * stride_vh
++    if SEQ % BLOCK_M == 0:
++        q = tl.load(q_ptrs)
++    else:
++        q = tl.load(q_ptrs, mask=rows[:, None] < SEQ, other=0)
+ 
+-    q_ptrs = (
+-        q_ptr
+-        + q_base
+-        + offs_m[:, None] * stride_qs
+-        + offs_d[None, :] * stride_qd
+-    )
+-    q = tl.load(
+-        q_ptrs,
+-        mask=(offs_m[:, None] < S) & (offs_d[None, :] < HEAD_DIM),
+-        other=0.0,
+-    )
++    m = tl.full((BLOCK_M,), -float("inf"), tl.float32)
++    l = tl.zeros((BLOCK_M,), tl.float32)
++    acc = tl.zeros((BLOCK_M, HEAD_DIM), tl.float32)
+ 
+-    # Online softmax state for each query row. The accumulator is the
+-    # unnormalized weighted sum of V for the keys seen so far.
+-    row_max = tl.full((BLOCK_M,), float("-inf"), dtype=tl.float32)
+-    row_sum = tl.zeros((BLOCK_M,), dtype=tl.float32)
+-    acc = tl.zeros((BLOCK_M, HEAD_DIM), dtype=tl.float32)
+-    scale = 1.0 / tl.sqrt(float(HEAD_DIM))
++    if CAUSAL:
++        prefix_end = (query_block * BLOCK_M // BLOCK_N) * BLOCK_N
+ 
+-    for start_n in range(0, S, BLOCK_N):
+-        key_rows = start_n + offs_n
+-
+-        k_ptrs = (
+-            k_ptr
+-            + k_base
+-            + key_rows[:, None] * stride_ks
+-            + offs_d[None, :] * stride_kd
+-        )
+-        v_ptrs = (
+-            v_ptr
+-            + v_base
+-            + key_rows[:, None] * stride_vs
+-            + offs_d[None, :] * stride_vd
++        m, l, acc = _attention_blocks(
++            q, K, V, base, rows, m, l, acc,
++            0, prefix_end,
++            SEQ, HEAD_DIM, BLOCK_M, BLOCK_N, False,
+         )
+ 
+-        k = tl.load(
+-            k_ptrs,
+-            mask=(key_rows[:, None] < S) & (offs_d[None, :] < HEAD_DIM),
+-            other=0.0,
++        diagonal_end = tl.minimum((query_block + 1) * BLOCK_M, SEQ)
++        m, l, acc = _attention_blocks(
++            q, K, V, base, rows, m, l, acc,
++            prefix_end, diagonal_end,
++            SEQ, HEAD_DIM, BLOCK_M, BLOCK_N, True,
+         )
+-        v = tl.load(
+-            v_ptrs,
+-            mask=(key_rows[:, None] < S) & (offs_d[None, :] < HEAD_DIM),
+-            other=0.0,
++    else:
++        m, l, acc = _attention_blocks(
++            q, K, V, base, rows, m, l, acc,
++            0, SEQ,
++            SEQ, HEAD_DIM, BLOCK_M, BLOCK_N, False,
+         )
+ 
+-        # QK^T, scaling, and masking are fused with the online softmax.
+-        scores = tl.dot(q, tl.trans(k)) * scale
+-        key_mask = key_rows < S
+-        if CAUSAL:
+-            key_mask = key_mask[None, :] & (offs_m[:, None] >= key_rows[None, :])
+-        else:
+-            key_mask = tl.broadcast_to(key_mask[None, :], (BLOCK_M, BLOCK_N))
+-        scores = tl.where(key_mask, scores, float("-inf"))
++    result = (acc / l[:, None]).to(O.dtype.element_ty)
++    out_ptrs = O + base + rows[:, None] * HEAD_DIM + dims[None, :]
+ 
+-        block_max = tl.max(scores, axis=1)
+-        new_max = tl.maximum(row_max, block_max)
+-        alpha = tl.exp(row_max - new_max)
+-        probs = tl.exp(scores - new_max[:, None])
+-        probs = tl.where(key_mask, probs, 0.0)
+-
+-        row_sum = row_sum * alpha + tl.sum(probs, axis=1)
+-        acc = acc * alpha[:, None] + tl.dot(
+-            probs.to(q.dtype), v, out_dtype=tl.float32
+-        )
+-        row_max = new_max
+-
+-    result = acc / row_sum[:, None]
+-    out_ptrs = out_ptr + (pid_bh * S + offs_m[:, None]) * HEAD_DIM + offs_d[None, :]
+-    tl.store(
+-        out_ptrs,
+-        result,
+-        mask=(offs_m[:, None] < S) & (offs_d[None, :] < HEAD_DIM),
+-    )
++    if SEQ % BLOCK_M == 0:
++        tl.store(out_ptrs, result)
++    else:
++        tl.store(out_ptrs, result, mask=rows[:, None] < SEQ)
+ 
+ 
+ def kernel_function(Q, K, V, causal):
+-    """Compute scaled dot-product attention with a single fused Triton kernel.
++    batch, heads, seq, head_dim = Q.shape
++    output = torch.empty(Q.shape, dtype=Q.dtype, device=Q.device)
+ 
+-    The kernel fuses QK^T, scaling, optional causal masking, numerically stable
+-    online softmax, and the weighted V reduction. It does not materialize the
+-    attention-score or probability matrices.
+-    """
+-    if Q.ndim != 4 or K.ndim != 4 or V.ndim != 4:
+-        raise ValueError("Q, K, and V must have shape [batch, heads, seq, dim]")
+-    if Q.shape != K.shape or Q.shape != V.shape:
+-        raise ValueError("Q, K, and V must have identical shapes")
+-    if Q.dtype != K.dtype or Q.dtype != V.dtype:
+-        raise ValueError("Q, K, and V must have the same dtype")
+-    if Q.device != K.device or Q.device != V.device:
+-        raise ValueError("Q, K, and V must be on the same device")
+-    if not Q.is_cuda:
+-        raise ValueError("Q, K, and V must be CUDA tensors")
+-
+-    batch, heads, seq, head_dim = Q.shape
+-    output = torch.empty(
+-        (batch, heads, seq, head_dim), device=Q.device, dtype=Q.dtype
++    grid = lambda meta: (
++        triton.cdiv(seq, meta["BLOCK_M"]),
++        batch * heads,
+     )
+ 
+-    block_m = 16
+-    block_n = 64
+-    grid = (triton.cdiv(seq, block_m), batch * heads)
+-
+-    _flash_attention_kernel[grid](
+-        Q,
+-        K,
+-        V,
+-        output,
+-        seq,
+-        Q.stride(0),
+-        Q.stride(1),
+-        Q.stride(2),
+-        Q.stride(3),
+-        K.stride(0),
+-        K.stride(1),
+-        K.stride(2),
+-        K.stride(3),
+-        V.stride(0),
+-        V.stride(1),
+-        V.stride(2),
+-        V.stride(3),
+-        H=heads,
++    _flash_attention[grid](
++        Q, K, V, output,
++        SEQ=seq,
+         HEAD_DIM=head_dim,
++        BATCH_HEADS=batch * heads,
+         CAUSAL=bool(causal),
+-        BLOCK_M=block_m,
+-        BLOCK_N=block_n,
+-        num_warps=4,
+     )
+     return output

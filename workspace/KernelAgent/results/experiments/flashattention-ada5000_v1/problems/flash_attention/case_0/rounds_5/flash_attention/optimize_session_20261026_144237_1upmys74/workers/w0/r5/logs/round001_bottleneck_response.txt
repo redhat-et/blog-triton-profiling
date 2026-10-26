@@ -1,0 +1,56 @@
+[
+  {
+    "category": "memory",
+    "summary": "The measured integer-fill kernel is DRAM-bandwidth-bound; these metrics do not characterize the Triton attention kernel.",
+    "reasoning": "DRAM throughput reaches 86.85% sustained utilization (488.64 GB/s), while SM throughput is only 4.16%. Active-warp occupancy is 93.87%, so underutilization is not the primary issue. The profiled symbol is at::vectorized_elementwise_kernel with FillFunctor<int>, not _flash_attention_kernel.",
+    "root_causes": [
+      {
+        "cause": "Large, write-dominated fill traffic consumes available DRAM bandwidth.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 225971712,
+            "interpretation": "Approximately 226 MB of writes dominate the measured traffic."
+          },
+          {
+            "metric": "dram__bytes_read.sum",
+            "value": 3086976,
+            "interpretation": "Reads constitute only about 1.35% of total DRAM traffic."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 86.85,
+            "interpretation": "The fill is already close to sustained DRAM bandwidth."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Identify the filled allocation and remove initialization if every element is overwritten before being read.",
+            "rationale": "Eliminating an unnecessary fill removes its write traffic rather than trying to substantially accelerate an already bandwidth-efficient operation."
+          }
+        ]
+      },
+      {
+        "cause": "The standalone fill performs little computation per byte written, making its memory pass the dominant cost.",
+        "evidence": [
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 4.16,
+            "interpretation": "Compute demand is low relative to the saturated memory subsystem, consistent with the reported integer-fill kernel."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 93.87,
+            "interpretation": "High active-warp occupancy indicates that insufficient resident warps are not the primary limitation."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "If initialization is required, fuse its semantics into the consuming or producing kernel where correctness permits.",
+            "rationale": "Fusion can avoid a separate full-buffer memory pass. Profile _flash_attention_kernel separately before applying attention-specific tuning."
+          }
+        ]
+      }
+    ]
+  }
+]

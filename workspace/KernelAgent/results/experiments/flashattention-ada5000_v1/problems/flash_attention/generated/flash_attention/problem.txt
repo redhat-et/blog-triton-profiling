@@ -1,0 +1,49 @@
+Implement the forward pass of flash attention (scaled dot-product attention)
+as a Triton kernel.
+
+Wrapper signature (must be defined at the top level of kernel.py):
+    def kernel_function(Q, K, V, causal):
+
+Inputs:
+- Q, K, V: 4D tensors of shape (B, H, S, D) — batch size, number of heads,
+  sequence length, head dimension; dtype float16 or bfloat16; contiguous;
+  on CUDA
+- causal: bool — when True, query position i attends only to key/value
+  positions j <= i (lower-triangular causal mask); when False, every query
+  attends to every key/value position
+
+Output:
+- 4D tensor of shape (B, H, S, D), same dtype as Q, containing
+  softmax((Q @ K^T) / sqrt(D)) @ V
+
+Requirements:
+- Use the flash-attention algorithm: tile the queries and iterate over
+  key/value blocks with an online (running) softmax — do NOT materialize
+  the full (S, S) attention score matrix in global memory
+- Keep the running maximum m_i, running normalizer l_i, and the output
+  accumulator in float32
+- Scale the logits by 1/sqrt(D)
+- Apply the causal mask block-wise when causal=True; skip key/value blocks
+  that are fully masked for efficiency
+- Handle arbitrary B, H, S, including sequence lengths that are not
+  multiples of the chosen block sizes (mask boundary loads and stores).
+  D is one of 32, 64, or 128
+- Support both float16 and bfloat16 inputs
+- The wrapper kernel_function must allocate the output tensor, launch the
+  Triton kernel(s), and return the output tensor
+- Do NOT use torch.matmul / torch.mm / torch.bmm / torch.einsum /
+  F.scaled_dot_product_attention, cuDNN, FlashAttention libraries, or any
+  PyTorch compute op to produce the result; only Triton kernels may
+  perform the computation (allocating tensors with torch.empty or
+  torch.zeros is allowed)
+- Wrap the attention @triton.jit kernel in @triton.autotune with a small
+  (about 4-8 entries) config space of triton.Config objects that sweeps
+  BLOCK_M, BLOCK_N and num_warps/num_stages for good performance on the
+  target GPU: NVIDIA RTX 5000 Ada Generation Laptop GPU (16GB, compute capability 8.9, Ada Lovelace, sm_89)
+- Build the grid from the selected config (for example
+  grid = lambda meta: ... using meta["BLOCK_M"]) so the autotuner's choice
+  actually takes effect, and key the autotuner on SEQ, HEAD_DIM,
+  BATCH_HEADS and CAUSAL
+- Keep the config space small enough to compile and tune quickly on this
+  GPU and within its shared-memory limit; a config that cannot launch is
+  silently scored as infinity by the autotuner

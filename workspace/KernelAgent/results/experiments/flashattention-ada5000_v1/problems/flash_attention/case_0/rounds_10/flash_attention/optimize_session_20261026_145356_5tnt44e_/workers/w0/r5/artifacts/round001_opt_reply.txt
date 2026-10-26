@@ -1,0 +1,147 @@
+```python
+import torch
+import triton
+import triton.language as tl
+
+
+@triton.jit
+def _attention_blocks(
+    q, K, V, base, rows, m, l, acc,
+    start, end,
+    SEQ: tl.constexpr,
+    HEAD_DIM: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    MASK_CAUSAL: tl.constexpr,
+):
+    cols = tl.arange(0, BLOCK_N)
+    dims = tl.arange(0, HEAD_DIM)
+    scale: tl.constexpr = 1.4426950408889634 * HEAD_DIM ** -0.5
+
+    k_ptrs = K + base + dims[:, None] + cols[None, :] * HEAD_DIM
+    v_ptrs = V + base + cols[:, None] * HEAD_DIM + dims[None, :]
+
+    for block in range(start, end, BLOCK_N):
+        keys = block + cols
+        if SEQ % BLOCK_N == 0:
+            k = tl.load(k_ptrs + block * HEAD_DIM)
+        else:
+            k = tl.load(
+                k_ptrs + block * HEAD_DIM,
+                keys[None, :] < SEQ,
+                other=0,
+            )
+
+        scores = tl.dot(q, k)
+
+        if SEQ % BLOCK_N != 0:
+            scores = tl.where(keys[None, :] < SEQ, scores, -float("inf"))
+        if MASK_CAUSAL:
+            scores = tl.where(
+                rows[:, None] >= keys[None, :], scores, -float("inf")
+            )
+
+        m_new = tl.maximum(m, tl.max(scores, axis=1))
+        alpha = tl.exp2((m - m_new) * scale)
+        p = tl.exp2(scores * scale - (m_new * scale)[:, None])
+        p_sum = tl.sum(p, axis=1)
+        p_low = p.to(q.dtype)
+
+        if SEQ % BLOCK_N == 0:
+            v = tl.load(v_ptrs + block * HEAD_DIM)
+        else:
+            v = tl.load(
+                v_ptrs + block * HEAD_DIM,
+                keys[:, None] < SEQ,
+                other=0,
+            )
+
+        acc = acc * alpha[:, None]
+        acc = tl.dot(p_low, v, acc)
+        l = l * alpha + p_sum
+        m = m_new
+
+    return m, l, acc
+
+
+@triton.autotune(
+    configs=[
+        triton.Config({"BLOCK_M": 32, "BLOCK_N": 32}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_M": 32, "BLOCK_N": 64}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_M": 32, "BLOCK_N": 64}, num_warps=4, num_stages=3),
+        triton.Config({"BLOCK_M": 32, "BLOCK_N": 64}, num_warps=2, num_stages=3),
+        triton.Config({"BLOCK_M": 64, "BLOCK_N": 32}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_M": 64, "BLOCK_N": 64}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_M": 64, "BLOCK_N": 64}, num_warps=4, num_stages=3),
+        triton.Config({"BLOCK_M": 128, "BLOCK_N": 32}, num_warps=4, num_stages=2),
+    ],
+    key=["SEQ", "HEAD_DIM", "BATCH_HEADS", "CAUSAL"],
+)
+@triton.jit
+def _flash_attention_kernel(
+    Q, K, V, O,
+    SEQ: tl.constexpr,
+    HEAD_DIM: tl.constexpr,
+    BATCH_HEADS: tl.constexpr,
+    CAUSAL: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+):
+    pid_m = tl.program_id(0)
+    pid_bh = tl.program_id(1)
+    base = pid_bh * SEQ * HEAD_DIM
+
+    rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+    dims = tl.arange(0, HEAD_DIM)
+    q_ptrs = Q + base + rows[:, None] * HEAD_DIM + dims[None, :]
+
+    if SEQ % BLOCK_M == 0:
+        q = tl.load(q_ptrs)
+    else:
+        q = tl.load(q_ptrs, rows[:, None] < SEQ, other=0)
+
+    m = tl.full((BLOCK_M,), -float("inf"), tl.float32)
+    l = tl.zeros((BLOCK_M,), tl.float32)
+    acc = tl.zeros((BLOCK_M, HEAD_DIM), tl.float32)
+
+    if CAUSAL:
+        prefix_end = (pid_m * BLOCK_M // BLOCK_N) * BLOCK_N
+        m, l, acc = _attention_blocks(
+            q, K, V, base, rows, m, l, acc,
+            0, prefix_end,
+            SEQ, HEAD_DIM, BLOCK_M, BLOCK_N, False,
+        )
+        diagonal_end = tl.minimum((pid_m + 1) * BLOCK_M, SEQ)
+        m, l, acc = _attention_blocks(
+            q, K, V, base, rows, m, l, acc,
+            prefix_end, diagonal_end,
+            SEQ, HEAD_DIM, BLOCK_M, BLOCK_N, True,
+        )
+    else:
+        m, l, acc = _attention_blocks(
+            q, K, V, base, rows, m, l, acc,
+            0, SEQ,
+            SEQ, HEAD_DIM, BLOCK_M, BLOCK_N, False,
+        )
+
+    result = (acc / l[:, None]).to(O.dtype.element_ty)
+    out_ptrs = O + base + rows[:, None] * HEAD_DIM + dims[None, :]
+    if SEQ % BLOCK_M == 0:
+        tl.store(out_ptrs, result)
+    else:
+        tl.store(out_ptrs, result, rows[:, None] < SEQ)
+
+
+def kernel_function(Q, K, V, causal):
+    batch, heads, seq, head_dim = Q.shape
+    output = torch.empty(Q.shape, device=Q.device, dtype=Q.dtype)
+    grid = lambda meta: (triton.cdiv(seq, meta["BLOCK_M"]), batch * heads)
+    _flash_attention_kernel[grid](
+        Q, K, V, output,
+        SEQ=seq,
+        HEAD_DIM=head_dim,
+        BATCH_HEADS=batch * heads,
+        CAUSAL=bool(causal),
+    )
+    return output
+```

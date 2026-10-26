@@ -1,0 +1,15 @@
+{
+  "problem": "flash_attention",
+  "model": "gpt-6-luna",
+  "llm_backend": "openai",
+  "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "workers": 1,
+  "rounds": 5,
+  "elapsed_s": 33.8,
+  "success": true,
+  "session_dir": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/generated/flash_attention/session_20261026_144154_378873",
+  "generated_at": "2026-10-26T14:42:28.138806",
+  "worker_id": 0,
+  "rounds_used": 1,
+  "kernel_path": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/generated/flash_attention/final_kernel.py"
+}

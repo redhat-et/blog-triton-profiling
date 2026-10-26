@@ -1,0 +1,66 @@
+[
+  {
+    "category": "memory",
+    "summary": "Cache-side memory pressure and load stalls limit the matmul, rather than external DRAM bandwidth.",
+    "reasoning": "Memory SOL is 70.14% versus compute throughput of 38.53%. L2 throughput reaches 74.96%, while DRAM throughput is only 15.24%, indicating a cache-dominated memory bottleneck. Long-scoreboard stalls account for 62.21% of active-warp cycles.",
+    "root_causes": [
+      {
+        "cause": "Global loads use memory sectors inefficiently, increasing traffic through the cache hierarchy.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global loads use only half of each sector on average."
+          },
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 62.21,
+            "interpretation": "Warps frequently wait for dependencies on global-memory loads."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Specialize operand load layouts for the actual input strides so adjacent lanes access contiguous, aligned elements.",
+            "rationale": "Improved coalescing can reduce sector traffic and the service time of operand loads."
+          }
+        ]
+      },
+      {
+        "cause": "Small 32\u00d764 output tiles limit intra-program operand reuse, placing repeated operand-load demand on L2.",
+        "evidence": [
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 74.96,
+            "interpretation": "L2 is the most heavily utilized reported memory level."
+          },
+          {
+            "metric": "lts__t_sector_hit_rate.pct",
+            "value": 95.79,
+            "interpretation": "Most requests hit L2, consistent with repeated cached operand accesses."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 15.24,
+            "interpretation": "External DRAM bandwidth is not saturated."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Benchmark larger output tiles, such as 64\u00d764 or 64\u00d7128, while tuning num_warps and checking occupancy.",
+            "rationale": "Larger tiles reuse each loaded operand across more output elements, reducing cache traffic per FLOP; occupancy checks guard against excessive resource usage."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Specialize operand load layouts for the actual input strides so adjacent lanes access contiguous, aligned elements.",
+        "rationale": "Improved coalescing can reduce sector traffic and the service time of operand loads."
+      },
+      {
+        "fix": "Benchmark larger output tiles, such as 64\u00d764 or 64\u00d7128, while tuning num_warps and checking occupancy.",
+        "rationale": "Larger tiles reuse each loaded operand across more output elements, reducing cache traffic per FLOP; occupancy checks guard against excessive resource usage."
+      }
+    ]
+  }
+]

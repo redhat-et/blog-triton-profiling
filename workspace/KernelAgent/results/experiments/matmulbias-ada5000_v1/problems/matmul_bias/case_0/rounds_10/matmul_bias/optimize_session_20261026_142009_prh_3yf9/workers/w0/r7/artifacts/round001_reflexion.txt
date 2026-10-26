@@ -1,0 +1,24 @@
+{
+  "was_diagnosis_correct": true,
+  "was_fix_effective": false,
+  "expected_outcome": "If inefficient global-load sector utilization was limiting performance, improving operand layout and lane-to-element mapping should reduce memory traffic per useful byte and lower kernel latency.",
+  "actual_outcome": "Verification passed, but latency increased from 0.0244 ms to 0.0246 ms, a reported 1.0% regression. NCU SOL remained memory-dominant at 71.0% memory versus 38.8% compute.",
+  "reasoning": "The SOL metrics support the broad memory-bottleneck diagnosis, but they do not establish partially utilized load sectors as the specific cause. The applied action describes inspecting strides and profiling layouts, without evidence that the executed kernel actually used a better-coalesced access pattern. There was no measured speedup, so the fix was not effective in this run. No baseline SOL metrics were supplied, so improvement in memory utilization cannot be determined. Also, SOL memory utilization alone does not measure useful-byte efficiency: a successful traffic reduction need not increase it. The 0.0002 ms timing difference may be measurement noise and requires repeated measurements.",
+  "lessons": [
+    "Distinguish evidence of a general memory bottleneck from evidence of poor sector utilization.",
+    "Confirm that a proposed layout change actually changes operand strides, alignment, and adjacent-lane accesses in the measured execution.",
+    "Compare before-and-after load-sector counts, transferred bytes, cache behavior, and runtime rather than relying on SOL percentages alone.",
+    "Use repeated timing trials to determine whether a roughly 1% change is significant."
+  ],
+  "avoid_patterns": [
+    "Treating inspection or profiling as a completed optimization without verifying a changed access pattern.",
+    "Assuming high memory SOL proves uncoalesced loads or that higher memory SOL necessarily indicates an improvement.",
+    "Introducing packing without accounting for its cost in the workload being optimized."
+  ],
+  "try_patterns": [
+    "Inspect actual A/B strides and map adjacent lanes to adjacent aligned elements where the computation permits.",
+    "Run controlled comparisons of original and contiguous or packed layouts, measuring useful bytes relative to sectors transferred.",
+    "Measure kernel-only gains and packing overhead separately, then evaluate total runtime.",
+    "If sector utilization is already good, investigate other memory limitations such as redundant loads, insufficient reuse, or memory-dependency stalls."
+  ]
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "category": "memory",
+    "summary": "The profiled integer-fill kernel is DRAM-bandwidth-bound; these metrics do not establish the Triton attention kernel's bottleneck.",
+    "reasoning": "DRAM throughput reaches 87.97% while SM throughput is only 4.22%. Active-warp occupancy is 92.48%, arguing against underutilization. The measured kernel is at::vectorized_elementwise_kernel with FillFunctor<int>, not _flash_attention_kernel.",
+    "root_causes": [
+      {
+        "cause": "A large, write-dominated fill consumes most available DRAM bandwidth with little computation.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 226943744,
+            "interpretation": "Approximately 227 MB of writes dominate the approximately 2.08 MB of reads."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 87.97,
+            "interpretation": "DRAM bandwidth is close to saturation."
+          },
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 4.22,
+            "interpretation": "Compute throughput is not the limiting resource."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Trace the filled allocation and remove its initialization if its consumer overwrites every element before reading it.",
+            "rationale": "Eliminating an unnecessary fill removes the bandwidth-heavy pass; preserve initialization wherever values can be read before being overwritten."
+          }
+        ]
+      },
+      {
+        "cause": "The profiling selection captures an auxiliary integer-fill operation rather than the supplied attention kernel, making attribution to attention unsupported.",
+        "evidence": [
+          {
+            "metric": "sm__inst_executed_pipe_tensor.avg.pct_of_peak_sustained_active",
+            "value": 0.0,
+            "interpretation": "Consistent with the reported FillFunctor<int> kernel; this does not characterize the attention kernel's tl.dot operations."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 92.48,
+            "interpretation": "The captured fill has high occupancy, but its occupancy cannot be attributed to the separate Triton launch."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Warm up compilation and autotuning, then filter NCU capture to the selected _flash_attention_kernel launch.",
+            "rationale": "Correct kernel attribution is necessary before choosing attention tile sizes, pipeline stages, or memory optimizations."
+          }
+        ]
+      }
+    ]
+  }
+]

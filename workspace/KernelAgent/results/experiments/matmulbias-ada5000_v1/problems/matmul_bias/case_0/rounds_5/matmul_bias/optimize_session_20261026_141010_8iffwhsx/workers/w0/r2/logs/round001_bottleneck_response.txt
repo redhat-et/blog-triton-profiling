@@ -1,0 +1,61 @@
+[
+  {
+    "category": "memory",
+    "summary": "Cache-side memory pressure and poorly hidden load latency limit the kernel, rather than DRAM bandwidth.",
+    "reasoning": "Memory SOL is 64.89% versus 52.2% compute SOL. L2 throughput reaches 71.13% of active-cycle peak, while DRAM throughput is only 19.56%, consistent with the 93.51% L2 hit rate. Long-scoreboard stalls indicate substantial waiting for memory dependencies.",
+    "root_causes": [
+      {
+        "cause": "Global loads use only half of each transferred sector, increasing cache traffic for the operand tiles.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global-load sector utilization is only 50%, indicating inefficient use of transferred data."
+          },
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 71.13,
+            "interpretation": "L2 is the most heavily utilized measured memory level."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Profile A and B loads separately and tune their tile layouts for the actual input strides, making adjacent lanes access contiguous, aligned elements.",
+            "rationale": "Improving sector utilization reduces cache traffic per useful operand byte and relieves L2 pressure."
+          }
+        ]
+      },
+      {
+        "cause": "Low achieved occupancy limits the ability to hide operand-load latency; register and shared-memory usage constrain residency.",
+        "evidence": [
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 26.69,
+            "interpretation": "Few resident active warps are available to cover memory latency."
+          },
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 37.17,
+            "interpretation": "Warps frequently wait for outstanding memory dependencies."
+          },
+          {
+            "metric": "launch__registers_per_thread",
+            "value": 85,
+            "interpretation": "Register usage contributes to the reported five-block residency limit."
+          },
+          {
+            "metric": "launch__occupancy_limit_shared_mem",
+            "value": 5,
+            "interpretation": "Shared memory also limits residency to five blocks per SM."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Extend autotuning with smaller accumulator tiles and lower-stage variants, selecting configurations that improve occupancy without introducing spills or losing necessary load overlap.",
+            "rationale": "Reducing both register and shared-memory footprints can allow more resident warps to hide load latency."
+          }
+        ]
+      }
+    ]
+  }
+]

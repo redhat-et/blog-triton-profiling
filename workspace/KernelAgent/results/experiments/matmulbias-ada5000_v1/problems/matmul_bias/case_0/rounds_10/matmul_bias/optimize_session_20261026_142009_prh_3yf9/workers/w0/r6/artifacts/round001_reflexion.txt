@@ -1,0 +1,23 @@
+{
+  "was_diagnosis_correct": true,
+  "was_fix_effective": false,
+  "expected_outcome": "Better-coalesced operand loads should reduce wasted memory transactions and cache traffic, lowering total latency if those savings outweigh layout-conversion costs.",
+  "actual_outcome": "Verification passed, but latency increased from 0.0244 ms to 0.0317 ms, a 29.9% regression. Post-change NCU SOL was 39.0% compute and 71.1% memory.",
+  "reasoning": "The higher memory SOL relative to compute SOL is consistent with the broad memory-bottleneck diagnosis, but it does not establish low global-load sector utilization as the specific cause. The fix was ineffective end to end because execution became slower. Packing may have introduced extra reads, writes, launches, or indexing overhead that exceeded any coalescing benefit, but this requires measurement. No baseline SOL or sector-utilization metrics were provided, so improvement in memory efficiency cannot be determined from the reported SOL values alone.",
+  "lessons": [
+    "A plausible memory-bottleneck diagnosis does not guarantee that packing improves overall performance.",
+    "Validate the specific root cause using per-operand load metrics, sectors per request, and transferred bytes before and after the change.",
+    "Measure packing and compute separately while retaining total latency as the acceptance criterion.",
+    "Passing verification establishes correctness, not optimization effectiveness."
+  ],
+  "avoid_patterns": [
+    "Adding a packing pass without checking whether its cost can be amortized.",
+    "Interpreting a single post-change memory SOL value as proof of improved memory efficiency.",
+    "Changing multiple operand layouts without isolating which operand causes inefficient accesses."
+  ],
+  "try_patterns": [
+    "A/B test stride-specialized loads independently for each operand before introducing packing.",
+    "Compare baseline and modified kernels using identical timing boundaries and matched NCU memory metrics.",
+    "Prefer direct coalesced access or fused layout conversion when feasible; evaluate reusable prepacking only when repeated use can amortize its cost."
+  ]
+}

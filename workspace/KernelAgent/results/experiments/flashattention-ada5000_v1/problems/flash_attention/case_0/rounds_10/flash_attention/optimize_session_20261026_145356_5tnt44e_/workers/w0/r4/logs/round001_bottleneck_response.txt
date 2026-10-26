@@ -1,0 +1,51 @@
+[
+  {
+    "category": "memory",
+    "summary": "The profiled integer-fill kernel is limited by DRAM write bandwidth.",
+    "reasoning": "DRAM throughput reaches 83.13% of sustained peak (467.7 GB/s), while SM throughput is only 4.32%. Active-warp occupancy is high at 87.71%, so underutilization is not the primary limitation. These metrics describe a PyTorch FillFunctor<int> kernel, not the supplied Triton attention kernel; they do not establish the attention kernel's bottleneck.",
+    "root_causes": [
+      {
+        "cause": "Bulk initialization generates predominantly DRAM writes, consuming available memory bandwidth.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 226839168,
+            "interpretation": "Approximately 226.8 MB of writes dominate the measured traffic."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 83.13,
+            "interpretation": "DRAM bandwidth is already heavily utilized."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Identify the allocation responsible for this integer fill and remove initialization if every element is overwritten before being read.",
+            "rationale": "Eliminating a redundant fill removes the bandwidth-heavy write pass entirely."
+          }
+        ]
+      },
+      {
+        "cause": "A standalone constant-fill operation performs little computation per byte transferred, making memory movement its dominant cost.",
+        "evidence": [
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 4.32,
+            "interpretation": "Compute throughput is lightly used despite high DRAM utilization, consistent with a low-arithmetic-intensity fill."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 87.71,
+            "interpretation": "High active-warp occupancy indicates that insufficient resident warps are not the main constraint."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "If initialization is required, fuse it into the actual producer or consumer where semantics permit, rather than issuing a separate full-buffer fill.",
+            "rationale": "Combining initialization with useful work can avoid a separate memory pass; increasing arithmetic throughput alone will not accelerate this fill."
+          }
+        ]
+      }
+    ]
+  }
+]

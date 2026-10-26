@@ -1,0 +1,76 @@
+[
+  {
+    "category": "memory",
+    "summary": "Cache-side memory pressure and insufficient latency hiding limit matmul throughput, rather than DRAM bandwidth.",
+    "reasoning": "Memory SOL is 64.89% versus 52.2% compute throughput. L2 throughput reaches 71.13% with a 93.51% hit rate, while DRAM throughput is only 19.56%. Long-scoreboard stalls of 37.17% indicate memory dependencies are limiting progress.",
+    "root_causes": [
+      {
+        "cause": "Inefficient global-load sector utilization increases cache-side traffic for matrix operands.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global loads use only half the available bytes per sector."
+          },
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 71.13,
+            "interpretation": "Substantial L2 activity indicates cache-side bandwidth pressure."
+          },
+          {
+            "metric": "lts__t_sector_hit_rate.pct",
+            "value": 93.51,
+            "interpretation": "Most requests hit L2, so low DRAM utilization does not rule out a memory bottleneck."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Add stride-aware operand-layout specializations and tune tile shapes so adjacent lanes load contiguous, aligned elements; verify that useful bytes per sector increase.",
+            "rationale": "Improved coalescing reduces sector traffic and demand on the L2-to-SM memory path."
+          }
+        ]
+      },
+      {
+        "cause": "Low achieved occupancy limits the ability to hide operand-load latency.",
+        "evidence": [
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 26.69,
+            "interpretation": "Few resident warps are available to overlap memory dependencies."
+          },
+          {
+            "metric": "launch__registers_per_thread",
+            "value": 85,
+            "interpretation": "High register usage contributes to residency constraints."
+          },
+          {
+            "metric": "launch__occupancy_limit_registers",
+            "value": 5,
+            "interpretation": "Registers limit residency to five blocks per SM; shared memory imposes the same block limit."
+          },
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 37.17,
+            "interpretation": "Warps frequently wait on outstanding memory dependencies."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Extend autotuning with smaller accumulator tiles and lower pipeline-stage counts, selecting configurations that reduce register/shared-memory usage without increasing runtime.",
+            "rationale": "Lower per-block resource consumption can increase resident warps and improve memory-latency hiding."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Add stride-aware operand-layout specializations and tune tile shapes so adjacent lanes load contiguous, aligned elements; verify that useful bytes per sector increase.",
+        "rationale": "Improved coalescing reduces sector traffic and demand on the L2-to-SM memory path."
+      },
+      {
+        "fix": "Extend autotuning with smaller accumulator tiles and lower pipeline-stage counts, selecting configurations that reduce register/shared-memory usage without increasing runtime.",
+        "rationale": "Lower per-block resource consumption can increase resident warps and improve memory-latency hiding."
+      }
+    ]
+  }
+]
