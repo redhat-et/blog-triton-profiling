@@ -2,7 +2,7 @@
   "schema_version": 1,
   "experiment_id": "flashattention-ada5000_v1",
   "created_at": "2026-10-26T14:41:49.397753",
-  "updated_at": "2026-10-26T15:20:01.014811",
+  "updated_at": "2026-10-26T21:22:20.370354",
   "status": "completed",
   "configuration": {
     "problems": [
@@ -138,6 +138,26 @@
           ],
           "failure": null
         }
+      },
+      "baselines": {
+        "vllm_triton_prefill": {
+          "status": "verified",
+          "kind": "external",
+          "label": "vllm_triton_prefill",
+          "kernel_path": "problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py",
+          "kernel_sha256": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441",
+          "source_path": "flash_attention/baselines/vllm_triton_prefill.py",
+          "record_path": "problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/verify_vllm_triton_prefill.json",
+          "bench": {
+            "kernel_ms": 0.0818,
+            "ref_ms": 0.0638,
+            "speedup": 0.781,
+            "kernel_tflops": 52.51,
+            "ref_tflops": 67.27
+          },
+          "added_at": "2026-10-26T21:19:55.237991",
+          "failure": null
+        }
       }
     }
   },
@@ -252,11 +272,201 @@
         }
       },
       "status": "completed"
+    },
+    {
+      "capture_id": "capture_20261026_211955_fdad",
+      "created_at": "2026-10-26T21:19:55.238922",
+      "profilers": [
+        "ncu"
+      ],
+      "iters": {
+        "default": 10
+      },
+      "warmup": 10,
+      "ncu_set": "full",
+      "captures": {
+        "flash_attention/vllm_triton_prefill/ncu": {
+          "problem": "flash_attention",
+          "variant": "vllm_triton_prefill",
+          "profiler": "ncu",
+          "label": "vllm_triton_prefill",
+          "iters": 10,
+          "status": "ok",
+          "report_path": "captures/capture_20261026_211955_fdad/flash_attention/vllm_triton_prefill_ncu_case0.ncu-rep",
+          "metadata_path": "captures/capture_20261026_211955_fdad/flash_attention/vllm_triton_prefill_ncu_case0.json",
+          "exports": [
+            {
+              "name": "ncu_details_csv",
+              "status": "ok",
+              "paths": [
+                "captures/capture_20261026_211955_fdad/flash_attention/vllm_triton_prefill_ncu_case0.details.csv"
+              ]
+            },
+            {
+              "name": "ncu_raw_csv",
+              "status": "ok",
+              "paths": [
+                "captures/capture_20261026_211955_fdad/flash_attention/vllm_triton_prefill_ncu_case0.raw.csv"
+              ]
+            }
+          ],
+          "kernel_sha256": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441",
+          "failure": null,
+          "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+          "torch": "2.13.0+cu129",
+          "triton": "3.7.1",
+          "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0"
+        }
+      },
+      "status": "completed"
+    },
+    {
+      "capture_id": "capture_20261026_212117_4e7d",
+      "created_at": "2026-10-26T21:21:17.381965",
+      "profilers": [
+        "ncu"
+      ],
+      "iters": {
+        "default": 10
+      },
+      "warmup": 10,
+      "ncu_set": "full",
+      "captures": {
+        "flash_attention/generated/ncu": {
+          "problem": "flash_attention",
+          "variant": "generated",
+          "profiler": "ncu",
+          "label": "generated",
+          "iters": 10,
+          "status": "ok",
+          "report_path": "captures/capture_20261026_212117_4e7d/flash_attention/generated_ncu_case0.ncu-rep",
+          "metadata_path": "captures/capture_20261026_212117_4e7d/flash_attention/generated_ncu_case0.json",
+          "exports": [
+            {
+              "name": "ncu_details_csv",
+              "status": "ok",
+              "paths": [
+                "captures/capture_20261026_212117_4e7d/flash_attention/generated_ncu_case0.details.csv"
+              ]
+            },
+            {
+              "name": "ncu_raw_csv",
+              "status": "ok",
+              "paths": [
+                "captures/capture_20261026_212117_4e7d/flash_attention/generated_ncu_case0.raw.csv"
+              ]
+            }
+          ],
+          "kernel_sha256": "d1c93f8eb4837df3292414db089c5e46727010177ac5883913dc66d4185b0b08",
+          "failure": null,
+          "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+          "torch": "2.13.0+cu129",
+          "triton": "3.7.1",
+          "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0"
+        },
+        "flash_attention/rounds_10/ncu": {
+          "problem": "flash_attention",
+          "variant": "rounds_10",
+          "profiler": "ncu",
+          "label": "rounds_10",
+          "iters": 10,
+          "status": "ok",
+          "report_path": "captures/capture_20261026_212117_4e7d/flash_attention/rounds_10_ncu_case0.ncu-rep",
+          "metadata_path": "captures/capture_20261026_212117_4e7d/flash_attention/rounds_10_ncu_case0.json",
+          "exports": [
+            {
+              "name": "ncu_details_csv",
+              "status": "ok",
+              "paths": [
+                "captures/capture_20261026_212117_4e7d/flash_attention/rounds_10_ncu_case0.details.csv"
+              ]
+            },
+            {
+              "name": "ncu_raw_csv",
+              "status": "ok",
+              "paths": [
+                "captures/capture_20261026_212117_4e7d/flash_attention/rounds_10_ncu_case0.raw.csv"
+              ]
+            }
+          ],
+          "kernel_sha256": "9b1431e00661389fb25f70b141a99a89a54194ca048ed1e91555db98b73c953b",
+          "failure": null,
+          "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+          "torch": "2.13.0+cu129",
+          "triton": "3.7.1",
+          "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0"
+        },
+        "flash_attention/rounds_5/ncu": {
+          "problem": "flash_attention",
+          "variant": "rounds_5",
+          "profiler": "ncu",
+          "label": "rounds_5",
+          "iters": 10,
+          "status": "ok",
+          "report_path": "captures/capture_20261026_212117_4e7d/flash_attention/rounds_5_ncu_case0.ncu-rep",
+          "metadata_path": "captures/capture_20261026_212117_4e7d/flash_attention/rounds_5_ncu_case0.json",
+          "exports": [
+            {
+              "name": "ncu_details_csv",
+              "status": "ok",
+              "paths": [
+                "captures/capture_20261026_212117_4e7d/flash_attention/rounds_5_ncu_case0.details.csv"
+              ]
+            },
+            {
+              "name": "ncu_raw_csv",
+              "status": "ok",
+              "paths": [
+                "captures/capture_20261026_212117_4e7d/flash_attention/rounds_5_ncu_case0.raw.csv"
+              ]
+            }
+          ],
+          "kernel_sha256": "138f765d4df325b4ac22258049ae820cee3fdae58e1ae503ae2176663f0ea130",
+          "failure": null,
+          "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+          "torch": "2.13.0+cu129",
+          "triton": "3.7.1",
+          "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0"
+        },
+        "flash_attention/vllm_triton_prefill/ncu": {
+          "problem": "flash_attention",
+          "variant": "vllm_triton_prefill",
+          "profiler": "ncu",
+          "label": "vllm_triton_prefill",
+          "iters": 10,
+          "status": "ok",
+          "report_path": "captures/capture_20261026_212117_4e7d/flash_attention/vllm_triton_prefill_ncu_case0.ncu-rep",
+          "metadata_path": "captures/capture_20261026_212117_4e7d/flash_attention/vllm_triton_prefill_ncu_case0.json",
+          "exports": [
+            {
+              "name": "ncu_details_csv",
+              "status": "ok",
+              "paths": [
+                "captures/capture_20261026_212117_4e7d/flash_attention/vllm_triton_prefill_ncu_case0.details.csv"
+              ]
+            },
+            {
+              "name": "ncu_raw_csv",
+              "status": "ok",
+              "paths": [
+                "captures/capture_20261026_212117_4e7d/flash_attention/vllm_triton_prefill_ncu_case0.raw.csv"
+              ]
+            }
+          ],
+          "kernel_sha256": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441",
+          "failure": null,
+          "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+          "torch": "2.13.0+cu129",
+          "triton": "3.7.1",
+          "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0"
+        }
+      },
+      "status": "completed"
     }
   ],
   "report": {
     "path": "reports/comparison.md",
-    "generated_at": "2026-10-26T15:20:01.014803"
+    "generated_at": "2026-10-26T21:22:20.370344"
   },
   "shared_harness": {
     "file": "_harness.py",

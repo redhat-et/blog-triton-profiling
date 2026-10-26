@@ -669,9 +669,11 @@ added only to a terminal experiment (`completed`, `partial`, or
 An experiment's variants all descend from one LLM-generated kernel. To
 compare a hand-written kernel against them — one lifted from a blog
 post or a library, or from your own tuning study — add it as an
-**external baseline**. The repository ships one: the ROCm blog's fused
+**external baseline**. The repository ships two: the ROCm blog's fused
 matmul + bias kernel, adapted to the problem contract at
-`problems/matmul_bias/baselines/rocm_blog_fusion.py`.
+`problems/matmul_bias/baselines/rocm_blog_fusion.py`, and vLLM v0.32.0's
+Triton prefill-attention kernel at
+`problems/flash_attention/baselines/vllm_triton_prefill.py`.
 
 An external kernel must satisfy the same contract as a generated one —
 a top-level `kernel_function(A, B, bias)` computing `(A @ B) + bias`
@@ -683,6 +685,14 @@ follow the inputs (the blog hardcodes fp16, which fails the bf16
 cases). The kernel body, autotune config space, and launch metadata
 are unchanged, so the performance comparison stays honest.
 
+The vLLM baseline is already a contiguous flash-attention forward with
+online softmax, causal and non-causal, and arbitrary sequence lengths, so
+it needs only vLLM-import/platform shims and a wrapper. The wrapper maps
+the problem's `(B, H, S, D)` tensors onto the kernel's `[b*s, head, d]`
+layout with a zero-copy view (batch and heads are flattened into the
+kernel's batch axis with head = 1). The kernel body, masking, block-size
+heuristic, and launch parameters are unchanged.
+
 Add it to a saved experiment — one in a terminal state (`completed` or
 `partial`); no LLM is involved:
 
@@ -690,6 +700,16 @@ Add it to a saved experiment — one in a terminal state (`completed` or
 make kernelagent-experiment-baseline KA_EXPERIMENT=webinar-v1 \
   KA_PROBLEM=matmul_bias KA_LABEL=rocm_blog_fusion \
   KA_KERNEL_SOURCE=matmul_bias/baselines/rocm_blog_fusion.py
+```
+
+The flash-attention baseline is added the same way. Matching the
+experiment's existing captures keeps the report comparable:
+
+```bash
+make kernelagent-experiment-baseline KA_EXPERIMENT=flashattention-ada5000_v1 \
+  KA_PROBLEM=flash_attention KA_LABEL=vllm_triton_prefill \
+  KA_KERNEL_SOURCE=flash_attention/baselines/vllm_triton_prefill.py \
+  KA_PROFILER=ncu KA_NCU_SET=full
 ```
 
 `KA_KERNEL_SOURCE` is a host path (absolute or relative to the repository

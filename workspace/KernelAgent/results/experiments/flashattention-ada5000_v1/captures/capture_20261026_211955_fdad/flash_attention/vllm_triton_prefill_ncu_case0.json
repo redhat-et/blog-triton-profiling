@@ -1,0 +1,36 @@
+{
+  "problem": "flash_attention",
+  "case": 0,
+  "case_spec": "(2, 8, 1024, 64, False, 'float16')",
+  "impl": "kernel",
+  "label": "vllm_triton_prefill",
+  "profiler": "ncu",
+  "iters": 10,
+  "warmup": 10,
+  "ncu_set": "full",
+  "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "torch": "2.13.0+cu129",
+  "triton": "3.7.1",
+  "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+  "report": "/workspace/user/results/experiments/flashattention-ada5000_v1/captures/capture_20261026_211955_fdad/flash_attention/vllm_triton_prefill_ncu_case0.ncu-rep",
+  "kernel_path": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py",
+  "kernel_sha256": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441",
+  "exports": [
+    {
+      "name": "ncu_details_csv",
+      "status": "ok",
+      "paths": [
+        "/workspace/user/results/experiments/flashattention-ada5000_v1/captures/capture_20261026_211955_fdad/flash_attention/vllm_triton_prefill_ncu_case0.details.csv"
+      ]
+    },
+    {
+      "name": "ncu_raw_csv",
+      "status": "ok",
+      "paths": [
+        "/workspace/user/results/experiments/flashattention-ada5000_v1/captures/capture_20261026_211955_fdad/flash_attention/vllm_triton_prefill_ncu_case0.raw.csv"
+      ]
+    }
+  ],
+  "command": "/usr/local/bin/profile-kernel.py flash_attention --case 0 --impl kernel --kernel /workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py --label vllm_triton_prefill --out /workspace/user/results/experiments/flashattention-ada5000_v1/captures/capture_20261026_211955_fdad --profiler ncu --iters 10 --warmup 10 --ncu-set full",
+  "created_at": "2026-10-26T21:20:11.114257"
+}

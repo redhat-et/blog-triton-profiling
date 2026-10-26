@@ -3,7 +3,7 @@
   "experiment_id": "flashattention-ada5000_v1",
   "status": "completed",
   "created_at": "2026-10-26T14:41:49.397753",
-  "report_generated_at": "2026-10-26T15:20:01.012009",
+  "report_generated_at": "2026-10-26T17:22:56.657620",
   "configuration": {
     "problems": [
       "flash_attention"
@@ -51,8 +51,8 @@
     "git": null
   },
   "capture_batch": {
-    "capture_id": "capture_20261026_151913_e52e",
-    "created_at": "2026-10-26T15:19:13.813046",
+    "capture_id": "capture_20261026_212117_4e7d",
+    "created_at": "2026-10-26T21:21:17.381965",
     "profilers": [
       "ncu"
     ],
@@ -101,21 +101,21 @@
               "label": "generated",
               "iters": 10,
               "status": "ok",
-              "report_path": "captures/capture_20261026_151913_e52e/flash_attention/generated_ncu_case0.ncu-rep",
-              "metadata_path": "captures/capture_20261026_151913_e52e/flash_attention/generated_ncu_case0.json",
+              "report_path": "captures/capture_20261026_212117_4e7d/flash_attention/generated_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_212117_4e7d/flash_attention/generated_ncu_case0.json",
               "exports": [
                 {
                   "name": "ncu_details_csv",
                   "status": "ok",
                   "paths": [
-                    "captures/capture_20261026_151913_e52e/flash_attention/generated_ncu_case0.details.csv"
+                    "captures/capture_20261026_212117_4e7d/flash_attention/generated_ncu_case0.details.csv"
                   ]
                 },
                 {
                   "name": "ncu_raw_csv",
                   "status": "ok",
                   "paths": [
-                    "captures/capture_20261026_151913_e52e/flash_attention/generated_ncu_case0.raw.csv"
+                    "captures/capture_20261026_212117_4e7d/flash_attention/generated_ncu_case0.raw.csv"
                   ]
                 }
               ],
@@ -129,16 +129,16 @@
                 {
                   "kernel": "_flash_attention_kernel",
                   "launches": 10,
-                  "duration_avg_us": 184.279,
-                  "duration_total_us": 1842.79,
-                  "sm_pct": 41.638999999999996,
-                  "mem_pct": 38.825,
-                  "dram_pct": 9.174,
-                  "occupancy_pct": 16.163,
+                  "duration_avg_us": 185.454,
+                  "duration_total_us": 1854.54,
+                  "sm_pct": 41.756,
+                  "mem_pct": 40.722,
+                  "dram_pct": 7.24,
+                  "occupancy_pct": 16.162,
                   "regs": 64,
                   "grid": 1024.0,
                   "block": 128.0,
-                  "cycles": 260233.0
+                  "cycles": 260646.5
                 }
               ],
               "metric_source": "details"
@@ -179,21 +179,21 @@
               "label": "rounds_5",
               "iters": 10,
               "status": "ok",
-              "report_path": "captures/capture_20261026_151913_e52e/flash_attention/rounds_5_ncu_case0.ncu-rep",
-              "metadata_path": "captures/capture_20261026_151913_e52e/flash_attention/rounds_5_ncu_case0.json",
+              "report_path": "captures/capture_20261026_212117_4e7d/flash_attention/rounds_5_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_212117_4e7d/flash_attention/rounds_5_ncu_case0.json",
               "exports": [
                 {
                   "name": "ncu_details_csv",
                   "status": "ok",
                   "paths": [
-                    "captures/capture_20261026_151913_e52e/flash_attention/rounds_5_ncu_case0.details.csv"
+                    "captures/capture_20261026_212117_4e7d/flash_attention/rounds_5_ncu_case0.details.csv"
                   ]
                 },
                 {
                   "name": "ncu_raw_csv",
                   "status": "ok",
                   "paths": [
-                    "captures/capture_20261026_151913_e52e/flash_attention/rounds_5_ncu_case0.raw.csv"
+                    "captures/capture_20261026_212117_4e7d/flash_attention/rounds_5_ncu_case0.raw.csv"
                   ]
                 }
               ],
@@ -207,16 +207,16 @@
                 {
                   "kernel": "_flash_attention_kernel",
                   "launches": 10,
-                  "duration_avg_us": 153.83800000000002,
-                  "duration_total_us": 1538.38,
-                  "sm_pct": 58.588,
-                  "mem_pct": 44.840999999999994,
-                  "dram_pct": 10.942,
-                  "occupancy_pct": 39.754000000000005,
-                  "regs": 72,
-                  "grid": 512.0,
+                  "duration_avg_us": 72.624,
+                  "duration_total_us": 726.24,
+                  "sm_pct": 54.565,
+                  "mem_pct": 93.759,
+                  "dram_pct": 16.678,
+                  "occupancy_pct": 12.984,
+                  "regs": 248,
+                  "grid": 128.0,
                   "block": 128.0,
-                  "cycles": 216096.0
+                  "cycles": 101858.9
                 }
               ],
               "metric_source": "details"
@@ -257,21 +257,21 @@
               "label": "rounds_10",
               "iters": 10,
               "status": "ok",
-              "report_path": "captures/capture_20261026_151913_e52e/flash_attention/rounds_10_ncu_case0.ncu-rep",
-              "metadata_path": "captures/capture_20261026_151913_e52e/flash_attention/rounds_10_ncu_case0.json",
+              "report_path": "captures/capture_20261026_212117_4e7d/flash_attention/rounds_10_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_212117_4e7d/flash_attention/rounds_10_ncu_case0.json",
               "exports": [
                 {
                   "name": "ncu_details_csv",
                   "status": "ok",
                   "paths": [
-                    "captures/capture_20261026_151913_e52e/flash_attention/rounds_10_ncu_case0.details.csv"
+                    "captures/capture_20261026_212117_4e7d/flash_attention/rounds_10_ncu_case0.details.csv"
                   ]
                 },
                 {
                   "name": "ncu_raw_csv",
                   "status": "ok",
                   "paths": [
-                    "captures/capture_20261026_151913_e52e/flash_attention/rounds_10_ncu_case0.raw.csv"
+                    "captures/capture_20261026_212117_4e7d/flash_attention/rounds_10_ncu_case0.raw.csv"
                   ]
                 }
               ],
@@ -285,16 +285,91 @@
                 {
                   "kernel": "_flash_attention",
                   "launches": 10,
-                  "duration_avg_us": 118.87899999999999,
-                  "duration_total_us": 1188.79,
-                  "sm_pct": 33.201,
-                  "mem_pct": 57.988,
-                  "dram_pct": 13.207999999999998,
-                  "occupancy_pct": 7.87,
-                  "regs": 128,
-                  "grid": 512.0,
-                  "block": 64.0,
-                  "cycles": 167245.7
+                  "duration_avg_us": 68.59700000000001,
+                  "duration_total_us": 685.97,
+                  "sm_pct": 58.061,
+                  "mem_pct": 96.39500000000001,
+                  "dram_pct": 17.146,
+                  "occupancy_pct": 13.307999999999998,
+                  "regs": 244,
+                  "grid": 128.0,
+                  "block": 128.0,
+                  "cycles": 95761.6
+                }
+              ],
+              "metric_source": "details"
+            }
+          }
+        },
+        {
+          "variant": "vllm_triton_prefill",
+          "status": "verified",
+          "verify_status": null,
+          "kind": "external",
+          "rounds_requested": null,
+          "rounds_completed": null,
+          "kernel_path": "problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py",
+          "kernel_sha256": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441",
+          "source_kernel_sha256": null,
+          "source_path": "flash_attention/baselines/vllm_triton_prefill.py",
+          "summary_path": null,
+          "record_path": "problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/verify_vllm_triton_prefill.json",
+          "speedup": null,
+          "acceptance": null,
+          "bench": {
+            "kernel_ms": 0.0818,
+            "ref_ms": 0.0638,
+            "speedup": 0.781,
+            "kernel_tflops": 52.51,
+            "ref_tflops": 67.27
+          },
+          "failure": null,
+          "captures": {
+            "ncu": {
+              "problem": "flash_attention",
+              "variant": "vllm_triton_prefill",
+              "profiler": "ncu",
+              "label": "vllm_triton_prefill",
+              "iters": 10,
+              "status": "ok",
+              "report_path": "captures/capture_20261026_212117_4e7d/flash_attention/vllm_triton_prefill_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_212117_4e7d/flash_attention/vllm_triton_prefill_ncu_case0.json",
+              "exports": [
+                {
+                  "name": "ncu_details_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_212117_4e7d/flash_attention/vllm_triton_prefill_ncu_case0.details.csv"
+                  ]
+                },
+                {
+                  "name": "ncu_raw_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_212117_4e7d/flash_attention/vllm_triton_prefill_ncu_case0.raw.csv"
+                  ]
+                }
+              ],
+              "kernel_sha256": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441",
+              "failure": null,
+              "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+              "torch": "2.13.0+cu129",
+              "triton": "3.7.1",
+              "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+              "kernels": [
+                {
+                  "kernel": "_fwd_kernel",
+                  "launches": 10,
+                  "duration_avg_us": 80.74,
+                  "duration_total_us": 807.4,
+                  "sm_pct": 49.47,
+                  "mem_pct": 90.39099999999999,
+                  "dram_pct": 16.077,
+                  "occupancy_pct": 13.894,
+                  "regs": 255,
+                  "grid": 128.0,
+                  "block": 128.0,
+                  "cycles": 112631.9
                 }
               ],
               "metric_source": "details"
@@ -319,9 +394,27 @@
     },
     {
       "problem": "flash_attention",
+      "from": "generated",
+      "to": "vllm_triton_prefill",
+      "path": "reports/source-diffs/flash_attention__generated_to_vllm_triton_prefill.diff"
+    },
+    {
+      "problem": "flash_attention",
       "from": "rounds_5",
       "to": "rounds_10",
       "path": "reports/source-diffs/flash_attention__rounds_5_to_rounds_10.diff"
+    },
+    {
+      "problem": "flash_attention",
+      "from": "rounds_5",
+      "to": "vllm_triton_prefill",
+      "path": "reports/source-diffs/flash_attention__rounds_5_to_vllm_triton_prefill.diff"
+    },
+    {
+      "problem": "flash_attention",
+      "from": "rounds_10",
+      "to": "vllm_triton_prefill",
+      "path": "reports/source-diffs/flash_attention__rounds_10_to_vllm_triton_prefill.diff"
     }
   ]
 }

@@ -2,8 +2,8 @@
 
 - Status: **completed**
 - Created: 2026-10-26T14:41:49.397753
-- Report generated: 2026-10-26T15:20:01.012009
-- Capture batch: `capture_20261026_151913_e52e` (ncu, completed)
+- Report generated: 2026-10-26T17:22:56.657620
+- Capture batch: `capture_20261026_212117_4e7d` (ncu, completed)
 
 ## Configuration
 
@@ -45,6 +45,7 @@ Case: `(2, 8, 1024, 64, False, 'float16')`
 | `generated` | 1/5 | PASS | verified | 0.1338 | 0.0677 | 0.51x | 1.00x |
 | `rounds_5` | 5/5 | PASS | accepted | 0.4374 | 0.3296 | 0.75x | 0.31x |
 | `rounds_10` | 10/10 | PASS | accepted | 0.3072 | 0.3540 | 1.15x | 0.44x |
+| `vllm_triton_prefill` *(external baseline)* | — | PASS | verified | 0.0818 | 0.0638 | 0.78x | 1.64x |
 
 Optimizer acceptance timings (the comparison each optimization session gated on, case 0):
 
@@ -59,21 +60,26 @@ Optimizer acceptance timings (the comparison each optimization session gated on,
 
 | Variant | Kernel | Launches | Duration avg (µs) | SM % | Memory % | DRAM % | Occupancy % | Reg/thread |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| `generated` | `_flash_attention_kernel` | 10 | 184.28 | 41.6 | 38.8 | 9.2 | 16.2 | 64 |
-| `rounds_5` | `_flash_attention_kernel` | 10 | 153.84 | 58.6 | 44.8 | 10.9 | 39.8 | 72 |
-| `rounds_10` | `_flash_attention` | 10 | 118.88 | 33.2 | 58.0 | 13.2 | 7.9 | 128 |
+| `generated` | `_flash_attention_kernel` | 10 | 185.45 | 41.8 | 40.7 | 7.2 | 16.2 | 64 |
+| `rounds_5` | `_flash_attention_kernel` | 10 | 72.62 | 54.6 | 93.8 | 16.7 | 13.0 | 248 |
+| `rounds_10` | `_flash_attention` | 10 | 68.60 | 58.1 | 96.4 | 17.1 | 13.3 | 244 |
+| `vllm_triton_prefill` | `_fwd_kernel` | 10 | 80.74 | 49.5 | 90.4 | 16.1 | 13.9 | 255 |
 
 #### Artifacts
 
-- `generated` · kernel: [final_kernel.py](../problems/flash_attention/generated/flash_attention/final_kernel.py) · sha256 `d1c93f8eb483…` · record: [verify.json](../problems/flash_attention/generated/flash_attention/verify.json) · summary: [generate_result.json](../problems/flash_attention/generated/flash_attention/generate_result.json) · ncu: [generated_ncu_case0.ncu-rep](../captures/capture_20261026_151913_e52e/flash_attention/generated_ncu_case0.ncu-rep)
-- `rounds_5` · kernel: [optimized_kernel.py](../problems/flash_attention/case_0/rounds_5/flash_attention/optimized_kernel.py) · sha256 `138f765d4df3…` · record: [verify_optimized.json](../problems/flash_attention/case_0/rounds_5/flash_attention/verify_optimized.json) · summary: [optimize_result.json](../problems/flash_attention/case_0/rounds_5/flash_attention/optimize_result.json) · ncu: [rounds_5_ncu_case0.ncu-rep](../captures/capture_20261026_151913_e52e/flash_attention/rounds_5_ncu_case0.ncu-rep)
-- `rounds_10` · kernel: [optimized_kernel.py](../problems/flash_attention/case_0/rounds_10/flash_attention/optimized_kernel.py) · sha256 `9b1431e00661…` · record: [verify_optimized.json](../problems/flash_attention/case_0/rounds_10/flash_attention/verify_optimized.json) · summary: [optimize_result.json](../problems/flash_attention/case_0/rounds_10/flash_attention/optimize_result.json) · ncu: [rounds_10_ncu_case0.ncu-rep](../captures/capture_20261026_151913_e52e/flash_attention/rounds_10_ncu_case0.ncu-rep)
+- `generated` · kernel: [final_kernel.py](../problems/flash_attention/generated/flash_attention/final_kernel.py) · sha256 `d1c93f8eb483…` · record: [verify.json](../problems/flash_attention/generated/flash_attention/verify.json) · summary: [generate_result.json](../problems/flash_attention/generated/flash_attention/generate_result.json) · ncu: [generated_ncu_case0.ncu-rep](../captures/capture_20261026_212117_4e7d/flash_attention/generated_ncu_case0.ncu-rep)
+- `rounds_5` · kernel: [optimized_kernel.py](../problems/flash_attention/case_0/rounds_5/flash_attention/optimized_kernel.py) · sha256 `138f765d4df3…` · record: [verify_optimized.json](../problems/flash_attention/case_0/rounds_5/flash_attention/verify_optimized.json) · summary: [optimize_result.json](../problems/flash_attention/case_0/rounds_5/flash_attention/optimize_result.json) · ncu: [rounds_5_ncu_case0.ncu-rep](../captures/capture_20261026_212117_4e7d/flash_attention/rounds_5_ncu_case0.ncu-rep)
+- `rounds_10` · kernel: [optimized_kernel.py](../problems/flash_attention/case_0/rounds_10/flash_attention/optimized_kernel.py) · sha256 `9b1431e00661…` · record: [verify_optimized.json](../problems/flash_attention/case_0/rounds_10/flash_attention/verify_optimized.json) · summary: [optimize_result.json](../problems/flash_attention/case_0/rounds_10/flash_attention/optimize_result.json) · ncu: [rounds_10_ncu_case0.ncu-rep](../captures/capture_20261026_212117_4e7d/flash_attention/rounds_10_ncu_case0.ncu-rep)
+- `vllm_triton_prefill` · kernel: [kernel.py](../problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py) · sha256 `2c38b86851dd…` · source: `flash_attention/baselines/vllm_triton_prefill.py` · record: [verify_vllm_triton_prefill.json](../problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/verify_vllm_triton_prefill.json) · ncu: [vllm_triton_prefill_ncu_case0.ncu-rep](../captures/capture_20261026_212117_4e7d/flash_attention/vllm_triton_prefill_ncu_case0.ncu-rep)
 
 ## Source diffs
 
 - flash_attention: `generated` → `rounds_5`: [flash_attention__generated_to_rounds_5.diff](source-diffs/flash_attention__generated_to_rounds_5.diff)
 - flash_attention: `generated` → `rounds_10`: [flash_attention__generated_to_rounds_10.diff](source-diffs/flash_attention__generated_to_rounds_10.diff)
+- flash_attention: `generated` → `vllm_triton_prefill`: [flash_attention__generated_to_vllm_triton_prefill.diff](source-diffs/flash_attention__generated_to_vllm_triton_prefill.diff)
 - flash_attention: `rounds_5` → `rounds_10`: [flash_attention__rounds_5_to_rounds_10.diff](source-diffs/flash_attention__rounds_5_to_rounds_10.diff)
+- flash_attention: `rounds_5` → `vllm_triton_prefill`: [flash_attention__rounds_5_to_vllm_triton_prefill.diff](source-diffs/flash_attention__rounds_5_to_vllm_triton_prefill.diff)
+- flash_attention: `rounds_10` → `vllm_triton_prefill`: [flash_attention__rounds_10_to_vllm_triton_prefill.diff](source-diffs/flash_attention__rounds_10_to_vllm_triton_prefill.diff)
 
 ## Interpreting the numbers
 
