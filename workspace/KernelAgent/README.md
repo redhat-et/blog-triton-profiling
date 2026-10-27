@@ -272,19 +272,17 @@ minimal completion round-trips.
 ### 2. Generate the kernels
 
 ```bash
-make kernelagent-generate-matmul-bias OPENAI_MODEL=gpt-5.2
-make kernelagent-generate-flash-attention OPENAI_MODEL=claude-sonnet-4-6
-
-# Or both, sequentially
-make kernelagent-generate-kernels OPENAI_MODEL=gpt-5.2
+make kernelagent-generate KA_PROBLEM=matmul_bias OPENAI_MODEL=gpt-5.2
+make kernelagent-generate KA_PROBLEM=flash_attention OPENAI_MODEL=claude-sonnet-4-6
 ```
 
-`KA_WORKERS` is the number of initial kernel candidates the agent generates
-and verifies in parallel (candidates and workers are coupled), and
-`KA_GEN_ROUNDS` is the refinement-round budget:
+`KA_PROBLEM` selects the problem (default `matmul_bias`). `KA_WORKERS` is the
+number of initial kernel candidates the agent generates and verifies in
+parallel (candidates and workers are coupled), and `KA_GEN_ROUNDS` is the
+refinement-round budget:
 
 ```bash
-make kernelagent-generate-kernels OPENAI_MODEL=gpt-5.2 KA_WORKERS=2 KA_GEN_ROUNDS=8
+make kernelagent-generate KA_PROBLEM=matmul_bias OPENAI_MODEL=gpt-5.2 KA_WORKERS=2 KA_GEN_ROUNDS=8
 ```
 
 Outputs land under `results/<problem>/`:
@@ -304,14 +302,15 @@ see the review checklist in [AGENTS.md](../../AGENTS.md).
 
 ### 4. Verify and benchmark
 
-Re-run the fixed test and the benchmark against the saved kernels at any
-time — no LLM needed. `KA_IMPL` selects which saved kernel to verify:
-`kernel` (the generated `final_kernel.py`, default) or `optimized`
+Re-run the fixed test and the benchmark against one problem's saved kernel
+at any time — no LLM needed. `KA_PROBLEM` selects the problem (default
+`matmul_bias`), and `KA_IMPL` selects which saved kernel to verify: `kernel`
+(the generated `final_kernel.py`, default) or `optimized`
 (`optimized_kernel.py`, see the next section):
 
 ```bash
-make kernelagent-verify-kernels
-make kernelagent-verify-kernels KA_IMPL=optimized
+make kernelagent-verify KA_PROBLEM=matmul_bias
+make kernelagent-verify KA_PROBLEM=matmul_bias KA_IMPL=optimized
 cat results/matmul_bias/verify.json
 cat results/matmul_bias/verify_optimized.json
 ```
@@ -346,9 +345,6 @@ one problem:
 
 ```bash
 make kernelagent-optimize KA_PROBLEM=matmul_bias KA_CASE=3 OPENAI_MODEL=gpt-5.2
-
-# Or every problem, sequentially (an explicit KA_PROBLEM narrows this)
-make kernelagent-optimize-kernels OPENAI_MODEL=gpt-5.2
 ```
 
 `KA_OPT_ROUNDS` is the optimization-round budget. `KA_WORKERS` sets how many
@@ -427,7 +423,7 @@ Verify or profile the optimized kernel with `KA_IMPL=optimized` (or the
 explicit target below):
 
 ```bash
-make kernelagent-verify-kernels KA_IMPL=optimized
+make kernelagent-verify KA_PROBLEM=matmul_bias KA_IMPL=optimized
 make kernelagent-profile KA_PROBLEM=matmul_bias KA_CASE=3 KA_IMPL=optimized KA_PROFILER=proton
 make kernelagent-profile-optimized KA_PROBLEM=matmul_bias KA_CASE=3
 ```
@@ -774,7 +770,7 @@ the detector cannot report (the chip codename) or target hardware you are not
 running on:
 
 ```bash
-make kernelagent-generate-matmul-bias KA_GPU_TARGET="NVIDIA RTX 5000 Ada Generation \
+make kernelagent-generate KA_PROBLEM=matmul_bias KA_GPU_TARGET="NVIDIA RTX 5000 Ada Generation \
 Laptop GPU (AD103, 16GB, compute capability 8.9, sm_89)"
 ```
 
@@ -787,7 +783,8 @@ reach the initial generator — generation follows KernelAgent's own
 
 The benchmark cases in `bench.py` and the tolerance checks in
 `test_fixed.py` are hand-written; extend them (and re-run
-`kernelagent-verify-kernels`) to cover shapes you care about. Optimization
+`make kernelagent-verify KA_PROBLEM=<problem>`) to cover shapes you care
+about. Optimization
 targets one case at a time (`KA_CASE` selects it), so the cases you add are
 the cases you can optimize for. A hand-written kernel you want compared
 against the generated ones follows the same contract — see

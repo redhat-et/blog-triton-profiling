@@ -259,13 +259,13 @@ KA_IMAGE_TAG             := $(CUDA_IMAGE_NAME):$(CUDA_VERSION)
 KA_ALL_PROBLEMS          := $(patsubst $(KERNELAGENT_WORKSPACE)/problems/%/spec.py,%,$(wildcard $(KERNELAGENT_WORKSPACE)/problems/*/spec.py))
 # Problems selected by an explicitly given KA_PROBLEM. Unset keeps each
 # target's documented default: matmul_bias for the single-problem
-# targets, every problem for kernelagent-experiment and the bulk targets.
+# targets, every problem for kernelagent-experiment.
 KA_SELECTED_PROBLEMS     := $(if $(filter command line environment,$(origin KA_PROBLEM)),$(KA_PROBLEM),$(KA_ALL_PROBLEMS))
 # Experiment optimization budgets: unset keeps the documented "5 10"
 # (origin distinguishes it from the single-optimizer default).
 KA_EXPERIMENT_OPT_ROUNDS := $(if $(filter command line environment,$(origin KA_OPT_ROUNDS)),$(KA_OPT_ROUNDS),5 10)
-# Verification record written by kernelagent-verify-kernels for the
-# selected KA_IMPL (kernel -> final_kernel.py, optimized -> optimized_kernel.py)
+# Verification record written by kernelagent-verify for the selected
+# KA_IMPL (kernel -> final_kernel.py, optimized -> optimized_kernel.py)
 KA_VERIFY_RECORD         := $(if $(filter optimized,$(KA_IMPL)),verify_optimized.json,verify.json)
 # External kernel source for kernelagent-profile and
 # kernelagent-experiment-baseline. Accepts a host path (absolute or
@@ -332,12 +332,11 @@ KA_EXPERIMENT_TARGETS    := kernelagent-experiment kernelagent-experiment-profil
 KA_PROFILER_CHOICES      := ncu nsys proton
 KA_NCU_SETS              := basic detailed full
 # Every target that takes exactly one KA_PROBLEM.
-KA_SINGLE_PROBLEM_TARGETS := $(KA_PROFILE_TARGETS) kernelagent-optimize \
-	kernelagent-experiment-baseline
+KA_SINGLE_PROBLEM_TARGETS := $(KA_PROFILE_TARGETS) kernelagent-generate \
+	kernelagent-optimize kernelagent-verify kernelagent-experiment-baseline
 # Every target that takes one or more problems: an explicit KA_PROBLEM
 # selects them, otherwise every problem runs.
-KA_MULTI_PROBLEM_TARGETS  := kernelagent-experiment kernelagent-generate-kernels \
-	kernelagent-optimize-kernels kernelagent-verify-kernels
+KA_MULTI_PROBLEM_TARGETS  := kernelagent-experiment
 
 # Legacy names from before the KA_ namespace. Reject them on any
 # kernelagent-* goal so an old command or a typo can never be silently
@@ -366,9 +365,9 @@ endif
 endif
 endif
 
-ifneq (,$(filter kernelagent-verify-kernels,$(MAKECMDGOALS)))
+ifneq (,$(filter kernelagent-verify,$(MAKECMDGOALS)))
 ifneq ($(KA_IMPL),$(filter $(KA_VERIFY_IMPLS),$(KA_IMPL)))
-$(error unknown KA_IMPL '$(KA_IMPL)' for kernelagent-verify-kernels; valid choices: $(KA_VERIFY_IMPLS) — ref is kernelagent-profile only)
+$(error unknown KA_IMPL '$(KA_IMPL)' for kernelagent-verify; valid choices: $(KA_VERIFY_IMPLS) — ref is kernelagent-profile only)
 endif
 endif
 ifneq (,$(filter kernelagent-profile,$(MAKECMDGOALS)))
@@ -423,16 +422,7 @@ $(error unknown KA_PROBLEM '$(KA_SELECTED_PROBLEMS)' for $(KA_MULTI_PROBLEM_TARG
 endif
 endif
 
-# kernelagent-generate-<problem> selects its problem in the target name.
-# Exclude the bulk target, which the same wildcard would otherwise match.
-KA_GENERATE_PATTERN_GOALS := $(filter-out kernelagent-generate-kernels,$(filter kernelagent-generate-%,$(MAKECMDGOALS)))
-ifneq (,$(KA_GENERATE_PATTERN_GOALS))
-ifneq (,$(filter command line environment,$(origin KA_PROBLEM)))
-$(error $(KA_GENERATE_PATTERN_GOALS) selects the problem in the target name; do not also set KA_PROBLEM)
-endif
-endif
-
-ifneq (,$(filter kernelagent-optimize kernelagent-optimize-kernels,$(MAKECMDGOALS)))
+ifneq (,$(filter kernelagent-optimize,$(MAKECMDGOALS)))
 ifneq ($(words $(KA_OPT_ROUNDS)),1)
 $(error KA_OPT_ROUNDS must be exactly one optimization budget for $(MAKECMDGOALS), not '$(KA_OPT_ROUNDS)')
 endif
@@ -652,33 +642,13 @@ kernelagent-compute: kernelagent-image
 kernelagent-test: kernelagent-image _ka_require_llm
 	$(KA_RUN) $(ka_llm_env) $(IMAGE_REPO)/$(KA_IMAGE_TAG) verify-llm.py
 
-# Generate one problem's Triton kernel from its fixed spec (dashed name,
-# e.g. kernelagent-generate-matmul-bias for the matmul_bias problem). Not
-# declared .PHONY — pattern rules can't be, since .PHONY takes literal
-# names, not patterns — but no file named kernelagent-generate-<problem>
-# is expected to exist in the repo root.
-kernelagent-generate-%: kernelagent-image _ka_require_llm
-	@echo "Kernel sessions will be saved under $(KERNELAGENT_WORKSPACE)/results/$(subst -,_,$*)/"
-	$(KA_GENERATE_RUN) $(subst -,_,$*)
-	@echo "Results: $(KERNELAGENT_WORKSPACE)/results/$(subst -,_,$*)/ (final_kernel.py)"
-
-# Run one problem at a time over the selected problems (KA_PROBLEM when
-# given explicitly, every problem otherwise; stays sequential under
-# make -j). $(1) labels the session, $(2) is the per-problem command,
-# $(3) appends extra arguments to it, and $(4) names the saved results.
-define ka_all_problems
-	@set -e; for p in $(KA_SELECTED_PROBLEMS); do \
-		echo "$(1) session will be saved under $(KERNELAGENT_WORKSPACE)/results/$$p/"; \
-		$(2) $$p $(3); \
-		echo "Results: $(KERNELAGENT_WORKSPACE)/results/$$p/ ($(4))"; \
-	done
-endef
-
-# Generate the selected problems' kernels sequentially (every problem when
-# KA_PROBLEM is unset; stays sequential under make -j).
-.PHONY: kernelagent-generate-kernels
-kernelagent-generate-kernels: kernelagent-image _ka_require_llm
-	$(call ka_all_problems,Kernel,$(KA_GENERATE_RUN),,final_kernel.py)
+# Generate one problem's Triton kernel from its fixed spec, selected with
+# KA_PROBLEM (default matmul_bias). Mirrors kernelagent-optimize.
+.PHONY: kernelagent-generate
+kernelagent-generate: kernelagent-image _ka_require_llm
+	@echo "Kernel session will be saved under $(KERNELAGENT_WORKSPACE)/results/$(KA_PROBLEM)/"
+	$(KA_GENERATE_RUN) $(KA_PROBLEM)
+	@echo "Results: $(KERNELAGENT_WORKSPACE)/results/$(KA_PROBLEM)/ (final_kernel.py)"
 
 # Optimize the saved final_kernel.py of one problem for one benchmark case
 # (KA_CASE) with KernelAgent's hardware-guided optimizer (NCU profiling plus
@@ -691,21 +661,14 @@ kernelagent-optimize: kernelagent-image _ka_require_llm
 	$(KA_OPTIMIZE_RUN) $(KA_PROBLEM) --case $(KA_CASE)
 	@echo "Results: $(KERNELAGENT_WORKSPACE)/results/$(KA_PROBLEM)/ (optimized_kernel.py, optimize_result.json)"
 
-# Optimize the selected problems' kernels sequentially at the selected
-# KA_CASE (every problem when KA_PROBLEM is unset; stays sequential under
-# make -j).
-.PHONY: kernelagent-optimize-kernels
-kernelagent-optimize-kernels: kernelagent-image _ka_require_llm
-	$(call ka_all_problems,Optimization,$(KA_OPTIMIZE_RUN),--case $(KA_CASE),optimized_kernel.py and optimize_result.json)
-
-# Re-run the fixed correctness tests and benchmarks on the selected
-# problems' saved kernels (no LLM access needed). KA_IMPL selects which
-# saved kernel to verify: kernel (final_kernel.py, default) or optimized
-# (optimized_kernel.py).
-.PHONY: kernelagent-verify-kernels
-kernelagent-verify-kernels: kernelagent-image
-	$(call ka_all_problems,Verification,$(KA_VERIFY_RUN),--impl $(KA_IMPL),$(KA_VERIFY_RECORD))
-	@echo "Results: $(KERNELAGENT_WORKSPACE)/results/*/$(KA_VERIFY_RECORD)"
+# Re-run the fixed correctness tests and benchmarks on one problem's saved
+# kernel (no LLM access needed). KA_IMPL selects which saved kernel to
+# verify: kernel (final_kernel.py, default) or optimized (optimized_kernel.py).
+.PHONY: kernelagent-verify
+kernelagent-verify: kernelagent-image
+	@echo "Verification record will be saved under $(KERNELAGENT_WORKSPACE)/results/$(KA_PROBLEM)/"
+	$(KA_VERIFY_RUN) $(KA_PROBLEM) --impl $(KA_IMPL)
+	@echo "Results: $(KERNELAGENT_WORKSPACE)/results/$(KA_PROBLEM)/ ($(KA_VERIFY_RECORD))"
 
 # Kernel sources outside the mounted trees are copied into a mounted tree
 # (already labeled for the container) before the container runs; the
@@ -863,11 +826,9 @@ help:
 	@echo "  kernelagent-image                  Build the shared CUDA image (alias for cuda-image)"
 	@echo "  kernelagent-console                Open a shell in the KernelAgent container"
 	@echo "  kernelagent-test                   Smoke-test the configured LLM provider (prints VERIFY_OK)"
-	@echo "  kernelagent-generate-<problem>     Generate one problem's Triton kernel (dashed name of a problems/ subdirectory)"
-	@echo "  kernelagent-generate-kernels       Generate the selected problems' kernels sequentially"
+	@echo "  kernelagent-generate               Generate one problem's Triton kernel (KA_PROBLEM)"
 	@echo "  kernelagent-optimize               Optimize a saved kernel for one case (KA_PROBLEM, KA_CASE)"
-	@echo "  kernelagent-optimize-kernels       Optimize the selected problems' kernels sequentially"
-	@echo "  kernelagent-verify-kernels         Re-run correctness tests and benchmarks on the selected saved kernels"
+	@echo "  kernelagent-verify                 Re-run correctness tests and benchmarks on one saved kernel (KA_PROBLEM, KA_IMPL)"
 	@echo "  kernelagent-profile                Profile a saved kernel, the PyTorch baseline, or an external kernel (KA_KERNEL_SOURCE, KA_LABEL)"
 	@echo "  kernelagent-profile-unoptimized    Profile the generated kernel (KA_IMPL fixed to kernel)"
 	@echo "  kernelagent-profile-optimized      Profile the optimized kernel (KA_IMPL fixed to optimized)"
@@ -886,7 +847,7 @@ help:
 	@echo "  NOTEBOOK_PORT=8888  OPENAI_MODEL=<model> (default claude-sonnet-4-6)  KA_REASONING_EFFORT=low|medium|high"
 	@echo "  OPENAI_API_KEY / ANTHROPIC_API_KEY  OPENAI_BASE_URL=<local server /v1>"
 	@echo "  KA_GENERATION_MODEL / KA_OPTIMIZATION_MODEL=<model>[:low|medium|high]  per-stage model and effort (experiments only)"
-	@echo "  KA_PROBLEM=<problem> (single-problem targets) or '<p1> <p2>' (experiments/bulk; default: every problem)"
+	@echo "  KA_PROBLEM=<problem> (single-problem targets, default matmul_bias) or '<p1> <p2>' (kernelagent-experiment; default: every problem)"
 	@echo "  KA_CASE=$(KA_CASE)  KA_IMPL=kernel|optimized (profile also: ref)  KA_PROFILER=$(KA_PROFILER)  KA_NCU_SET=$(KA_NCU_SET)"
 	@echo "  KA_EXPERIMENT=<id>  KA_GEN_ROUNDS=$(KA_GEN_ROUNDS)  KA_OPT_ROUNDS=<budget or '5 10'>  KA_PROFILER='ncu nsys proton'"
 	@echo "  KA_PROFILE_ITERS=$(KA_PROFILE_ITERS)  KA_PROFILE_WARMUP=$(KA_PROFILE_WARMUP)  KA_TEST_TIMEOUT=$(KA_TEST_TIMEOUT)  KA_REPORT_OUT=<path>  (list values are space-separated and must be quoted)"
@@ -896,8 +857,9 @@ help:
 	@echo "  make cuda-jupyter NOTEBOOK_PORT=8888"
 	@echo ""
 	@echo "  Single-kernel workflow:"
-	@echo "  make kernelagent-generate-matmul-bias OPENAI_MODEL=gpt-5.2 OPENAI_API_KEY=sk-..."
+	@echo "  make kernelagent-generate KA_PROBLEM=matmul_bias OPENAI_MODEL=gpt-5.2 OPENAI_API_KEY=sk-..."
 	@echo "  make kernelagent-optimize KA_PROBLEM=matmul_bias KA_CASE=3 OPENAI_MODEL=gpt-5.2"
+	@echo "  make kernelagent-verify KA_PROBLEM=matmul_bias KA_IMPL=kernel"
 	@echo "  make kernelagent-profile KA_PROBLEM=flash_attention KA_CASE=0 KA_IMPL=ref KA_PROFILER=proton"
 	@echo "  make kernelagent-profile-unoptimized KA_PROBLEM=matmul_bias KA_CASE=3"
 	@echo "  make kernelagent-profile-optimized KA_PROBLEM=matmul_bias KA_CASE=3 KA_PROFILER=ncu"

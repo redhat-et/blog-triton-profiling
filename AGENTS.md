@@ -29,7 +29,7 @@ Validate changes by running the demo:
 - Runtime or build changes: `make cuda-image` (or `make kernelagent-image`)
   must succeed — the build runs `check_install.py` — then run the relevant
   `make kernelagent-*` target.
-- LLM-free targets: `kernelagent-verify-kernels`, `kernelagent-profile*`,
+- LLM-free targets: `kernelagent-verify`, `kernelagent-profile*`,
   `kernelagent-experiment-profile`, `kernelagent-experiment-baseline`,
   `kernelagent-report`.
 - LLM/GPU targets: `kernelagent-test OPENAI_MODEL=...`, then generation,
@@ -113,7 +113,7 @@ Never move prompt text into documentation or AGENTS.md.
   `check_install.py` validates the full set at build time.
 - `test_fixed.py` and `bench.py` are hand-written acceptance artifacts. Edit
   them only intentionally, keeping them consistent with `spec.py` and
-  `problem.txt`, then re-run `make kernelagent-verify-kernels`.
+  `problem.txt`, then re-run `make kernelagent-verify KA_PROBLEM=<problem>`.
 - Preserve the `@GPU_TARGET@` token in `problem.txt`; it is resolved at
   generation and optimization time.
 

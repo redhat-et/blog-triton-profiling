@@ -37,8 +37,8 @@ make rocm-console
 make rocm-jupyter
 
 make kernelagent-test OPENAI_MODEL=gpt-5.2
-make kernelagent-generate-kernels OPENAI_MODEL=gpt-5.2
-make kernelagent-verify-kernels
+make kernelagent-generate KA_PROBLEM=matmul_bias OPENAI_MODEL=gpt-5.2
+make kernelagent-verify KA_PROBLEM=matmul_bias
 make kernelagent-optimize KA_PROBLEM=matmul_bias KA_CASE=3 OPENAI_MODEL=gpt-5.2
 make kernelagent-profile KA_PROBLEM=matmul_bias KA_CASE=3 KA_PROFILER=proton
 make kernelagent-profile-unoptimized KA_PROBLEM=matmul_bias KA_CASE=3
