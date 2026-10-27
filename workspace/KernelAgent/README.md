@@ -600,8 +600,9 @@ results/experiments/webinar-v1/
                                    verify_rocm_blog_fusion.json
   captures/<capture-id>/matmul_bias/
     generated_ncu_case3.ncu-rep    one stem per variant and profiler, with
-    rounds_5_ncu_case3.ncu-rep     .details.csv/.raw.csv (ncu) or
-    rounds_10_ncu_case3.ncu-rep    nsys stats CSVs exported beside them
+    rounds_5_ncu_case3.ncu-rep     .details.csv/.raw.csv (ncu), nsys stats
+    rounds_10_ncu_case3.ncu-rep    CSVs (nsys), or .hatchet (proton), plus
+                                   matching .json metadata
   reports/
     comparison.md                 The rendered comparison report
     comparison.json               The same data, machine-readable
@@ -638,13 +639,19 @@ python3 workspace/KernelAgent/scripts/report-experiment.py webinar-v1 \
   --results-root workspace/KernelAgent/results --format json
 ```
 
+`KA_CAPTURE_BATCH` selects the batch the Markdown/JSON report renders;
+`KA_CAPTURE_BATCH=latest-per-profiler` renders the newest capture of each
+profiler across every batch (see [Re-profiling with a different
+profiler](#re-profiling-with-a-different-profiler)).
+
 It contains, per problem: the fixed-benchmark comparison table (latency,
 speedup vs the generated kernel and the PyTorch baseline, completed
 rounds, correctness and acceptance status), the optimizer's own
-acceptance timings, one section per profiler (ncu duration and SOL
-metrics aggregated over the profiled launches, nsys kernel and CUDA API
-summaries, Proton timing entries), artifact links (kernel sources,
-records, native captures, source diffs), and explicit failure rows.
+acceptance timings, one section per profiler (ncu duration, tensor
+TFLOPS, and SOL metrics aggregated over the profiled launches, nsys
+kernel and CUDA API summaries, Proton timing entries), artifact links
+(kernel sources, records, native captures, source diffs), and explicit
+failure rows.
 Profiler timings stay in their own sections — they measure captured
 launches, not the benchmark's `do_bench` means — and missing metrics
 render as `—`.
@@ -658,11 +665,76 @@ make kernelagent-experiment-profile KA_EXPERIMENT=webinar-v1 \
   KA_PROFILER="nsys proton" KA_PROFILE_ITERS=20
 ```
 
-Each invocation appends one capture batch (the report defaults to the
-latest; `make kernelagent-report KA_CAPTURE_BATCH=<id>` selects another)
-and re-profiles the archived, verified kernels only. Captures can be
+Each invocation appends one capture batch and re-profiles the archived,
+verified kernels only. The refreshed report defaults to that newest batch;
+`KA_CAPTURE_BATCH=<id>` selects one batch, and
+`KA_CAPTURE_BATCH=latest-per-profiler` renders the newest capture of each
+profiler across every batch — use it when a batch that adds a profiler
+should still show the experiment's earlier captures. Captures can be
 added only to a terminal experiment (`completed`, `partial`, or
 `failed`); let a run still in progress finish first.
+
+### Re-profiling with a different profiler
+
+A saved experiment can gain captures from any supported profiler — `ncu`,
+`nsys`, or `proton` — without repeating any LLM work. `KA_PROFILER`
+accepts one name or a space-separated list, so a batch can add several
+profilers at once:
+
+```bash
+# Add Nsight Systems beside the experiment's existing captures
+make kernelagent-experiment-profile KA_EXPERIMENT=matmulbias-ada5000_v1 \
+  KA_PROFILER=nsys KA_CAPTURE_BATCH=latest-per-profiler
+
+# Add Proton instead (the default KA_PROFILER)
+make kernelagent-experiment-profile KA_EXPERIMENT=matmulbias-ada5000_v1 \
+  KA_PROFILER=proton KA_CAPTURE_BATCH=latest-per-profiler
+
+# Capture every profiler in one new batch
+make kernelagent-experiment-profile KA_EXPERIMENT=matmulbias-ada5000_v1 \
+  KA_PROFILER='ncu nsys proton' KA_CAPTURE_BATCH=latest-per-profiler
+```
+
+Each verified variant gets one capture stem per profiler under
+`captures/<capture-id>/<problem>/`:
+
+- ncu: `<variant>_ncu_case<N>.ncu-rep` plus `.details.csv` and `.raw.csv`
+- nsys: `<variant>_nsys_case<N>.nsys-rep` plus nsys stats CSVs
+- proton: `<variant>_proton_case<N>.hatchet`
+
+A matching `.json` metadata file records the profiler version, measured
+iterations, GPU/torch/triton versions, kernel path, and kernel SHA-256.
+
+`KA_CAPTURE_BATCH=latest-per-profiler` makes the refreshed report render
+the newest capture of each profiler across all batches, so a new section
+appears beside the older ones. Without it the report shows only the new
+batch (the default, latest-batch behavior). The same selection works
+when re-rendering later:
+
+```bash
+make kernelagent-report KA_EXPERIMENT=matmulbias-ada5000_v1 \
+  KA_CAPTURE_BATCH=latest-per-profiler
+
+python3 workspace/KernelAgent/scripts/report-experiment.py \
+  matmulbias-ada5000_v1 --results-root workspace/KernelAgent/results \
+  --capture-batch latest-per-profiler --format json
+```
+
+`latest-per-profiler` is a sentinel, not a batch id: the report walks
+`capture_batches` in `manifest.json` oldest to newest and keeps the
+newest capture per problem, variant, and profiler. A newer capture of a
+variant whose archived kernel was missing or replaced supersedes the
+older refusal, and a newer refusal supersedes older captures for that
+variant. The report header names the batch that supplied each profiler;
+the ncu and nsys preambles defer to the settings recorded by those
+batches instead of claiming one batch's `--set` or iteration count.
+Profiler sections stay separate and their timings are never merged into
+one latency column.
+
+Inspect the artifacts from inside the container (`make kernelagent-console`):
+`ncu --import <stem>.ncu-rep`, `nsys stats <stem>.nsys-rep`, or
+`proton-viewer <stem>.hatchet`. Capture batches need a GPU and the built
+image; the report command runs on the host.
 
 ### External baseline kernels
 

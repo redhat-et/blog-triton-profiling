@@ -68,6 +68,10 @@ IMPL_ARTIFACTS = {
 # report presents them.
 SUPPORTED_PROFILERS = ("ncu", "nsys", "proton")
 
+# Report selection sentinel: render the newest capture of each profiler
+# across every capture batch instead of one whole batch.
+LATEST_PER_PROFILER = "latest-per-profiler"
+
 # Record stems a user-supplied --label must never collide with: the
 # impl-based names the CLIs themselves publish (verify.json /
 # verify_optimized.json, profile report stems).

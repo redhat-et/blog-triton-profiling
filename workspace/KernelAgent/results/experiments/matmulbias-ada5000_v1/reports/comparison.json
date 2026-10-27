@@ -3,7 +3,7 @@
   "experiment_id": "matmulbias-ada5000_v1",
   "status": "completed",
   "created_at": "2026-10-26T14:09:36.676368",
-  "report_generated_at": "2026-10-26T15:36:03.260624",
+  "report_generated_at": "2026-10-27T17:30:05.756444",
   "configuration": {
     "problems": [
       "matmul_bias"
@@ -95,7 +95,54 @@
           "failure": null,
           "captures": {
             "ncu": {
-              "status": "not_captured"
+              "problem": "matmul_bias",
+              "variant": "generated",
+              "profiler": "ncu",
+              "label": "generated",
+              "iters": 10,
+              "status": "ok",
+              "report_path": "captures/capture_20261026_143346_e551/matmul_bias/generated_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_143346_e551/matmul_bias/generated_ncu_case0.json",
+              "exports": [
+                {
+                  "name": "ncu_details_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/generated_ncu_case0.details.csv"
+                  ]
+                },
+                {
+                  "name": "ncu_raw_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/generated_ncu_case0.raw.csv"
+                  ]
+                }
+              ],
+              "kernel_sha256": "5ba2fb340021645983fbd0519bd2c31b1829979724947b7f27b005b98da9f3bd",
+              "failure": null,
+              "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+              "torch": "2.13.0+cu129",
+              "triton": "3.7.1",
+              "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+              "kernels": [
+                {
+                  "kernel": "_matmul_bias_kernel",
+                  "launches": 10,
+                  "duration_avg_us": 53.15599999999999,
+                  "duration_total_us": 531.56,
+                  "sm_pct": 38.158,
+                  "mem_pct": 83.757,
+                  "dram_pct": 14.9,
+                  "occupancy_pct": 53.983000000000004,
+                  "regs": 53,
+                  "grid": 512.0,
+                  "block": 128.0,
+                  "cycles": 73352.6,
+                  "tflops": 40.400255252543495
+                }
+              ],
+              "metric_source": "details"
             }
           }
         },
@@ -127,7 +174,54 @@
           "failure": null,
           "captures": {
             "ncu": {
-              "status": "not_captured"
+              "problem": "matmul_bias",
+              "variant": "rounds_5",
+              "profiler": "ncu",
+              "label": "rounds_5",
+              "iters": 10,
+              "status": "ok",
+              "report_path": "captures/capture_20261026_143346_e551/matmul_bias/rounds_5_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_143346_e551/matmul_bias/rounds_5_ncu_case0.json",
+              "exports": [
+                {
+                  "name": "ncu_details_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/rounds_5_ncu_case0.details.csv"
+                  ]
+                },
+                {
+                  "name": "ncu_raw_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/rounds_5_ncu_case0.raw.csv"
+                  ]
+                }
+              ],
+              "kernel_sha256": "e71fe54ed298b313df7d04c170a5ac2c8c4acc9ff7559be753704e006216fa5d",
+              "failure": null,
+              "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+              "torch": "2.13.0+cu129",
+              "triton": "3.7.1",
+              "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+              "kernels": [
+                {
+                  "kernel": "_matmul_bias_kernel",
+                  "launches": 10,
+                  "duration_avg_us": 35.613,
+                  "duration_total_us": 356.13,
+                  "sm_pct": 57.470000000000006,
+                  "mem_pct": 124.31800000000001,
+                  "dram_pct": 22.131,
+                  "occupancy_pct": 14.208000000000002,
+                  "regs": 150,
+                  "grid": 128.0,
+                  "block": 128.0,
+                  "cycles": 48589.5,
+                  "tflops": 60.30089316200917
+                }
+              ],
+              "metric_source": "details"
             }
           }
         },
@@ -159,7 +253,54 @@
           "failure": null,
           "captures": {
             "ncu": {
-              "status": "not_captured"
+              "problem": "matmul_bias",
+              "variant": "rounds_10",
+              "profiler": "ncu",
+              "label": "rounds_10",
+              "iters": 10,
+              "status": "ok",
+              "report_path": "captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.json",
+              "exports": [
+                {
+                  "name": "ncu_details_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.details.csv"
+                  ]
+                },
+                {
+                  "name": "ncu_raw_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.raw.csv"
+                  ]
+                }
+              ],
+              "kernel_sha256": "30091c7800b195aad30d239dc78dfe0a2b25d7c31fe690b3f0ec9f03fc495a84",
+              "failure": null,
+              "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+              "torch": "2.13.0+cu129",
+              "triton": "3.7.1",
+              "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+              "kernels": [
+                {
+                  "kernel": "_matmul_bias_kernel",
+                  "launches": 10,
+                  "duration_avg_us": 35.589999999999996,
+                  "duration_total_us": 355.9,
+                  "sm_pct": 57.547000000000004,
+                  "mem_pct": 122.34700000000001,
+                  "dram_pct": 21.779,
+                  "occupancy_pct": 14.225999999999999,
+                  "regs": 150,
+                  "grid": 128.0,
+                  "block": 128.0,
+                  "cycles": 48518.1,
+                  "tflops": 60.338845531379256
+                }
+              ],
+              "metric_source": "details"
             }
           }
         },
@@ -231,7 +372,8 @@
                   "regs": 255,
                   "grid": 64.0,
                   "block": 128.0,
-                  "cycles": 46935.1
+                  "cycles": 46935.1,
+                  "tflops": 61.432500915415595
                 }
               ],
               "metric_source": "details"
@@ -241,6 +383,19 @@
       ]
     }
   ],
+  "capture_merge": {
+    "mode": "latest-per-profiler",
+    "capture_ids": [
+      "capture_20261026_143346_e551",
+      "capture_20261026_153544_0129"
+    ],
+    "profiler_batches": {
+      "ncu": [
+        "capture_20261026_143346_e551",
+        "capture_20261026_153544_0129"
+      ]
+    }
+  },
   "diffs": [
     {
       "problem": "matmul_bias",

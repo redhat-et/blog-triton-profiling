@@ -3,7 +3,7 @@
   "experiment_id": "flashattention-ada5000_v1",
   "status": "completed",
   "created_at": "2026-10-26T14:41:49.397753",
-  "report_generated_at": "2026-10-26T17:22:56.657620",
+  "report_generated_at": "2026-10-27T17:30:05.976721",
   "configuration": {
     "problems": [
       "flash_attention"
@@ -138,7 +138,8 @@
                   "regs": 64,
                   "grid": 1024.0,
                   "block": 128.0,
-                  "cycles": 260646.5
+                  "cycles": 260646.5,
+                  "tflops": 23.1589557415236
                 }
               ],
               "metric_source": "details"
@@ -216,7 +217,8 @@
                   "regs": 248,
                   "grid": 128.0,
                   "block": 128.0,
-                  "cycles": 101858.9
+                  "cycles": 101858.9,
+                  "tflops": 59.13977880590439
                 }
               ],
               "metric_source": "details"
@@ -294,7 +296,8 @@
                   "regs": 244,
                   "grid": 128.0,
                   "block": 128.0,
-                  "cycles": 95761.6
+                  "cycles": 95761.6,
+                  "tflops": 62.61031301021598
                 }
               ],
               "metric_source": "details"
@@ -369,7 +372,8 @@
                   "regs": 255,
                   "grid": 128.0,
                   "block": 128.0,
-                  "cycles": 112631.9
+                  "cycles": 112631.9,
+                  "tflops": 53.19556418691293
                 }
               ],
               "metric_source": "details"
@@ -379,6 +383,19 @@
       ]
     }
   ],
+  "capture_merge": {
+    "mode": "latest-per-profiler",
+    "capture_ids": [
+      "capture_20261026_151913_e52e",
+      "capture_20261026_211955_fdad",
+      "capture_20261026_212117_4e7d"
+    ],
+    "profiler_batches": {
+      "ncu": [
+        "capture_20261026_212117_4e7d"
+      ]
+    }
+  },
   "diffs": [
     {
       "problem": "flash_attention",

@@ -2,8 +2,10 @@
 
 - Status: **completed**
 - Created: 2026-10-26T14:41:49.397753
-- Report generated: 2026-10-26T17:22:56.657620
-- Capture batch: `capture_20261026_212117_4e7d` (ncu, completed)
+- Report generated: 2026-10-27T17:30:05.976721
+- Capture selection: newest capture of each profiler across 3 batch(es) (`latest-per-profiler`)
+- Capture batches: `capture_20261026_151913_e52e`, `capture_20261026_211955_fdad`, `capture_20261026_212117_4e7d`
+- Profiler batches: ncu ← `capture_20261026_212117_4e7d`
 
 ## Configuration
 
@@ -56,14 +58,16 @@ Optimizer acceptance timings (the comparison each optimization session gated on,
 
 ### Nsight Compute (`ncu`)
 
-`ncu --set full`, 10 measured iterations; duration is the mean over profiled launches, throughput and occupancy are per-launch means (% of peak).
+Each variant's newest `ncu` capture across capture batches (`latest-per-profiler`); `--set` and measured iterations come from the batch that produced each capture, so duration is the mean over profiled launches, and throughput and occupancy are per-launch means (% of peak).
 
-| Variant | Kernel | Launches | Duration avg (µs) | SM % | Memory % | DRAM % | Occupancy % | Reg/thread |
-|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `generated` | `_flash_attention_kernel` | 10 | 185.45 | 41.8 | 40.7 | 7.2 | 16.2 | 64 |
-| `rounds_5` | `_flash_attention_kernel` | 10 | 72.62 | 54.6 | 93.8 | 16.7 | 13.0 | 248 |
-| `rounds_10` | `_flash_attention` | 10 | 68.60 | 58.1 | 96.4 | 17.1 | 13.3 | 244 |
-| `vllm_triton_prefill` | `_fwd_kernel` | 10 | 80.74 | 49.5 | 90.4 | 16.1 | 13.9 | 255 |
+TFLOPS is tensor-pipeline executed FLOPs (`sm__ops_path_tensor_*.sum`) over summed profiled launch time; collecting it requires `ncu --set full`.
+
+| Variant | Kernel | Launches | Duration avg (µs) | TFLOPS | SM % | Memory % | DRAM % | Occupancy % | Reg/thread |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `generated` | `_flash_attention_kernel` | 10 | 185.45 | 23.2 | 41.8 | 40.7 | 7.2 | 16.2 | 64 |
+| `rounds_5` | `_flash_attention_kernel` | 10 | 72.62 | 59.1 | 54.6 | 93.8 | 16.7 | 13.0 | 248 |
+| `rounds_10` | `_flash_attention` | 10 | 68.60 | 62.6 | 58.1 | 96.4 | 17.1 | 13.3 | 244 |
+| `vllm_triton_prefill` | `_fwd_kernel` | 10 | 80.74 | 53.2 | 49.5 | 90.4 | 16.1 | 13.9 | 255 |
 
 #### Artifacts
 

@@ -82,6 +82,8 @@ Usage:
   experiment-kernels.py profile <experiment-id> [--problems "A"]
                                              [--profilers "nsys proton"]
                                              [--profile-iters N] ...
+                                             [--report-capture-batch
+                                              ID|latest-per-profiler]
   experiment-kernels.py add-baseline <experiment-id> --problem P
                                       --label NAME --kernel PATH
                                       [--source-path PATH]
@@ -95,6 +97,8 @@ Examples:
   experiment-kernels.py run mixed-v1 --generation gpt-6.1-sol \
       --optimization claude-sonnet-4-6:high
   experiment-kernels.py profile webinar-v1 --profilers "nsys proton"
+  experiment-kernels.py profile webinar-v1 --profilers proton \
+      --report-capture-batch latest-per-profiler
   experiment-kernels.py add-baseline webinar-v1 --problem matmul_bias \
       --label rocm_blog_fusion \
       --kernel problems/matmul_bias/baselines/rocm_blog_fusion.py
@@ -120,6 +124,7 @@ import ka_common
 from ka_common import (
     GENERATED_VARIANT,
     IMPL_ARTIFACTS,
+    LATEST_PER_PROFILER,
     MANIFEST_FILENAME,
     MANIFEST_SCHEMA_VERSION,
     PROBLEM_FILES,
@@ -1392,14 +1397,19 @@ def _run_capture_batch(
 # Report regeneration
 
 
-def _generate_report(exp_dir: Path) -> bool:
+def _generate_report(exp_dir: Path, capture_id: str | None = None) -> bool:
     """Render comparison.md/json via report-experiment.py (loaded, not
-    spawned, so the report runs in this dependency-free process)."""
+    spawned, so the report runs in this dependency-free process).
+
+    capture_id selects the batch the report renders; None keeps the
+    latest-batch default, and LATEST_PER_PROFILER selects the newest
+    capture of each profiler across batches.
+    """
     try:
         report_mod = ka_common._load_module(
             "report_experiment", _script_path(REPORT_SCRIPT), register=True
         )
-        out = report_mod.generate_report(exp_dir)
+        out = report_mod.generate_report(exp_dir, capture_id=capture_id)
     except Exception as exc:  # noqa: BLE001 - report failure (including a
         # report module that cannot even be loaded) must not discard the
         # experiment's artifacts
@@ -1409,7 +1419,32 @@ def _generate_report(exp_dir: Path) -> bool:
     return True
 
 
-def _finish_with_report(exp_dir: Path, manifest: dict, ok: bool) -> bool:
+def _validate_report_capture_batch(
+    manifest: dict, capture_id: str | None
+) -> None:
+    """Reject an unknown report batch before rendering. The sentinel is
+    always valid; None keeps the latest-batch default."""
+    if not capture_id or capture_id == LATEST_PER_PROFILER:
+        return
+    known = [
+        batch.get("capture_id")
+        for batch in manifest.get("capture_batches") or []
+    ]
+    if capture_id not in known:
+        raise SystemExit(
+            f"ERROR: no capture batch {capture_id!r} in experiment "
+            f"{manifest.get('experiment_id')!r} (known: "
+            f"{', '.join(map(str, known)) or 'none'}; or use "
+            f"{LATEST_PER_PROFILER})"
+        )
+
+
+def _finish_with_report(
+    exp_dir: Path,
+    manifest: dict,
+    ok: bool,
+    capture_id: str | None = None,
+) -> bool:
     """Render the report and record the terminal manifest state.
 
     The caller persists its terminal status first — the report reloads
@@ -1418,8 +1453,11 @@ def _finish_with_report(exp_dir: Path, manifest: dict, ok: bool) -> bool:
     render downgrades the experiment to "partial" with no report record;
     a successful one records where the report landed. Every mutating
     command (run, profile, add-baseline) ends this way.
+
+    capture_id is forwarded to the report so a capture batch can choose
+    the batch (or latest-per-profiler selection) its refresh renders.
     """
-    if _generate_report(exp_dir):
+    if _generate_report(exp_dir, capture_id):
         manifest["report"] = {
             "path": "reports/comparison.md",
             "generated_at": datetime.now().isoformat(),
@@ -1688,7 +1726,10 @@ def _profile(exp_dir: Path, args) -> int:
     # manifest.json from disk), matching cmd_run's ordering.
     manifest["status"] = "partial" if not ok else manifest.get("status")
     _save_manifest(exp_dir, manifest)
-    ok = _finish_with_report(exp_dir, manifest, ok)
+    _validate_report_capture_batch(manifest, args.report_capture_batch)
+    ok = _finish_with_report(
+        exp_dir, manifest, ok, args.report_capture_batch
+    )
     return 0 if ok else 1
 
 
@@ -2010,6 +2051,13 @@ def main() -> int:
         "experiment", help="experiment id (or its directory)"
     )
     _add_common_args(profile_p, with_run_settings=False)
+    profile_p.add_argument(
+        "--report-capture-batch",
+        default=None,
+        help="batch the refreshed report renders: an id, or "
+        "latest-per-profiler for the newest capture of each profiler "
+        "across batches (default: the latest batch)",
+    )
     profile_p.set_defaults(func=cmd_profile)
 
     baseline_p = sub.add_parser(

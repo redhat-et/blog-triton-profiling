@@ -314,7 +314,10 @@ KA_PROFILE_WARMUP        ?= 10
 KA_TEST_TIMEOUT          ?= 180
 # Optional destination for kernelagent-report's Markdown
 KA_REPORT_OUT            ?=
-# Capture batch reported by kernelagent-report (empty: the latest)
+# Capture batch reported by kernelagent-report and by the refreshed report
+# of kernelagent-experiment-profile (empty: the latest batch). The sentinel
+# latest-per-profiler renders the newest capture of each profiler across
+# every batch.
 KA_CAPTURE_BATCH         ?=
 
 # KA_IMPL is shared by targets with different valid values: verify takes
@@ -752,12 +755,15 @@ kernelagent-experiment: $(if $(strip $(OPENAI_MODEL)),_ka_require_llm,_ka_requir
 # Add one capture batch to a saved experiment — re-profile its archived,
 # verified kernels with any subset of KA_PROFILER, then refresh the report.
 # No LLM needed. An explicit KA_PROBLEM restricts the batch (unset: every
-# problem in the experiment).
+# problem in the experiment). KA_CAPTURE_BATCH selects what the refreshed
+# report renders (empty: the new latest batch; latest-per-profiler: the
+# newest capture of each profiler across batches).
 .PHONY: kernelagent-experiment-profile
 kernelagent-experiment-profile: kernelagent-image
 	$(KA_RUN) $(IMAGE_REPO)/$(KA_IMAGE_TAG) \
 		experiment-kernels.py profile $(KA_EXPERIMENT_CONTAINER_PATH) \
-		$(call ka_capture_flags,1,$(if $(filter command line environment,$(origin KA_PROBLEM)),--problems "$(KA_PROBLEM)"))
+		$(call ka_capture_flags,1,$(if $(filter command line environment,$(origin KA_PROBLEM)),--problems "$(KA_PROBLEM)")) \
+		$(if $(KA_CAPTURE_BATCH),--report-capture-batch $(KA_CAPTURE_BATCH))
 	@echo "Experiment: $(KA_EXPERIMENT_DIR)"
 
 # Add an external kernel to a saved experiment as a baseline: archive and
@@ -787,7 +793,8 @@ kernelagent-experiment-baseline: kernelagent-image
 # host — no container, GPU, or LLM: the report is built from the saved
 # manifest, benchmark records, and profiler exports. KA_REPORT_OUT writes
 # elsewhere (links follow), KA_CAPTURE_BATCH selects a batch (default:
-# latest).
+# latest) or latest-per-profiler for the newest capture of each profiler
+# across batches.
 .PHONY: kernelagent-report
 kernelagent-report:
 	python3 $(KERNELAGENT_WORKSPACE)/scripts/report-experiment.py $(KA_EXPERIMENT) \
@@ -833,9 +840,9 @@ help:
 	@echo "  kernelagent-systems                Run the Nsight Systems UI (with GPU)"
 	@echo "  kernelagent-compute                Run the Nsight Compute UI (with GPU)"
 	@echo "  kernelagent-experiment             Run a comparison experiment (generate, optimize per KA_OPT_ROUNDS, profile, report)"
-	@echo "  kernelagent-experiment-profile     Add a capture batch to an experiment (KA_EXPERIMENT, KA_PROFILER)"
+	@echo "  kernelagent-experiment-profile     Re-profile an experiment's archived kernels with any KA_PROFILER (KA_EXPERIMENT, KA_CAPTURE_BATCH)"
 	@echo "  kernelagent-experiment-baseline    Add an external kernel baseline to an experiment (KA_EXPERIMENT, KA_PROBLEM, KA_LABEL, KA_KERNEL_SOURCE)"
-	@echo "  kernelagent-report                 Render an experiment's Markdown report on the host (KA_EXPERIMENT)"
+	@echo "  kernelagent-report                 Render an experiment's Markdown report on the host (KA_EXPERIMENT, KA_CAPTURE_BATCH)"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  clean                              Remove notebook checkpoints"
@@ -849,6 +856,7 @@ help:
 	@echo "  KA_CASE=$(KA_CASE)  KA_IMPL=kernel|optimized (profile also: ref)  KA_PROFILER=$(KA_PROFILER)  KA_NCU_SET=$(KA_NCU_SET)"
 	@echo "  KA_EXPERIMENT=<id>  KA_GEN_ROUNDS=$(KA_GEN_ROUNDS)  KA_OPT_ROUNDS=<budget or '5 10'>  KA_PROFILER='ncu nsys proton'"
 	@echo "  KA_PROFILE_ITERS=$(KA_PROFILE_ITERS)  KA_PROFILE_WARMUP=$(KA_PROFILE_WARMUP)  KA_TEST_TIMEOUT=$(KA_TEST_TIMEOUT)  KA_REPORT_OUT=<path>  (list values are space-separated and must be quoted)"
+	@echo "  KA_CAPTURE_BATCH=<capture id|latest-per-profiler>  report batch (empty: latest; latest-per-profiler: newest capture of each profiler)"
 	@echo "  KA_KERNEL_SOURCE=<host path, path relative to problems/, or /workspace/user/... path>  KA_LABEL=<name>  (kernelagent-profile and kernelagent-experiment-baseline)"
 	@echo ""
 	@echo "Examples:"
@@ -868,4 +876,6 @@ help:
 	@echo "  make kernelagent-experiment KA_EXPERIMENT=mixed-v1 KA_CASE=3 KA_GENERATION_MODEL=gpt-6.1-sol KA_OPTIMIZATION_MODEL=claude-sonnet-4-6:high  # one model per stage"
 	@echo "  make kernelagent-experiment-baseline KA_EXPERIMENT=webinar-v1 KA_PROBLEM=matmul_bias KA_LABEL=rocm_blog_fusion KA_KERNEL_SOURCE=matmul_bias/baselines/rocm_blog_fusion.py"
 	@echo "  make kernelagent-experiment-profile KA_EXPERIMENT=webinar-v1 KA_PROFILER='nsys proton'  # optional: more capture batches"
+	@echo "  make kernelagent-experiment-profile KA_EXPERIMENT=webinar-v1 KA_PROFILER=ncu KA_CAPTURE_BATCH=latest-per-profiler  # re-profile, keep other profilers"
+	@echo "  make kernelagent-experiment-profile KA_EXPERIMENT=webinar-v1 KA_PROFILER='ncu nsys proton' KA_CAPTURE_BATCH=latest-per-profiler"
 	@echo "  make kernelagent-report KA_EXPERIMENT=webinar-v1 KA_REPORT_OUT=slides/comparison.md  # optional: re-render / relocate"

@@ -10,7 +10,8 @@ runs on the host with a plain Python 3 standard library:
     bench.py timing; the optimizer's own acceptance timings are shown
     separately where they exist)
   - Nsight Compute tables come from the .details.csv export
-    profile-kernel.py writes beside each capture
+    profile-kernel.py writes beside each capture; achieved TFLOPS comes
+    from the .raw.csv export's tensor-pipeline FLOP counters
   - Nsight Systems tables come from the nsys stats CSV exports
   - Proton tables come from the JSON .hatchet capture
   - kernel sources are diffed pairwise into reports/source-diffs/
@@ -25,7 +26,8 @@ and aggregation stated beside the table. Missing metrics render as "—".
 
 Usage:
   report-experiment.py <experiment> [--results-root DIR] [--out PATH]
-                       [--capture-batch ID] [--format markdown|json]
+                       [--capture-batch ID|latest-per-profiler]
+                       [--format markdown|json]
 
   <experiment>  experiment id under <results-root>/experiments, or an
                 experiment directory directly
@@ -34,12 +36,15 @@ Usage:
   --out         write the Markdown somewhere other than
                 <experiment>/reports/comparison.md (links are computed
                 relative to the destination)
-  --capture-batch  report a specific capture batch (default: the latest)
+  --capture-batch  report a specific capture batch (default: the latest),
+                or latest-per-profiler to use the newest capture of each
+                profiler across every batch
   --format json  print the normalized report data as JSON and exit
 
 Examples:
   report-experiment.py webinar-v1
   report-experiment.py webinar-v1 --out slides/kernel-comparison.md
+  report-experiment.py webinar-v1 --capture-batch latest-per-profiler
   report-experiment.py webinar-v1 --format json
 """
 
@@ -56,6 +61,7 @@ from pathlib import Path
 
 from ka_common import (
     GENERATED_VARIANT,
+    LATEST_PER_PROFILER,
     RESULTS_MOUNT_DEFAULT,
     SUPPORTED_PROFILERS,
     _atomic_write_json,
@@ -271,6 +277,93 @@ def _aggregate_launches(launches: list[dict]) -> list[dict]:
     return summaries
 
 
+# Raw-page metric family that counts executed math operations. NCU
+# reports them as FLOPs (an FMA counts as two operations), and only the
+# full metric set collects the tensor-pipeline counters.
+_NCU_TENSOR_OPS_PREFIX = "sm__ops_path_tensor_"
+_NCU_DURATION_METRIC = "gpu__time_duration.sum"
+
+
+def _parse_ncu_raw(path: Path) -> list[dict]:
+    """Per-launch tensor FLOPs from --csv --page raw.
+
+    The raw page is one column per metric, with a units row under the
+    header. Only the tensor-pipeline ``sm__ops_path_tensor_*.sum``
+    columns are FLOPs, and only ``--set full`` collects them, so a
+    basic/detailed capture yields no records (rendered as —).
+    """
+    rows = _read_csv_rows(path)
+    header_idx = None
+    for i, row in enumerate(rows):
+        headers = {_norm_header(c) for c in row}
+        if {"id", "kernelname", _NCU_DURATION_METRIC} <= headers:
+            header_idx = i
+            break
+    if header_idx is None:
+        return []
+    header = {_norm_header(c): j for j, c in enumerate(rows[header_idx])}
+    id_col = header["id"]
+    kernel_col = header["kernelname"]
+    duration_col = header[_NCU_DURATION_METRIC]
+    tensor_cols = [
+        j
+        for name, j in header.items()
+        if name.startswith(_NCU_TENSOR_OPS_PREFIX) and name.endswith(".sum")
+    ]
+    if not tensor_cols:
+        return []
+
+    start = header_idx + 1
+    unit = "us"
+    if start < len(rows):
+        id_cell = rows[start][id_col] if id_col < len(rows[start]) else None
+        if _to_int(id_cell) is None:
+            # The units row sits directly under the header. Keep the raw
+            # page's us when the exported unit is one we cannot scale.
+            raw_unit = (
+                rows[start][duration_col]
+                if duration_col < len(rows[start])
+                else None
+            )
+            if (raw_unit or "").strip().lower() in _DURATION_UNITS:
+                unit = raw_unit
+            start += 1
+
+    launches = []
+    for row in rows[start:]:
+        try:
+            kernel = row[kernel_col]
+            duration_us = _duration_us(row[duration_col], unit)
+        except IndexError:
+            continue
+        if not kernel or duration_us is None:
+            continue
+        flops = sum(
+            _to_float(row[j]) or 0.0 for j in tensor_cols if j < len(row)
+        )
+        launches.append(
+            {"kernel": kernel, "duration_us": duration_us, "flops": flops}
+        )
+    return launches
+
+
+def _aggregate_tflops(launches: list[dict]) -> dict[str, float]:
+    """Achieved tensor TFLOPS per kernel: summed FLOPs over summed
+    profiled launch time, so every launch is weighted by its cost."""
+    grouped: dict[str, dict] = {}
+    for launch in launches:
+        acc = grouped.setdefault(
+            launch["kernel"], {"flops": 0.0, "duration_us": 0.0}
+        )
+        acc["flops"] += launch["flops"]
+        acc["duration_us"] += launch["duration_us"]
+    return {
+        kernel: acc["flops"] / (acc["duration_us"] * 1e-6) / 1e12
+        for kernel, acc in grouped.items()
+        if acc["duration_us"] > 0
+    }
+
+
 # ---------------------------------------------------------------------------
 # nsys stats CSV parsing
 
@@ -438,6 +531,15 @@ def _capture_summary(exp_dir: Path, capture: dict, profiler: str) -> dict:
             for launch in _parse_ncu_details(exp_dir / path)
         ]
         summary["kernels"] = _aggregate_launches(launches)
+        tflops = _aggregate_tflops(
+            [
+                launch
+                for path in _export_paths(capture, "ncu_raw_csv")
+                for launch in _parse_ncu_raw(exp_dir / path)
+            ]
+        )
+        for kernel in summary["kernels"]:
+            kernel["tflops"] = tflops.get(kernel["kernel"])
         summary["metric_source"] = "details" if launches else None
     elif profiler == "nsys":
         kernels = []
@@ -488,6 +590,49 @@ def _is_superseded(capture: dict, record: dict) -> bool:
         and expected
         and capture.get("kernel_sha256") not in (None, expected)
     )
+
+
+def _merge_capture_batches(
+    batches: list[dict],
+) -> tuple[dict, dict[str, list[str]]]:
+    """The newest capture per (problem, variant, profiler) across batches.
+
+    Batches are walked oldest to newest, so a later capture overrides an
+    older one for the same key. A variant-level refusal (key
+    "problem/variant", profiler None) describes the archived kernel at
+    that batch, so a newer refusal drops older profiler captures and a
+    newer successful capture drops an older refusal. Returns the merged
+    captures plus, per profiler, the batch ids that supplied the selected
+    records.
+    """
+    merged: dict = {}
+    for batch in batches:
+        captures = batch.get("captures") or {}
+        for key, record in captures.items():
+            if record.get("profiler") is None:
+                for old_key in [k for k in merged if k.startswith(f"{key}/")]:
+                    del merged[old_key]
+                merged[key] = record
+        for key, record in captures.items():
+            if record.get("profiler") is not None:
+                merged.pop(key.rsplit("/", 1)[0], None)
+                merged[key] = record
+
+    provenance: dict[str, list[str]] = {}
+    for batch in batches:
+        capture_id = batch.get("capture_id")
+        for key, record in (batch.get("captures") or {}).items():
+            # Identity, not equality: only the record currently held by
+            # the merge is the selected newest capture for this key.
+            if merged.get(key) is not record:
+                continue
+            profiler = record.get("profiler")
+            if profiler is None:
+                continue
+            ids = provenance.setdefault(profiler, [])
+            if capture_id not in ids:
+                ids.append(capture_id)
+    return merged, provenance
 
 
 def _variant_captures(
@@ -596,27 +741,45 @@ def build_report_data(
 ) -> dict:
     config = manifest.get("configuration") or {}
     batches = manifest.get("capture_batches") or []
+    merge: dict | None = None
     batch = None
-    if capture_id is not None:
-        batch = next(
-            (b for b in batches if b.get("capture_id") == capture_id), None
-        )
-        if batch is None:
-            known = [b.get("capture_id") for b in batches]
-            raise SystemExit(
-                f"ERROR: no capture batch {capture_id!r} in "
-                f"{exp_dir} (known: {', '.join(map(str, known))})"
+    if capture_id == LATEST_PER_PROFILER:
+        merged, profiler_batches = _merge_capture_batches(batches)
+        batch = batches[-1] if batches else None
+        captures_batch = {"captures": merged} if batches else None
+        merge = {
+            "mode": LATEST_PER_PROFILER,
+            "capture_ids": [b.get("capture_id") for b in batches],
+            "profiler_batches": profiler_batches,
+        }
+    else:
+        if capture_id is not None:
+            batch = next(
+                (b for b in batches if b.get("capture_id") == capture_id), None
             )
-    elif batches:
-        batch = batches[-1]
+            if batch is None:
+                known = [b.get("capture_id") for b in batches]
+                raise SystemExit(
+                    f"ERROR: no capture batch {capture_id!r} in "
+                    f"{exp_dir} (known: {', '.join(map(str, known))})"
+                )
+        elif batches:
+            batch = batches[-1]
+        captures_batch = batch
 
     # A later capture batch may use profilers the creating run did not
     # (and vice versa), so the report covers the union; order preserved.
+    profiler_sources = (
+        [
+            profiler
+            for b in batches
+            for profiler in (b.get("profilers") or [])
+        ]
+        if merge is not None
+        else ((batch.get("profilers") or []) if batch else [])
+    )
     profilers = list(
-        dict.fromkeys(
-            (config.get("profilers") or [])
-            + ((batch.get("profilers") or []) if batch else [])
-        )
+        dict.fromkeys((config.get("profilers") or []) + profiler_sources)
     )
     if not profilers:
         profilers = list(SUPPORTED_PROFILERS)
@@ -626,13 +789,13 @@ def build_report_data(
             exp_dir,
             name,
             manifest.get("problems", {}).get(name) or {},
-            batch,
+            captures_batch,
             profilers,
         )
         for name in config.get("problems", [])
     ]
 
-    return {
+    data = {
         "schema_version": SCHEMA_VERSION,
         "experiment_id": manifest.get("experiment_id"),
         "status": manifest.get("status"),
@@ -655,6 +818,9 @@ def build_report_data(
         ),
         "problems": problems,
     }
+    if merge is not None:
+        data["capture_merge"] = merge
+    return data
 
 
 # ---------------------------------------------------------------------------
@@ -864,9 +1030,20 @@ def _acceptance_section(variants: list[dict], data: dict) -> list[str]:
     return lines
 
 
-def _ncu_section(variants: list[dict], batch: dict | None) -> list[str]:
+def _ncu_section(
+    variants: list[dict], batch: dict | None, merge: dict | None = None
+) -> list[str]:
     lines = ["### Nsight Compute (`ncu`)", ""]
-    if batch:
+    if merge:
+        lines.append(
+            "Each variant's newest `ncu` capture across capture batches "
+            "(`latest-per-profiler`); `--set` and measured iterations come "
+            "from the batch that produced each capture, so duration is the "
+            "mean over profiled launches, and throughput and occupancy are "
+            "per-launch means (% of peak)."
+        )
+        lines.append("")
+    elif batch:
         lines.append(
             f"`ncu --set {batch.get('ncu_set')}`, "
             f"{_batch_iters(batch)} measured "
@@ -876,15 +1053,21 @@ def _ncu_section(variants: list[dict], batch: dict | None) -> list[str]:
         )
         lines.append("")
     lines.append(
-        "| Variant | Kernel | Launches | Duration avg (µs) | "
+        "TFLOPS is tensor-pipeline executed FLOPs "
+        "(`sm__ops_path_tensor_*.sum`) over summed profiled launch "
+        "time; collecting it requires `ncu --set full`."
+    )
+    lines.append("")
+    lines.append(
+        "| Variant | Kernel | Launches | Duration avg (µs) | TFLOPS | "
         "SM % | Memory % | DRAM % | Occupancy % | Reg/thread |"
     )
-    lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|")
+    lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|")
     for variant in variants:
         capture = variant["captures"].get("ncu") or {}
         kernels = capture.get("kernels") or []
         if capture.get("status") != "ok" or not kernels:
-            lines.append(_note_row(variant, capture, 7))
+            lines.append(_note_row(variant, capture, 8))
             continue
         for kernel in kernels:
             lines.append(
@@ -892,6 +1075,7 @@ def _ncu_section(variants: list[dict], batch: dict | None) -> list[str]:
                 f"| `{(kernel['kernel'] or '')[:48]}` "
                 f"| {kernel['launches']} "
                 f"| {_num(kernel['duration_avg_us'], 2)} "
+                f"| {_num(kernel.get('tflops'), 1)} "
                 f"| {_num(kernel['sm_pct'], 1)} "
                 f"| {_num(kernel['mem_pct'], 1)} "
                 f"| {_num(kernel['dram_pct'], 1)} "
@@ -902,9 +1086,19 @@ def _ncu_section(variants: list[dict], batch: dict | None) -> list[str]:
     return lines
 
 
-def _nsys_section(variants: list[dict], batch: dict | None) -> list[str]:
+def _nsys_section(
+    variants: list[dict], batch: dict | None, merge: dict | None = None
+) -> list[str]:
     lines = ["### Nsight Systems (`nsys`)", ""]
-    if batch:
+    if merge:
+        lines.append(
+            "Each variant's newest `nsys` capture across capture batches "
+            "(`latest-per-profiler`); measured iterations come from the "
+            "batch that produced each capture, and GPU kernel times exclude "
+            "warmup and JIT (cudaProfilerApi window)."
+        )
+        lines.append("")
+    elif batch:
         lines.append(
             f"{_batch_iters(batch)} measured iterations; GPU "
             "kernel times exclude warmup and JIT (cudaProfilerApi window)."
@@ -951,13 +1145,23 @@ def _nsys_section(variants: list[dict], batch: dict | None) -> list[str]:
     return lines
 
 
-def _proton_section(variants: list[dict]) -> list[str]:
-    lines = [
-        "### Proton",
-        "",
-        "| Variant | Entry | Type | Time (ns) |",
-        "|---|---|---|---:|",
-    ]
+def _proton_section(
+    variants: list[dict], merge: dict | None = None
+) -> list[str]:
+    lines = ["### Proton", ""]
+    if merge:
+        lines.append(
+            "Each variant's newest Proton capture across capture batches "
+            "(`latest-per-profiler`); entries are the in-process Triton "
+            "profiler's timing tree."
+        )
+        lines.append("")
+    lines.extend(
+        [
+            "| Variant | Entry | Type | Time (ns) |",
+            "|---|---|---|---:|",
+        ]
+    )
     for variant in variants:
         capture = variant["captures"].get("proton") or {}
         entries = capture.get("entries") or []
@@ -1064,17 +1268,18 @@ def _render_problem(
     lines.extend(_acceptance_section(variants, data))
 
     batch = data.get("capture_batch")
+    merge = data.get("capture_merge")
     profilers_present = _profilers_present(variants)
     if not profilers_present:
         lines.append("_No profiler captures available for this problem._")
         lines.append("")
     for profiler in profilers_present:
         if profiler == "ncu":
-            lines.extend(_ncu_section(variants, batch))
+            lines.extend(_ncu_section(variants, batch, merge))
         elif profiler == "nsys":
-            lines.extend(_nsys_section(variants, batch))
+            lines.extend(_nsys_section(variants, batch, merge))
         elif profiler == "proton":
-            lines.extend(_proton_section(variants))
+            lines.extend(_proton_section(variants, merge))
 
     lines.extend(
         _artifacts_section(variants, profilers_present, exp_dir, out_dir)
@@ -1127,8 +1332,33 @@ def render_markdown(
     lines.append(f"- Status: **{data['status'] or '—'}**")
     lines.append(f"- Created: {data['created_at'] or '—'}")
     lines.append(f"- Report generated: {data['report_generated_at']}")
+    merge = data.get("capture_merge")
     batch = data.get("capture_batch")
-    if batch:
+    if merge:
+        capture_ids = merge.get("capture_ids") or []
+        lines.append(
+            "- Capture selection: newest capture of each profiler across "
+            f"{len(capture_ids)} batch(es) (`{merge.get('mode')}`)"
+        )
+        lines.append(
+            "- Capture batches: "
+            + (
+                ", ".join(f"`{capture_id}`" for capture_id in capture_ids)
+                if capture_ids
+                else "none"
+            )
+        )
+        sources = merge.get("profiler_batches") or {}
+        if sources:
+            lines.append(
+                "- Profiler batches: "
+                + "; ".join(
+                    f"{profiler} ← "
+                    + ", ".join(f"`{capture_id}`" for capture_id in ids)
+                    for profiler, ids in sources.items()
+                )
+            )
+    elif batch:
         lines.append(
             f"- Capture batch: `{batch['capture_id']}` "
             f"({', '.join(batch.get('profilers') or [])}, {batch['status']})"
@@ -1251,7 +1481,9 @@ def main() -> int:
     parser.add_argument(
         "--capture-batch",
         default=None,
-        help="report this capture batch (default: the latest)",
+        help="report this capture batch (default: the latest), or "
+        "latest-per-profiler for the newest capture of each profiler "
+        "across every batch",
     )
     parser.add_argument(
         "--format",
