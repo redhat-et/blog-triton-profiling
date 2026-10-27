@@ -10,8 +10,8 @@ This workflow is **CUDA-only** (KernelAgent generates Triton kernels for
 NVIDIA GPUs). It runs in the **shared CUDA image** — the same image the
 `cuda-*` / `nsight-*` targets use, with the Nsight CLI tools and UIs and
 a Jupyter notebook server on board. The `kernelagent-*` targets mount
-`workspace/KernelAgent`'s `problems/`, `results/`, and `profiles/`
-directories as the container's data (the CLI scripts themselves are baked
+`workspace/KernelAgent`'s `problems/` and `results/` directories as the
+container's data (the CLI scripts themselves are baked
 into the image, not mounted — see `ka_vol` in the Makefile) and configure
 the LLM backend; no separate KernelAgent image exists.
 
@@ -30,8 +30,8 @@ workspace/KernelAgent/
     report-experiment.py   Render an experiment's Markdown/JSON report
     ka_common.py           Helpers the CLIs share (atomic writes, spec loading,
                            the CUDA probe) — imported, not run directly
-  results/            KernelAgent sessions, kernels, verification records
-  profiles/           Proton / Nsight captures
+  results/            KernelAgent sessions, kernels, verification records,
+                      experiments, and per-problem profiles/ captures
 ```
 
 Each problem directory holds the complete spec the agent works from:
@@ -475,7 +475,7 @@ make kernelagent-profile-optimized KA_PROBLEM=matmul_bias KA_CASE=3 KA_PROFILER=
 `kernelagent-profile-optimized` needs a completed optimization first (see
 the previous section); both targets need the generated kernel.
 
-Reports land under `profiles/<problem>/` as
+Reports land under `results/<problem>/profiles/` as
 `<impl>_<profiler>_case<N>.{hatchet,nsys-rep,ncu-rep}` with a `.json`
 metadata file recording the case, GPU, software versions, and kernel
 identity — `kernel_`-prefixed for the generated kernel (the unoptimized
@@ -484,7 +484,11 @@ PyTorch baseline, `<label>_`-prefixed for a `KA_KERNEL_SOURCE`/`KA_LABEL` run. V
 Proton's `.hatchet` output with `proton-viewer`, or open the
 `.nsys-rep` / `.ncu-rep` reports in the Nsight UIs launched from this
 workspace's own container — the reports appear at
-`/workspace/user/profiles/<problem>/`:
+`/workspace/user/results/<problem>/profiles/`:
+
+Captures from before this layout lived under
+`workspace/KernelAgent/profiles/<problem>/`; move them into
+`workspace/KernelAgent/results/<problem>/profiles/` to keep viewing them.
 
 ```bash
 make kernelagent-systems

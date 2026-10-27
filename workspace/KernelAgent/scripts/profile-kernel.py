@@ -19,8 +19,11 @@ compilation, autotuning, and warmup launches.
 Usage:
   profile-kernel.py <problem> [--case N] [--impl kernel|optimized|ref]
                      [--profiler proton|nsys|ncu] [--iters N] [--warmup N]
-                     [--kernel PATH] [--out DIR] [--ncu-set SET]
+                     [--kernel PATH] [--out CAPTURE_DIR] [--ncu-set SET]
                      [--label NAME]
+
+CAPTURE_DIR is the exact directory the report files are written to; it
+defaults to results/<problem>/profiles.
 
 Examples:
   profile-kernel.py matmul_bias --case 3 --profiler proton
@@ -237,9 +240,6 @@ PROBLEMS_HOME = Path(
 )
 RESULTS_MOUNT = Path(
     os.environ.get("RESULTS_MOUNT", ka_common.RESULTS_MOUNT_DEFAULT)
-)
-PROFILES_HOME = Path(
-    os.environ.get("PROFILES_HOME", ka_common.PROFILES_HOME_DEFAULT)
 )
 
 
@@ -625,7 +625,11 @@ def main() -> int:
         help="kernel to profile (default: results/<problem>/final_kernel.py)",
     )
     parser.add_argument(
-        "--out", type=Path, default=PROFILES_HOME, help="profiles output root"
+        "--out",
+        type=Path,
+        default=None,
+        help="exact directory for this problem's captures "
+        "(default: results/<problem>/profiles)",
     )
     parser.add_argument(
         "--internal-child",
@@ -675,7 +679,11 @@ def main() -> int:
     if not 0 <= args.case < len(cases):
         raise SystemExit(f"ERROR: --case must be in 0..{len(cases) - 1}")
 
-    out_dir = args.out / args.problem
+    out_dir = (
+        args.out
+        if args.out is not None
+        else RESULTS_MOUNT / args.problem / "profiles"
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = out_dir / f"{args.label or args.impl}_{args.profiler}_case{args.case}"
 

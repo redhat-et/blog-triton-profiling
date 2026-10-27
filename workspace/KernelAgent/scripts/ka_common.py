@@ -40,11 +40,10 @@ PROBLEM_FILES = ("problem.txt", "test_fixed.py", "bench.py", "spec.py")
 SHARED_HARNESS = "_harness.py"
 
 # Default filesystem locations. Each CLI binds its
-# PROBLEMS_HOME/RESULTS_MOUNT/PROFILES_HOME module attribute at import
-# time, but the container's canonical paths are defined once here.
+# PROBLEMS_HOME/RESULTS_MOUNT module attribute at import time, but the
+# container's canonical paths are defined once here.
 PROBLEMS_HOME_DEFAULT = "/workspace/user/problems"
 RESULTS_MOUNT_DEFAULT = "/workspace/user/results"
-PROFILES_HOME_DEFAULT = "/workspace/user/profiles"
 
 # Saved kernel artifacts, keyed by impl. The optimized kernel is
 # deliberately separate from final_kernel.py: generation replaces

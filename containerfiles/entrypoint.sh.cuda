@@ -107,7 +107,8 @@ else
 (image shared with the CUDA profiling workflow)
 LLM model: ${OPENAI_MODEL}
 LLM backend: ${LLM_BACKEND}"
-            banner_footer="Problem specs, results, and profiles live under /workspace/user
+            banner_footer="Problem specs live under /workspace/user/problems;
+results, including each problem's profiles/, live under /workspace/user/results
 (the host workspace/KernelAgent directory)."
             ;;
         *)

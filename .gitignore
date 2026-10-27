@@ -13,10 +13,10 @@ __pycache__/
 # here; a .build/ from the old KernelAgent source staging may survive)
 .build/
 
-# KernelAgent run artifacts (sessions, final kernels, profiles)
+# KernelAgent run artifacts (sessions, kernels, profiles, experiments)
 workspace/KernelAgent/results/*
 !workspace/KernelAgent/results/.gitkeep
-workspace/KernelAgent/profiles/*
-!workspace/KernelAgent/profiles/.gitkeep
+# Legacy capture location (pre results/<problem>/profiles); no longer mounted
+workspace/KernelAgent/profiles/
 workspace/KernelAgent/.env
 workspace/KernelAgent/.tmp-verify/

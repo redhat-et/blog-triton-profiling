@@ -286,8 +286,7 @@ KA_KERNEL_HOST_PATH = $(if $(strip $(KA_KERNEL_SOURCE)),$(firstword \
 # its host path back to the container path that mount already provides.
 KA_KERNEL_MOUNTED_CONTAINER_PATH = $(patsubst $(KERNELAGENT_WORKSPACE)/%,/workspace/user/%,$(filter \
 	$(KERNELAGENT_WORKSPACE)/problems/% \
-	$(KERNELAGENT_WORKSPACE)/results/% \
-	$(KERNELAGENT_WORKSPACE)/profiles/%,$(KA_KERNEL_HOST_PATH)))
+	$(KERNELAGENT_WORKSPACE)/results/%,$(KA_KERNEL_HOST_PATH)))
 # Sources outside those mounts are copied into a mounted tree before the
 # container runs; kernelagent-experiment-baseline overrides the directory
 # with the experiment tree.
@@ -556,8 +555,7 @@ endef
 
 define ka_vol
 	-v "${KERNELAGENT_WORKSPACE}/problems:/workspace/user/problems:Z" \
-	-v "${KERNELAGENT_WORKSPACE}/results:/workspace/user/results:Z" \
-	-v "${KERNELAGENT_WORKSPACE}/profiles:/workspace/user/profiles:Z"
+	-v "${KERNELAGENT_WORKSPACE}/results:/workspace/user/results:Z"
 endef
 
 KA_RUN := $(CTR_CMD) run --rm $(cuda_dev_args)$(cuda_args)$(ka_args)$(ka_vol)
@@ -626,13 +624,13 @@ kernelagent-console: kernelagent-image
 	$(call ctr_run,$(cuda_dev_args)$(cuda_args)$(ka_args) $(ka_llm_env)$(ka_vol),$(KA_IMAGE_TAG),)
 
 # Run the Nsight Systems UI in the KernelAgent container (with GPU
-# support); the mounted workspace holds the saved profiles
+# support); the mounted results tree holds the saved profiles
 .PHONY: kernelagent-systems
 kernelagent-systems: kernelagent-image
 	$(call ctr_run,$(cuda_dev_args)$(cuda_args)$(ka_args)$(ka_vol)$(nsight_args),$(KA_IMAGE_TAG),nsys-ui)
 
 # Run the Nsight Compute UI in the KernelAgent container (with GPU
-# support); the mounted workspace holds the saved profiles
+# support); the mounted results tree holds the saved profiles
 .PHONY: kernelagent-compute
 kernelagent-compute: kernelagent-image
 	$(call ctr_run,$(cuda_dev_args)$(cuda_args)$(ka_args)$(ka_vol)$(nsight_args),$(KA_IMAGE_TAG),ncu-ui)
@@ -672,8 +670,8 @@ kernelagent-verify: kernelagent-image
 
 # Kernel sources outside the mounted trees are copied into a mounted tree
 # (already labeled for the container) before the container runs; the
-# recipe passes the copy's container path. Sources already under problems/,
-# results/, or profiles/ need no copy.
+# recipe passes the copy's container path. Sources already under problems/
+# or results/ need no copy.
 define ka_stage_kernel_source
 	set -e; if [ -n "$(KA_KERNEL_HOST_PATH)" ] && [ -z "$(KA_KERNEL_MOUNTED_CONTAINER_PATH)" ]; then mkdir -p "$(dir $(KA_KERNEL_STAGE_HOST))"; cp -p "$(KA_KERNEL_HOST_PATH)" "$(KA_KERNEL_STAGE_HOST)"; fi;
 endef
@@ -688,7 +686,7 @@ define ka_profile
 		--case $(KA_CASE) --impl $(1) --profiler $(KA_PROFILER) --iters $(KA_PROFILE_ITERS) \
 		--warmup $(KA_PROFILE_WARMUP) --ncu-set $(KA_NCU_SET) \
 		$(if $(KA_KERNEL_SOURCE),--kernel $(KA_KERNEL_CONTAINER_PATH) --label $(KA_LABEL))
-	@echo "Profiles: $(KERNELAGENT_WORKSPACE)/profiles/$(KA_PROBLEM)/"
+	@echo "Profiles: $(KERNELAGENT_WORKSPACE)/results/$(KA_PROBLEM)/profiles/"
 endef
 
 # Profile a saved kernel — or the PyTorch baseline with KA_IMPL=ref, or an

@@ -19,7 +19,6 @@ workspace/CUDA/
 # KernelAgent run artifacts and scratch output — mounted at runtime via
 # ka_vol, never copied into the image.
 workspace/KernelAgent/results/
-workspace/KernelAgent/profiles/
 workspace/KernelAgent/.tmp-verify/
 
 __pycache__/

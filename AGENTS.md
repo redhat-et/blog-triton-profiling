@@ -56,8 +56,8 @@ A host-side developer test suite was deliberately removed. Do not restore it:
 - `workspace/CUDA`, `workspace/ROCm` — profiling demo materials.
 - `workspace/KernelAgent/problems` — problem specs, mounted into the container.
   `workspace/KernelAgent/scripts` — CLIs baked into the image.
-  `workspace/KernelAgent/results` and `profiles` — runtime artifacts, mounted
-  and gitignored.
+  `workspace/KernelAgent/results` — runtime artifacts (kernels, records,
+  experiments, per-problem profiles), mounted and gitignored.
 
 Runtime model prompts are `workspace/KernelAgent/problems/<problem>/problem.txt`,
 consumed by `generate-kernel.py` and embedded in optimizer problem modules.
@@ -167,8 +167,8 @@ Never move prompt text into documentation or AGENTS.md.
 
 ## Do not edit / generated artifacts
 
-- Do not commit `workspace/KernelAgent/results/*` or
-  `workspace/KernelAgent/profiles/*` (only `.gitkeep` is tracked), generated
+- Do not commit `workspace/KernelAgent/results/*` (only `.gitkeep` is
+  tracked) or the legacy `workspace/KernelAgent/profiles/` directory, generated
   kernels, profile captures, session directories, `.env` files, or credentials.
 - Do not hand-edit `containerfiles/kernelagent/requirements.lock`.
 - Do not casually edit `problem.txt`, `test_fixed.py`, `bench.py`, or `spec.py`;

@@ -271,8 +271,7 @@ ENV BASH_ENV=${WORKSPACE}/bin/activate \
     CUDA_HOME=/usr/local/cuda \
     XDG_CACHE_HOME=$WORKSPACE \
     PROBLEMS_HOME=/workspace/user/problems \
-    RESULTS_MOUNT=/workspace/user/results \
-    PROFILES_HOME=/workspace/user/profiles
+    RESULTS_MOUNT=/workspace/user/results
 
 WORKDIR ${WORKSPACE}/user
 

@@ -1207,7 +1207,10 @@ def _run_one_capture(
             "--label",
             variant["label"],
             "--out",
-            str(captures_dir),
+            # profile-kernel.py treats --out as the exact capture directory;
+            # adding the problem keeps this experiment's published stem and
+            # manifest-relative paths unchanged.
+            str(captures_dir / name),
             "--profiler",
             profiler,
             "--iters",
