@@ -3,7 +3,7 @@
   "experiment_id": "flashattention-ada5000_v1",
   "status": "completed",
   "created_at": "2026-10-26T14:41:49.397753",
-  "report_generated_at": "2026-10-27T17:30:05.976721",
+  "report_generated_at": "2026-10-28T15:09:07.606731",
   "configuration": {
     "problems": [
       "flash_attention"
@@ -132,14 +132,25 @@
                   "duration_avg_us": 185.454,
                   "duration_total_us": 1854.54,
                   "sm_pct": 41.756,
-                  "mem_pct": 40.722,
+                  "mem_pct": 51.616,
                   "dram_pct": 7.24,
                   "occupancy_pct": 16.162,
                   "regs": 64,
                   "grid": 1024.0,
                   "block": 128.0,
                   "cycles": 260646.5,
-                  "tflops": 23.1589557415236
+                  "tflops": 23.158955741523595,
+                  "flops": 42949672960.0,
+                  "dram_bytes": 75492096.0,
+                  "ai_flop_per_byte": 568.929401032924,
+                  "ridge_flop_per_byte": 192.3860821244214,
+                  "peak_tflops": 108.21587010618791,
+                  "peak_bw_gbps": 562.4932370949875,
+                  "roofline_tflops": 108.21587010618791,
+                  "achieved_bw_gbps": 40.706203088603225,
+                  "sol_pct": 51.616,
+                  "bound": "memory",
+                  "limiter": "memory hierarchy (51.6%); cache-level pressure (DRAM 7.2%); low occupancy (16.2%)"
                 }
               ],
               "metric_source": "details"
@@ -211,14 +222,25 @@
                   "duration_avg_us": 72.624,
                   "duration_total_us": 726.24,
                   "sm_pct": 54.565,
-                  "mem_pct": 93.759,
+                  "mem_pct": 20.845,
                   "dram_pct": 16.678,
                   "occupancy_pct": 12.984,
                   "regs": 248,
                   "grid": 128.0,
                   "block": 128.0,
                   "cycles": 101858.9,
-                  "tflops": 59.13977880590439
+                  "tflops": 59.139778805904385,
+                  "flops": 42949672960.0,
+                  "dram_bytes": 68062208.0,
+                  "ai_flop_per_byte": 631.0355514766726,
+                  "ridge_flop_per_byte": 192.81536822899307,
+                  "peak_tflops": 108.39569596834444,
+                  "peak_bw_gbps": 562.1735288216788,
+                  "roofline_tflops": 108.39569596834444,
+                  "achieved_bw_gbps": 93.71861643533818,
+                  "sol_pct": 54.565,
+                  "bound": "compute",
+                  "limiter": "tensor pipelines (54.6%); low occupancy (13.0%); register pressure (248/thread)"
                 }
               ],
               "metric_source": "details"
@@ -290,14 +312,25 @@
                   "duration_avg_us": 68.59700000000001,
                   "duration_total_us": 685.97,
                   "sm_pct": 58.061,
-                  "mem_pct": 96.39500000000001,
+                  "mem_pct": 22.142000000000003,
                   "dram_pct": 17.146,
                   "occupancy_pct": 13.307999999999998,
                   "regs": 244,
                   "grid": 128.0,
                   "block": 128.0,
                   "cycles": 95761.6,
-                  "tflops": 62.61031301021598
+                  "tflops": 62.61031301021598,
+                  "flops": 42949672960.0,
+                  "dram_bytes": 66123776.0,
+                  "ai_flop_per_byte": 649.5344875646545,
+                  "ridge_flop_per_byte": 191.82564246292915,
+                  "peak_tflops": 107.8348440545055,
+                  "peak_bw_gbps": 562.1503083215002,
+                  "roofline_tflops": 107.8348440545055,
+                  "achieved_bw_gbps": 96.39259224704949,
+                  "sol_pct": 58.061,
+                  "bound": "compute",
+                  "limiter": "tensor pipelines (58.1%); low occupancy (13.3%); register pressure (244/thread)"
                 }
               ],
               "metric_source": "details"
@@ -366,21 +399,39 @@
                   "duration_avg_us": 80.74,
                   "duration_total_us": 807.4,
                   "sm_pct": 49.47,
-                  "mem_pct": 90.39099999999999,
+                  "mem_pct": 36.277,
                   "dram_pct": 16.077,
                   "occupancy_pct": 13.894,
                   "regs": 255,
                   "grid": 128.0,
                   "block": 128.0,
                   "cycles": 112631.9,
-                  "tflops": 53.19556418691293
+                  "tflops": 53.19556418691293,
+                  "flops": 42949672960.0,
+                  "dram_bytes": 73151744.0,
+                  "ai_flop_per_byte": 587.1312235563379,
+                  "ridge_flop_per_byte": 191.26542082139022,
+                  "peak_tflops": 107.54758257696335,
+                  "peak_bw_gbps": 562.2949622315407,
+                  "roofline_tflops": 107.54758257696335,
+                  "achieved_bw_gbps": 90.6025127818953,
+                  "sol_pct": 49.47,
+                  "bound": "compute",
+                  "limiter": "tensor pipelines (49.5%); low occupancy (13.9%); register pressure (255/thread)"
                 }
               ],
               "metric_source": "details"
             }
           }
         }
-      ]
+      ],
+      "roofline": {
+        "peak_tflops": 108.39569596834444,
+        "peak_bw_gbps": 562.4932370949875,
+        "ridge_flop_per_byte": 192.7057763896987,
+        "points": 4
+      },
+      "roofline_chart": "reports/roofline-flash_attention.svg"
     }
   ],
   "capture_merge": {

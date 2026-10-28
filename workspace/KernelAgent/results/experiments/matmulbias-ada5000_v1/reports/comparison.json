@@ -3,7 +3,7 @@
   "experiment_id": "matmulbias-ada5000_v1",
   "status": "completed",
   "created_at": "2026-10-26T14:09:36.676368",
-  "report_generated_at": "2026-10-27T17:30:05.756444",
+  "report_generated_at": "2026-10-28T15:09:07.267520",
   "configuration": {
     "problems": [
       "matmul_bias"
@@ -132,14 +132,25 @@
                   "duration_avg_us": 53.15599999999999,
                   "duration_total_us": 531.56,
                   "sm_pct": 38.158,
-                  "mem_pct": 83.757,
+                  "mem_pct": 69.74,
                   "dram_pct": 14.9,
                   "occupancy_pct": 53.983000000000004,
                   "regs": 53,
                   "grid": 512.0,
                   "block": 128.0,
                   "cycles": 73352.6,
-                  "tflops": 40.400255252543495
+                  "tflops": 40.400255252543495,
+                  "flops": 21474836480.0,
+                  "dram_bytes": 44521344.0,
+                  "ai_flop_per_byte": 482.3492408495125,
+                  "ridge_flop_per_byte": 188.3311182248074,
+                  "peak_tflops": 105.87594244778661,
+                  "peak_bw_gbps": 562.1797578953705,
+                  "roofline_tflops": 105.87594244778661,
+                  "achieved_bw_gbps": 83.75726927939317,
+                  "sol_pct": 69.74,
+                  "bound": "memory",
+                  "limiter": "memory hierarchy (69.7%); cache-level pressure (DRAM 14.9%)"
                 }
               ],
               "metric_source": "details"
@@ -211,14 +222,25 @@
                   "duration_avg_us": 35.613,
                   "duration_total_us": 356.13,
                   "sm_pct": 57.470000000000006,
-                  "mem_pct": 124.31800000000001,
+                  "mem_pct": 53.678999999999995,
                   "dram_pct": 22.131,
                   "occupancy_pct": 14.208000000000002,
                   "regs": 150,
                   "grid": 128.0,
                   "block": 128.0,
                   "cycles": 48589.5,
-                  "tflops": 60.30089316200917
+                  "tflops": 60.30089316200917,
+                  "flops": 21474836480.0,
+                  "dram_bytes": 44266112.0,
+                  "ai_flop_per_byte": 485.13039681461066,
+                  "ridge_flop_per_byte": 186.7968073043821,
+                  "peak_tflops": 104.92982010967869,
+                  "peak_bw_gbps": 561.7324065860365,
+                  "roofline_tflops": 104.92982010967869,
+                  "achieved_bw_gbps": 124.29831970527451,
+                  "sol_pct": 57.470000000000006,
+                  "bound": "compute",
+                  "limiter": "tensor pipelines (57.5%); low occupancy (14.2%); register pressure (150/thread)"
                 }
               ],
               "metric_source": "details"
@@ -290,14 +312,25 @@
                   "duration_avg_us": 35.589999999999996,
                   "duration_total_us": 355.9,
                   "sm_pct": 57.547000000000004,
-                  "mem_pct": 122.34700000000001,
+                  "mem_pct": 53.720000000000006,
                   "dram_pct": 21.779,
                   "occupancy_pct": 14.225999999999999,
                   "regs": 150,
                   "grid": 128.0,
                   "block": 128.0,
                   "cycles": 48518.1,
-                  "tflops": 60.338845531379256
+                  "tflops": 60.338845531379256,
+                  "flops": 21474836480.0,
+                  "dram_bytes": 43540096.0,
+                  "ai_flop_per_byte": 493.2197779260753,
+                  "ridge_flop_per_byte": 186.6483615697876,
+                  "peak_tflops": 104.85227836743763,
+                  "peak_bw_gbps": 561.7637223578494,
+                  "roofline_tflops": 104.85227836743763,
+                  "achieved_bw_gbps": 122.33663010249957,
+                  "sol_pct": 57.547000000000004,
+                  "bound": "compute",
+                  "limiter": "tensor pipelines (57.5%); low occupancy (14.2%); register pressure (150/thread)"
                 }
               ],
               "metric_source": "details"
@@ -366,21 +399,39 @@
                   "duration_avg_us": 34.956,
                   "duration_total_us": 349.56,
                   "sm_pct": 59.414,
-                  "mem_pct": 136.052,
+                  "mem_pct": 38.108,
                   "dram_pct": 24.226999999999997,
                   "occupancy_pct": 8.317,
                   "regs": 255,
                   "grid": 64.0,
                   "block": 128.0,
                   "cycles": 46935.1,
-                  "tflops": 61.432500915415595
+                  "tflops": 61.4325009154156,
+                  "flops": 21474836480.0,
+                  "dram_bytes": 47555840.0,
+                  "ai_flop_per_byte": 451.5709633138643,
+                  "ridge_flop_per_byte": 184.1288036562292,
+                  "peak_tflops": 103.40015525473927,
+                  "peak_bw_gbps": 561.564259374588,
+                  "roofline_tflops": 103.40015525473927,
+                  "achieved_bw_gbps": 136.04174295129988,
+                  "sol_pct": 59.414,
+                  "bound": "compute",
+                  "limiter": "tensor pipelines (59.4%); low occupancy (8.3%); register pressure (255/thread)"
                 }
               ],
               "metric_source": "details"
             }
           }
         }
-      ]
+      ],
+      "roofline": {
+        "peak_tflops": 105.87594244778661,
+        "peak_bw_gbps": 562.1797578953705,
+        "ridge_flop_per_byte": 188.3311182248074,
+        "points": 4
+      },
+      "roofline_chart": "reports/roofline-matmul_bias.svg"
     }
   ],
   "capture_merge": {

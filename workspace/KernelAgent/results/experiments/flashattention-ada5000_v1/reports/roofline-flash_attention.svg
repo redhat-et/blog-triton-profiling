@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="524" viewBox="0 0 760 524" role="img">
+<title>Roofline for flash_attention</title>
+<style>
+.bg{fill:#ffffff}.fg{fill:#1f2328}.muted{fill:#57606a}
+.grid{stroke:#d0d7de;stroke-width:1}
+.axis{stroke:#57606a;stroke-width:1}
+.roof{stroke:#8250df;stroke-width:2.5;fill:none}
+.ridge{stroke:#8250df;stroke-width:1;stroke-dasharray:5 4}
+@media (prefers-color-scheme: dark){
+.bg{fill:#0d1117}.fg{fill:#e6edf3}.muted{fill:#8b949e}
+.grid{stroke:#30363d}.axis{stroke:#8b949e}
+.roof{stroke:#a371f7}.ridge{stroke:#a371f7}
+}
+</style>
+<rect class="bg" x="0" y="0" width="760" height="524"/>
+<text class="fg" x="78" y="30" font-size="18" font-weight="600">Roofline — flash_attention</text>
+<text class="muted" x="78" y="50" font-size="12">peak 108.4 TFLOPS · 562 GB/s · ridge 193 FLOP/B</text>
+<line class="grid" x1="194.0" y1="72" x2="194.0" y2="372"/>
+<text class="muted" x="194.0" y="390" font-size="11" text-anchor="middle">200</text>
+<line class="grid" x1="533.0" y1="72" x2="533.0" y2="372"/>
+<text class="muted" x="533.0" y="390" font-size="11" text-anchor="middle">500</text>
+<line class="grid" x1="78" y1="372.0" x2="732" y2="372.0"/>
+<text class="muted" x="68" y="376.0" font-size="11" text-anchor="end">0</text>
+<line class="grid" x1="78" y1="297.0" x2="732" y2="297.0"/>
+<text class="muted" x="68" y="301.0" font-size="11" text-anchor="end">38</text>
+<line class="grid" x1="78" y1="222.0" x2="732" y2="222.0"/>
+<text class="muted" x="68" y="226.0" font-size="11" text-anchor="end">75</text>
+<line class="grid" x1="78" y1="147.0" x2="732" y2="147.0"/>
+<text class="muted" x="68" y="151.0" font-size="11" text-anchor="end">112</text>
+<line class="grid" x1="78" y1="72.0" x2="732" y2="72.0"/>
+<text class="muted" x="68" y="76.0" font-size="11" text-anchor="end">150</text>
+<line class="axis" x1="78" y1="372" x2="732" y2="372"/>
+<line class="axis" x1="78" y1="72" x2="78" y2="372"/>
+<text class="muted" x="405.0" y="412" font-size="12" text-anchor="middle">Arithmetic intensity (FLOP/byte, log scale)</text>
+<text class="muted" x="18" y="222.0" font-size="12" text-anchor="middle" transform="rotate(-90 18 222.0)">Achieved throughput (TFLOPS)</text>
+<polyline class="roof" points="78.0,207.5 86.2,203.9 94.3,200.1 102.5,196.3 110.7,192.3 118.9,188.3 127.0,184.2 135.2,180.0 143.4,175.7 151.6,171.4 159.7,166.9 167.9,162.3 176.1,157.6 184.3,155.2 192.4,155.2 200.6,155.2 208.8,155.2 217.0,155.2 225.1,155.2 233.3,155.2 241.5,155.2 249.7,155.2 257.9,155.2 266.0,155.2 274.2,155.2 282.4,155.2 290.6,155.2 298.7,155.2 306.9,155.2 315.1,155.2 323.3,155.2 331.4,155.2 339.6,155.2 347.8,155.2 356.0,155.2 364.1,155.2 372.3,155.2 380.5,155.2 388.7,155.2 396.8,155.2 405.0,155.2 413.2,155.2 421.3,155.2 429.5,155.2 437.7,155.2 445.9,155.2 454.0,155.2 462.2,155.2 470.4,155.2 478.6,155.2 486.7,155.2 494.9,155.2 503.1,155.2 511.3,155.2 519.4,155.2 527.6,155.2 535.8,155.2 544.0,155.2 552.1,155.2 560.3,155.2 568.5,155.2 576.7,155.2 584.9,155.2 593.0,155.2 601.2,155.2 609.4,155.2 617.6,155.2 625.7,155.2 633.9,155.2 642.1,155.2 650.3,155.2 658.4,155.2 666.6,155.2 674.8,155.2 682.9,155.2 691.1,155.2 699.3,155.2 707.5,155.2 715.7,155.2 723.8,155.2 732.0,155.2"/>
+<text class="muted" x="724" y="147.2" font-size="11" text-anchor="end">compute roof</text>
+<text class="muted" x="113.8" y="182.8" font-size="11">DRAM roof</text>
+<line class="ridge" x1="180.2" y1="72" x2="180.2" y2="372"/>
+<text class="muted" x="186.2" y="86" font-size="11">ridge 193 FLOP/B</text>
+<circle cx="580.8" cy="325.7" r="5" fill="#0072B2" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="619.1" cy="253.7" r="5" fill="#D55E00" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="629.8" cy="246.8" r="5" fill="#009E73" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="592.4" cy="265.6" r="5" fill="#CC79A7" stroke="#ffffff" stroke-width="1.5"/>
+<rect x="78" y="427" width="10" height="10" fill="#0072B2" stroke="#ffffff" stroke-width="1"/>
+<text class="fg" x="94" y="436" font-size="12">generated — SOL 51.6%</text>
+<rect x="78" y="445" width="10" height="10" fill="#D55E00" stroke="#ffffff" stroke-width="1"/>
+<text class="fg" x="94" y="454" font-size="12">rounds_5 — SOL 54.6%</text>
+<rect x="78" y="463" width="10" height="10" fill="#009E73" stroke="#ffffff" stroke-width="1"/>
+<text class="fg" x="94" y="472" font-size="12">rounds_10 — SOL 58.1%</text>
+<rect x="78" y="481" width="10" height="10" fill="#CC79A7" stroke="#ffffff" stroke-width="1"/>
+<text class="fg" x="94" y="490" font-size="12">vllm_triton_prefill — SOL 49.5%</text>
+</svg>

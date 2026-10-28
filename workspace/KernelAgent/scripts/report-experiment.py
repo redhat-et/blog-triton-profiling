@@ -11,7 +11,10 @@ runs on the host with a plain Python 3 standard library:
     separately where they exist)
   - Nsight Compute tables come from the .details.csv export
     profile-kernel.py writes beside each capture; achieved TFLOPS comes
-    from the .raw.csv export's tensor-pipeline FLOP counters
+    from the .raw.csv export's tensor-pipeline FLOP counters, and the
+    Roofline and SOL section combines NCU's GPU Speed Of Light
+    percentages with the raw page's FLOPs, DRAM bytes, and peak-sustained
+    rates (one SVG roofline per problem under reports/)
   - Nsight Systems tables come from the nsys stats CSV exports
   - Proton tables come from the JSON .hatchet capture
   - kernel sources are diffed pairwise into reports/source-diffs/
@@ -53,7 +56,9 @@ from __future__ import annotations
 import argparse
 import csv
 import difflib
+import html
 import json
+import math
 import os
 import re
 from datetime import datetime
@@ -94,6 +99,12 @@ NCU_METRICS = {
     "Grid Size": "grid",
     "Block Size": "block",
 }
+
+# Percentage metrics must be matched with their unit: the details page
+# reports "Memory Throughput" twice — the GPU Speed Of Light percentage
+# and the Memory Workload Analysis GByte/s rate — and keying on the name
+# alone silently keeps the rate.
+_PCT_METRICS = {"sm_pct", "mem_pct", "dram_pct", "occupancy_pct"}
 
 _DURATION_UNITS = {
     "ns": 1e-3,
@@ -168,6 +179,69 @@ def _duration_us(value, unit):
     return number * factor
 
 
+_BYTE_UNITS = {
+    "byte": 1.0,
+    "bytes": 1.0,
+    "kbyte": 1e3,
+    "kilobyte": 1e3,
+    "mbyte": 1e6,
+    "megabyte": 1e6,
+    "gbyte": 1e9,
+    "gigabyte": 1e9,
+    "tbyte": 1e12,
+    "terabyte": 1e12,
+    # The peak DRAM rate is exported per DRAM cycle; scale those the same
+    # way so a version that reports Kbyte/cycle still lands in bytes.
+    "byte/cycle": 1.0,
+    "kbyte/cycle": 1e3,
+    "mbyte/cycle": 1e6,
+    "gbyte/cycle": 1e9,
+}
+
+# Rate units for the raw page's peak-sustained FLOP column. NCU exports
+# it as 1/ns (e.g. 104231.9, i.e. 104.2 TFLOPS); 1/s and 1/us cover
+# other exports of the same counter.
+_FLOPS_UNITS = {
+    "1/s": 1e-12,
+    "1/ns": 1e-3,
+    "1/us": 1e-6,
+    "1/ms": 1e-9,
+}
+
+_GHZ_UNITS = {
+    "hz": 1e-9,
+    "khz": 1e-6,
+    "mhz": 1e-3,
+    "ghz": 1.0,
+}
+
+
+def _bytes(value, unit):
+    """A byte count converted to bytes; unknown units stay unscaled."""
+    number = _to_float(value)
+    if number is None:
+        return None
+    return number * _BYTE_UNITS.get((unit or "").strip().lower(), 1.0)
+
+
+def _flops_per_second(value, unit):
+    """A raw-page FLOP rate converted to TFLOPS; unknown units assume the
+    raw page's 1/ns export."""
+    number = _to_float(value)
+    if number is None:
+        return None
+    factor = _FLOPS_UNITS.get((unit or "").strip().lower(), 1e-3)
+    return number * factor
+
+
+def _ghz(value, unit):
+    """A clock rate converted to GHz; unknown units assume GHz."""
+    number = _to_float(value)
+    if number is None:
+        return None
+    return number * _GHZ_UNITS.get((unit or "").strip().lower(), 1.0)
+
+
 # ---------------------------------------------------------------------------
 # NCU CSV parsing
 
@@ -218,6 +292,15 @@ def _parse_ncu_details(path: Path) -> list[dict]:
         )
         normalized = NCU_METRICS.get(metric)
         if normalized is None:
+            continue
+        if (
+            normalized in _PCT_METRICS
+            and (unit or "").strip() not in ("", "%")
+        ):
+            # The Memory Workload Analysis page repeats "Memory
+            # Throughput" in GByte/s; never let a rate overwrite the
+            # GPU Speed Of Light percentage. A missing unit is accepted
+            # for exports that omit the column.
             continue
         if normalized == "duration":
             launches[key]["metrics"][normalized] = _duration_us(value, unit)
@@ -277,20 +360,39 @@ def _aggregate_launches(launches: list[dict]) -> list[dict]:
     return summaries
 
 
-# Raw-page metric family that counts executed math operations. NCU
-# reports them as FLOPs (an FMA counts as two operations), and only the
-# full metric set collects the tensor-pipeline counters.
+# Raw-page metric families for the roofline. NCU reports executed FLOPs
+# (an FMA counts as two operations) and its own peak-sustained rates;
+# only the full metric set collects the tensor-pipeline counters.
 _NCU_TENSOR_OPS_PREFIX = "sm__ops_path_tensor_"
+_NCU_TENSOR_PEAK_SUFFIX = ".peak_sustained_elapsed.per_second"
 _NCU_DURATION_METRIC = "gpu__time_duration.sum"
+_NCU_DRAM_READ = "dram__bytes_read.sum"
+_NCU_DRAM_WRITE = "dram__bytes_write.sum"
+_NCU_DRAM_PEAK = "dram__bytes.sum.peak_sustained"
+_NCU_DRAM_CLOCK = "dram__cycles_elapsed.avg.per_second"
+
+# Per-kernel fields the raw page contributes to the report (and JSON).
+_ROOFLINE_FIELDS = (
+    "flops",
+    "dram_bytes",
+    "ai_flop_per_byte",
+    "ridge_flop_per_byte",
+    "peak_tflops",
+    "peak_bw_gbps",
+    "roofline_tflops",
+    "achieved_bw_gbps",
+)
 
 
 def _parse_ncu_raw(path: Path) -> list[dict]:
-    """Per-launch tensor FLOPs from --csv --page raw.
+    """Per-launch roofline inputs from --csv --page raw.
 
     The raw page is one column per metric, with a units row under the
-    header. Only the tensor-pipeline ``sm__ops_path_tensor_*.sum``
-    columns are FLOPs, and only ``--set full`` collects them, so a
-    basic/detailed capture yields no records (rendered as —).
+    header. Response records carry the executed tensor FLOPs and the
+    matching peak-sustained rate, the DRAM read+write bytes, and the
+    capture's peak DRAM bandwidth. Only ``--set full`` collects the
+    tensor counters, so a basic/detailed capture yields no records
+    (rendered as —).
     """
     rows = _read_csv_rows(path)
     header_idx = None
@@ -305,63 +407,237 @@ def _parse_ncu_raw(path: Path) -> list[dict]:
     id_col = header["id"]
     kernel_col = header["kernelname"]
     duration_col = header[_NCU_DURATION_METRIC]
-    tensor_cols = [
-        j
-        for name, j in header.items()
-        if name.startswith(_NCU_TENSOR_OPS_PREFIX) and name.endswith(".sum")
-    ]
+
+    # (executed-FLOP column, its peak-rate column or None)
+    tensor_cols = []
+    for name, col in header.items():
+        if not (
+            name.startswith(_NCU_TENSOR_OPS_PREFIX)
+            and name.endswith(".sum")
+        ):
+            continue
+        tensor_cols.append((col, header.get(name + _NCU_TENSOR_PEAK_SUFFIX)))
     if not tensor_cols:
         return []
 
     start = header_idx + 1
-    unit = "us"
+    units: dict[int, str] = {}
     if start < len(rows):
         id_cell = rows[start][id_col] if id_col < len(rows[start]) else None
         if _to_int(id_cell) is None:
-            # The units row sits directly under the header. Keep the raw
-            # page's us when the exported unit is one we cannot scale.
-            raw_unit = (
-                rows[start][duration_col]
-                if duration_col < len(rows[start])
-                else None
-            )
-            if (raw_unit or "").strip().lower() in _DURATION_UNITS:
-                unit = raw_unit
+            # The units row sits directly under the header.
+            units = dict(enumerate(rows[start]))
             start += 1
+
+    def unit(col):
+        return units.get(col)
+
+    duration_unit = unit(duration_col) or "us"
+    if (duration_unit or "").strip().lower() not in _DURATION_UNITS:
+        duration_unit = "us"
+
+    read_col = header.get(_NCU_DRAM_READ)
+    write_col = header.get(_NCU_DRAM_WRITE)
+    peak_col = header.get(_NCU_DRAM_PEAK)
+    clock_col = header.get(_NCU_DRAM_CLOCK)
 
     launches = []
     for row in rows[start:]:
         try:
             kernel = row[kernel_col]
-            duration_us = _duration_us(row[duration_col], unit)
+            duration_us = _duration_us(row[duration_col], duration_unit)
         except IndexError:
             continue
         if not kernel or duration_us is None:
             continue
-        flops = sum(
-            _to_float(row[j]) or 0.0 for j in tensor_cols if j < len(row)
-        )
+        flops = 0.0
+        tensor_peak_tflops = None
+        for col, peak in tensor_cols:
+            if col >= len(row):
+                continue
+            executed = _to_float(row[col]) or 0.0
+            if executed <= 0:
+                continue
+            flops += executed
+            if peak is not None and peak < len(row):
+                candidate = _flops_per_second(row[peak], unit(peak))
+                if candidate is not None and candidate > 0:
+                    # Mixed-precision kernels sum FLOPs across active
+                    # paths and divide by the fastest one's peak, a
+                    # conservative denominator.
+                    tensor_peak_tflops = max(
+                        tensor_peak_tflops or 0.0, candidate
+                    )
+        dram_bytes = None
+        if read_col is not None or write_col is not None:
+            dram_bytes = 0.0
+            for col in (read_col, write_col):
+                if col is None:
+                    continue
+                value = row[col] if col < len(row) else None
+                dram_bytes += _bytes(value, unit(col)) or 0.0
+        dram_peak_gbps = None
+        if (
+            peak_col is not None
+            and clock_col is not None
+            and peak_col < len(row)
+            and clock_col < len(row)
+        ):
+            per_cycle = _bytes(row[peak_col], unit(peak_col))
+            clock_ghz = _ghz(row[clock_col], unit(clock_col))
+            if per_cycle is not None and clock_ghz is not None:
+                dram_peak_gbps = per_cycle * clock_ghz
         launches.append(
-            {"kernel": kernel, "duration_us": duration_us, "flops": flops}
+            {
+                "kernel": kernel,
+                "duration_us": duration_us,
+                "flops": flops,
+                "tensor_peak_tflops": tensor_peak_tflops,
+                "dram_bytes": dram_bytes,
+                "dram_peak_gbps": dram_peak_gbps,
+            }
         )
     return launches
 
 
-def _aggregate_tflops(launches: list[dict]) -> dict[str, float]:
-    """Achieved tensor TFLOPS per kernel: summed FLOPs over summed
-    profiled launch time, so every launch is weighted by its cost."""
+def _weighted_mean(pairs):
+    """Duration-weighted mean of (value, duration) pairs, ignoring None
+    values and non-positive durations."""
+    total = 0.0
+    weight = 0.0
+    for value, duration in pairs:
+        if value is None or duration is None or duration <= 0:
+            continue
+        total += value * duration
+        weight += duration
+    return total / weight if weight > 0 else None
+
+
+def _ratio(numerator, denominator):
+    if numerator is None or not denominator:
+        return None
+    value = numerator / denominator
+    return value if math.isfinite(value) else None
+
+
+def _aggregate_ncu_raw(launches: list[dict]) -> dict[str, dict]:
+    """Per-kernel roofline geometry from the raw page.
+
+    Achieved TFLOPS and DRAM bandwidth weight every launch by its cost
+    (summed FLOPs/bytes over summed time). The peak-sustained
+    denominators are duration-weighted means because NCU scales them
+    with the clock it sampled during each replay. SOL percentages are
+    not derived here: they are NCU's own details-page values.
+    """
     grouped: dict[str, dict] = {}
     for launch in launches:
         acc = grouped.setdefault(
-            launch["kernel"], {"flops": 0.0, "duration_us": 0.0}
+            launch["kernel"],
+            {
+                "launches": 0,
+                "flops": 0.0,
+                "dram_bytes": 0.0,
+                "duration_us": 0.0,
+                "bytes_complete": True,
+                "peak_tflops": [],
+                "peak_bw_gbps": [],
+            },
         )
+        acc["launches"] += 1
         acc["flops"] += launch["flops"]
         acc["duration_us"] += launch["duration_us"]
-    return {
-        kernel: acc["flops"] / (acc["duration_us"] * 1e-6) / 1e12
-        for kernel, acc in grouped.items()
-        if acc["duration_us"] > 0
-    }
+        if launch["dram_bytes"] is None:
+            acc["bytes_complete"] = False
+        else:
+            acc["dram_bytes"] += launch["dram_bytes"]
+        acc["peak_tflops"].append(
+            (launch["tensor_peak_tflops"], launch["duration_us"])
+        )
+        acc["peak_bw_gbps"].append(
+            (launch["dram_peak_gbps"], launch["duration_us"])
+        )
+
+    summaries = {}
+    for kernel, acc in grouped.items():
+        duration_s = acc["duration_us"] * 1e-6
+        tflops = _ratio(acc["flops"], duration_s * 1e12)
+        dram_bytes = acc["dram_bytes"] if acc["bytes_complete"] else None
+        achieved_bw_gbps = _ratio(dram_bytes, duration_s * 1e9)
+        ai = _ratio(acc["flops"], dram_bytes)
+        if acc["flops"] <= 0:
+            # A non-tensor kernel has a counter column but no FLOPs;
+            # keep TFLOPS at 0 like before, but no roofline point.
+            ai = None
+        peak_tflops = _weighted_mean(acc["peak_tflops"])
+        peak_bw_gbps = _weighted_mean(acc["peak_bw_gbps"])
+        ridge = (
+            _ratio(peak_tflops * 1000.0, peak_bw_gbps)
+            if peak_tflops is not None and peak_bw_gbps
+            else None
+        )
+        roofline = (
+            min(peak_tflops, ai * peak_bw_gbps / 1000.0)
+            if peak_tflops is not None
+            and ai is not None
+            and peak_bw_gbps
+            else None
+        )
+        summaries[kernel] = {
+            "launches": acc["launches"],
+            "flops": acc["flops"],
+            "dram_bytes": dram_bytes,
+            "tflops": tflops,
+            "achieved_bw_gbps": achieved_bw_gbps,
+            "ai_flop_per_byte": ai,
+            "peak_tflops": peak_tflops,
+            "peak_bw_gbps": peak_bw_gbps,
+            "ridge_flop_per_byte": ridge,
+            "roofline_tflops": roofline,
+        }
+    return summaries
+
+
+def _limiter_note(kernel: dict) -> str | None:
+    """A short heuristic note about what limits a kernel.
+
+    This is explanatory text layered over NCU's percentages, not a second
+    model: the bound comes from NCU's GPU SOL (max of compute and
+    memory), and the flags call out occupancy/register pressure that the
+    same capture already reports.
+    """
+    bound = kernel.get("bound")
+    compute = kernel.get("sm_pct")
+    memory = kernel.get("mem_pct")
+    dram = kernel.get("dram_pct")
+    parts = []
+    if bound == "compute" and compute is not None:
+        parts.append(f"tensor pipelines ({compute:.1f}%)")
+    elif bound == "memory" and memory is not None:
+        parts.append(f"memory hierarchy ({memory:.1f}%)")
+        if dram is not None and memory - dram >= 15:
+            parts.append(f"cache-level pressure (DRAM {dram:.1f}%)")
+    occupancy = kernel.get("occupancy_pct")
+    if occupancy is not None and occupancy < 25:
+        parts.append(f"low occupancy ({occupancy:.1f}%)")
+    regs = kernel.get("regs")
+    if regs is not None and regs >= 128:
+        parts.append(f"register pressure ({regs}/thread)")
+    return "; ".join(parts) if parts else None
+
+
+def _classify_bottleneck(kernel: dict) -> None:
+    """Attach NCU's GPU SOL and the compute/memory verdict to a kernel:
+    SOL % is the larger of the Compute (SM) and Memory Throughput
+    percentages, exactly as NCU's Speed Of Light rule reports it."""
+    compute = kernel.get("sm_pct")
+    memory = kernel.get("mem_pct")
+    if compute is not None and memory is not None:
+        kernel["sol_pct"] = max(compute, memory)
+        kernel["bound"] = "compute" if compute >= memory else "memory"
+    else:
+        kernel["sol_pct"] = None
+        kernel["bound"] = None
+    kernel["limiter"] = _limiter_note(kernel)
 
 
 # ---------------------------------------------------------------------------
@@ -531,7 +807,7 @@ def _capture_summary(exp_dir: Path, capture: dict, profiler: str) -> dict:
             for launch in _parse_ncu_details(exp_dir / path)
         ]
         summary["kernels"] = _aggregate_launches(launches)
-        tflops = _aggregate_tflops(
+        raw = _aggregate_ncu_raw(
             [
                 launch
                 for path in _export_paths(capture, "ncu_raw_csv")
@@ -539,7 +815,11 @@ def _capture_summary(exp_dir: Path, capture: dict, profiler: str) -> dict:
             ]
         )
         for kernel in summary["kernels"]:
-            kernel["tflops"] = tflops.get(kernel["kernel"])
+            roofline = raw.get(kernel["kernel"]) or {}
+            kernel["tflops"] = roofline.get("tflops")
+            for field in _ROOFLINE_FIELDS:
+                kernel[field] = roofline.get(field)
+            _classify_bottleneck(kernel)
         summary["metric_source"] = "details" if launches else None
     elif profiler == "nsys":
         kernels = []
@@ -717,6 +997,64 @@ def _ordered_variant_records(problem_rec: dict) -> list[tuple[str, dict]]:
     return records
 
 
+def _safe_problem_stem(name: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", name or "problem")
+
+
+def _roofline_points(variants: list[dict]) -> list[dict]:
+    """One chart point per ncu kernel with a usable roofline, in report
+    order. A point needs the raw page's AI, achieved TFLOPS, and both
+    peak rates."""
+    points = []
+    for variant in variants:
+        capture = variant["captures"].get("ncu") or {}
+        if capture.get("status") != "ok":
+            continue
+        for kernel in capture.get("kernels") or []:
+            if (
+                kernel.get("ai_flop_per_byte") is None
+                or kernel.get("tflops") is None
+                or kernel.get("peak_tflops") is None
+                or kernel.get("peak_bw_gbps") is None
+            ):
+                continue
+            points.append(
+                {
+                    "variant": variant["variant"],
+                    "kernel": kernel["kernel"],
+                    "ai": kernel["ai_flop_per_byte"],
+                    "tflops": kernel["tflops"],
+                    "peak_tflops": kernel["peak_tflops"],
+                    "peak_bw_gbps": kernel["peak_bw_gbps"],
+                    "sol_pct": kernel.get("sol_pct"),
+                }
+            )
+    return points
+
+
+def _problem_roofline(variants: list[dict]) -> dict | None:
+    """The problem's shared roofline denominators: the highest
+    peak-sustained rates observed across its kernels, and the ridge they
+    imply."""
+    points = _roofline_points(variants)
+    if not points:
+        return None
+    peak_tflops = max(
+        (point["peak_tflops"] for point in points), default=None
+    )
+    peak_bw_gbps = max(
+        (point["peak_bw_gbps"] for point in points), default=None
+    )
+    return {
+        "peak_tflops": peak_tflops,
+        "peak_bw_gbps": peak_bw_gbps,
+        "ridge_flop_per_byte": _ratio(
+            (peak_tflops or 0.0) * 1000.0, peak_bw_gbps
+        ),
+        "points": len(points),
+    }
+
+
 def _problem_data(
     exp_dir: Path,
     name: str,
@@ -724,16 +1062,24 @@ def _problem_data(
     batch: dict | None,
     profilers: list[str],
 ) -> dict:
-    return {
+    variants = [
+        _variant_data(exp_dir, name, key, record, batch, profilers)
+        for key, record in _ordered_variant_records(problem_rec)
+    ]
+    data = {
         "problem": name,
         "case": problem_rec.get("case"),
         "case_spec": problem_rec.get("case_spec"),
         "status": problem_rec.get("status"),
-        "variants": [
-            _variant_data(exp_dir, name, key, record, batch, profilers)
-            for key, record in _ordered_variant_records(problem_rec)
-        ],
+        "variants": variants,
     }
+    roofline = _problem_roofline(variants)
+    if roofline:
+        data["roofline"] = roofline
+        data["roofline_chart"] = (
+            f"reports/roofline-{_safe_problem_stem(name)}.svg"
+        )
+    return data
 
 
 def build_report_data(
@@ -1195,6 +1541,427 @@ def _proton_section(
     return lines
 
 
+# ---------------------------------------------------------------------------
+# Roofline and SOL rendering
+
+
+_SVG_WIDTH = 760
+_SVG_LEFT = 78
+_SVG_RIGHT = 28
+_SVG_PLOT_TOP = 72
+_SVG_PLOT_HEIGHT = 300
+# Color-blind-safe qualitative palette, assigned per variant in report order.
+_SVG_POINT_COLORS = (
+    "#0072B2",
+    "#D55E00",
+    "#009E73",
+    "#CC79A7",
+    "#E69F00",
+    "#56B4E9",
+    "#F0E442",
+    "#999999",
+)
+
+
+def _scaled(value, divisor):
+    if value is None:
+        return None
+    try:
+        return float(value) / divisor
+    except (TypeError, ValueError):
+        return None
+
+
+def _relative_href(target: Path, from_dir: Path) -> str:
+    try:
+        return Path(os.path.relpath(target, from_dir)).as_posix()
+    except ValueError:
+        return target.as_posix()
+
+
+def _nice_ceiling(value: float) -> float:
+    """A readable upper bound (1/1.5/2/2.5/3/4/5/6/8 x 10^n) above value."""
+    if value <= 0:
+        return 1.0
+    exponent = math.floor(math.log10(value))
+    base = 10.0 ** exponent
+    for step in (1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0):
+        if value <= step * base:
+            return step * base
+    return 10.0 * base
+
+
+def _log_ticks(lo: float, hi: float) -> list[float]:
+    ticks = []
+    exponent = math.floor(math.log10(lo))
+    while 10.0 ** exponent <= hi * 1.0001:
+        for step in (1.0, 2.0, 5.0):
+            value = step * 10.0 ** exponent
+            if lo <= value <= hi:
+                ticks.append(value)
+        exponent += 1
+    return ticks or [lo, hi]
+
+
+def _axis_label(value: float) -> str:
+    if value >= 1000:
+        return f"{value / 1000.0:g}k"
+    return f"{value:g}"
+
+
+def _roofline_svg(
+    problem: str,
+    points: list[dict],
+    peak_tflops: float,
+    peak_bw_gbps: float,
+    ridge: float,
+) -> str:
+    """A self-contained roofline chart: arithmetic intensity on a log x
+    axis, achieved TFLOPS on a linear y axis, the compute and DRAM roofs,
+    and one point per kernel with a legend."""
+    width = _SVG_WIDTH
+    left = _SVG_LEFT
+    right = width - _SVG_RIGHT
+    top = _SVG_PLOT_TOP
+    bottom = top + _SVG_PLOT_HEIGHT
+    plot_width = right - left
+
+    intensities = [point["ai"] for point in points] + [ridge]
+    intensities = [
+        value for value in intensities if value and value > 0
+    ] or [1.0]
+    log_lo = math.log10(min(intensities)) - 0.12
+    log_hi = math.log10(max(intensities)) + 0.12
+    if log_hi - log_lo < 0.7:
+        middle = (log_hi + log_lo) / 2.0
+        log_lo, log_hi = middle - 0.35, middle + 0.35
+    x_lo, x_hi = 10.0 ** log_lo, 10.0 ** log_hi
+
+    y_max = _nice_ceiling(
+        max([peak_tflops] + [point["tflops"] for point in points]) * 1.1
+    )
+
+    def px(value):
+        fraction = (math.log10(value) - log_lo) / (log_hi - log_lo)
+        return left + fraction * plot_width
+
+    def py(value):
+        return bottom - (value / y_max) * _SVG_PLOT_HEIGHT
+
+    def esc(text):
+        return html.escape(str(text), quote=False)
+
+    legend_top = bottom + 64
+    height = legend_top + len(points) * 18 + 16
+    parts = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        (
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" '
+            f'height="{height}" viewBox="0 0 {width} {height}" '
+            'role="img">'
+        ),
+        f"<title>{esc('Roofline for ' + problem)}</title>",
+        "<style>",
+        ".bg{fill:#ffffff}.fg{fill:#1f2328}.muted{fill:#57606a}",
+        ".grid{stroke:#d0d7de;stroke-width:1}",
+        ".axis{stroke:#57606a;stroke-width:1}",
+        ".roof{stroke:#8250df;stroke-width:2.5;fill:none}",
+        ".ridge{stroke:#8250df;stroke-width:1;stroke-dasharray:5 4}",
+        "@media (prefers-color-scheme: dark){",
+        ".bg{fill:#0d1117}.fg{fill:#e6edf3}.muted{fill:#8b949e}",
+        ".grid{stroke:#30363d}.axis{stroke:#8b949e}",
+        ".roof{stroke:#a371f7}.ridge{stroke:#a371f7}",
+        "}",
+        "</style>",
+        (
+            f'<rect class="bg" x="0" y="0" width="{width}" '
+            f'height="{height}"/>'
+        ),
+        (
+            f'<text class="fg" x="{left}" y="30" font-size="18" '
+            f'font-weight="600">Roofline — {esc(problem)}</text>'
+        ),
+        (
+            f'<text class="muted" x="{left}" y="50" font-size="12">'
+            f"peak {peak_tflops:.1f} TFLOPS · {peak_bw_gbps:.0f} GB/s · "
+            f"ridge {ridge:.0f} FLOP/B</text>"
+        ),
+    ]
+
+    for tick in _log_ticks(x_lo, x_hi):
+        x = px(tick)
+        parts.append(
+            f'<line class="grid" x1="{x:.1f}" y1="{top}" '
+            f'x2="{x:.1f}" y2="{bottom}"/>'
+        )
+        parts.append(
+            f'<text class="muted" x="{x:.1f}" y="{bottom + 18}" '
+            f'font-size="11" text-anchor="middle">'
+            f"{esc(_axis_label(tick))}</text>"
+        )
+    for index in range(5):
+        value = y_max * index / 4.0
+        y = py(value)
+        parts.append(
+            f'<line class="grid" x1="{left}" y1="{y:.1f}" '
+            f'x2="{right}" y2="{y:.1f}"/>'
+        )
+        parts.append(
+            f'<text class="muted" x="{left - 10}" y="{y + 4:.1f}" '
+            f'font-size="11" text-anchor="end">{value:.0f}</text>'
+        )
+    parts.append(
+        f'<line class="axis" x1="{left}" y1="{bottom}" '
+        f'x2="{right}" y2="{bottom}"/>'
+    )
+    parts.append(
+        f'<line class="axis" x1="{left}" y1="{top}" '
+        f'x2="{left}" y2="{bottom}"/>'
+    )
+    parts.append(
+        f'<text class="muted" x="{(left + right) / 2.0:.1f}" '
+        f'y="{bottom + 40}" font-size="12" text-anchor="middle">'
+        "Arithmetic intensity (FLOP/byte, log scale)</text>"
+    )
+    middle_y = (top + bottom) / 2.0
+    parts.append(
+        f'<text class="muted" x="18" y="{middle_y:.1f}" font-size="12" '
+        f'text-anchor="middle" transform="rotate(-90 18 '
+        f'{middle_y:.1f})">Achieved throughput (TFLOPS)</text>'
+    )
+
+    def roof_value(intensity):
+        return min(peak_tflops, intensity * peak_bw_gbps / 1000.0)
+
+    samples = []
+    steps = 80
+    for index in range(steps + 1):
+        intensity = 10.0 ** (
+            log_lo + (log_hi - log_lo) * index / steps
+        )
+        samples.append(
+            f"{px(intensity):.1f},{py(roof_value(intensity)):.1f}"
+        )
+    parts.append(f'<polyline class="roof" points="{" ".join(samples)}"/>')
+
+    parts.append(
+        f'<text class="muted" x="{right - 8}" '
+        f'y="{py(peak_tflops) - 8:.1f}" font-size="11" '
+        'text-anchor="end">compute roof</text>'
+    )
+    if x_lo < ridge < x_hi:
+        slope_end = 10.0 ** (
+            math.log10(x_lo)
+            + 0.35 * (math.log10(ridge) - math.log10(x_lo))
+        )
+    else:
+        slope_end = x_lo * 1.2
+    if slope_end < x_hi:
+        parts.append(
+            f'<text class="muted" x="{px(slope_end):.1f}" '
+            f'y="{py(roof_value(slope_end)) - 8:.1f}" font-size="11">'
+            "DRAM roof</text>"
+        )
+    if x_lo < ridge < x_hi:
+        x = px(ridge)
+        parts.append(
+            f'<line class="ridge" x1="{x:.1f}" y1="{top}" '
+            f'x2="{x:.1f}" y2="{bottom}"/>'
+        )
+        parts.append(
+            f'<text class="muted" x="{x + 6:.1f}" y="{top + 14}" '
+            f'font-size="11">ridge {ridge:.0f} FLOP/B</text>'
+        )
+
+    variants = list(
+        dict.fromkeys(point["variant"] for point in points)
+    )
+    colors = {
+        variant: _SVG_POINT_COLORS[index % len(_SVG_POINT_COLORS)]
+        for index, variant in enumerate(variants)
+    }
+    for point in points:
+        color = colors[point["variant"]]
+        parts.append(
+            f'<circle cx="{px(point["ai"]):.1f}" '
+            f'cy="{py(point["tflops"]):.1f}" r="5" fill="{color}" '
+            'stroke="#ffffff" stroke-width="1.5"/>'
+        )
+    for index, point in enumerate(points):
+        color = colors[point["variant"]]
+        y = legend_top + index * 18
+        parts.append(
+            f'<rect x="{left}" y="{y - 9}" width="10" height="10" '
+            f'fill="{color}" stroke="#ffffff" stroke-width="1"/>'
+        )
+        label = point["variant"]
+        if sum(
+            1
+            for other in points
+            if other["variant"] == point["variant"]
+        ) > 1:
+            label += f" · {point['kernel']}"
+        if point.get("sol_pct") is not None:
+            label += f" — SOL {point['sol_pct']:.1f}%"
+        parts.append(
+            f'<text class="fg" x="{left + 16}" y="{y}" font-size="12">'
+            f"{esc(label)}</text>"
+        )
+    parts.append("</svg>")
+    return "\n".join(parts) + "\n"
+
+
+def _roofline_section(
+    problem: dict, exp_dir: Path, out_dir: Path
+) -> list[str]:
+    variants = problem["variants"]
+    points = _roofline_points(variants)
+    meta = problem.get("roofline") or {}
+    has_sol = any(
+        kernel.get("sol_pct") is not None
+        for variant in variants
+        for kernel in (
+            (variant["captures"].get("ncu") or {}).get("kernels") or []
+        )
+    )
+    if not points and not has_sol:
+        return []
+    lines = [
+        "### Roofline and SOL",
+        "",
+        (
+            "SOL percentages are Nsight Compute's own GPU Speed Of Light "
+            "metrics: `Compute (SM) Throughput`, `Memory Throughput` (the "
+            "busiest memory level, L1/L2 or DRAM), and `DRAM Throughput`. "
+            "`SOL %` is the larger of compute and memory, as NCU's rule "
+            "defines it, and `Bound` names that larger one."
+        ),
+        "",
+        (
+            "The roofline derives arithmetic intensity from executed tensor "
+            "FLOPs (`sm__ops_path_tensor_*.sum`) over DRAM read+write bytes, "
+            "and takes its peaks from the same `--set full` raw capture. "
+            "FLOPs and DRAM bytes are totals over the profiled launches; "
+            "the peaks are duration-weighted means because NCU scales them "
+            "with the sampled clock. It is a classic DRAM roofline, so a "
+            "kernel can sit on the compute side of the ridge while NCU's "
+            "cache-level memory SOL is the larger percentage."
+        ),
+        "",
+        (
+            "`Limiter` adds heuristics from the same capture: occupancy "
+            "below 25 % and register counts at or above 128 are secondary "
+            "limits, not a second model."
+        ),
+        "",
+        "#### Roofline",
+        "",
+        (
+            "| Variant | Kernel | FLOPs (G) | DRAM (MB) | AI (FLOP/B) "
+            "| Ridge (FLOP/B) | Peak TFLOPS | Peak DRAM GB/s "
+            "| Roofline TFLOPS | Achieved TFLOPS | Achieved DRAM GB/s |"
+        ),
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for variant in variants:
+        capture = variant["captures"].get("ncu") or {}
+        kernels = capture.get("kernels") or []
+        if capture.get("status") != "ok" or not kernels:
+            lines.append(_note_row(variant, capture, 9))
+            continue
+        for kernel in kernels:
+            lines.append(
+                f"| `{variant['variant']}` "
+                f"| `{(kernel['kernel'] or '')[:48]}` "
+                f"| {_num(_scaled(kernel.get('flops'), 1e9), 1)} "
+                f"| {_num(_scaled(kernel.get('dram_bytes'), 1e6), 1)} "
+                f"| {_num(kernel.get('ai_flop_per_byte'), 1)} "
+                f"| {_num(kernel.get('ridge_flop_per_byte'), 1)} "
+                f"| {_num(kernel.get('peak_tflops'), 1)} "
+                f"| {_num(kernel.get('peak_bw_gbps'), 0)} "
+                f"| {_num(kernel.get('roofline_tflops'), 1)} "
+                f"| {_num(kernel.get('tflops'), 1)} "
+                f"| {_num(kernel.get('achieved_bw_gbps'), 1)} |"
+            )
+    lines.append("")
+    lines.extend(
+        [
+            "#### Bottleneck",
+            "",
+            (
+                "| Variant | Kernel | Compute SOL % | Memory SOL % "
+                "| DRAM SOL % | SOL % | Bound | Limiter |"
+            ),
+            "|---|---|---:|---:|---:|---:|---|---|",
+        ]
+    )
+    for variant in variants:
+        capture = variant["captures"].get("ncu") or {}
+        kernels = capture.get("kernels") or []
+        if capture.get("status") != "ok" or not kernels:
+            lines.append(_note_row(variant, capture, 6))
+            continue
+        for kernel in kernels:
+            lines.append(
+                f"| `{variant['variant']}` "
+                f"| `{(kernel['kernel'] or '')[:48]}` "
+                f"| {_num(kernel.get('sm_pct'), 1)} "
+                f"| {_num(kernel.get('mem_pct'), 1)} "
+                f"| {_num(kernel.get('dram_pct'), 1)} "
+                f"| {_num(kernel.get('sol_pct'), 1)} "
+                f"| {kernel.get('bound') or '—'} "
+                f"| {kernel.get('limiter') or '—'} |"
+            )
+    chart = problem.get("roofline_chart")
+    if (
+        chart
+        and points
+        and meta.get("peak_tflops") is not None
+        and meta.get("peak_bw_gbps") is not None
+        and meta.get("ridge_flop_per_byte") is not None
+    ):
+        href = _relative_href(exp_dir / chart, out_dir)
+        lines.append("")
+        lines.append(
+            f"![Roofline for {problem['problem']}]({href})"
+        )
+    lines.append("")
+    return lines
+
+
+def _write_roofline_charts(exp_dir: Path, data: dict) -> None:
+    """Render one SVG per problem with a roofline and remove stale
+    roofline charts this report no longer produces."""
+    reports_dir = exp_dir / "reports"
+    expected = set()
+    for problem in data.get("problems") or []:
+        chart = problem.get("roofline_chart")
+        meta = problem.get("roofline") or {}
+        points = _roofline_points(problem["variants"])
+        if (
+            not chart
+            or not points
+            or meta.get("peak_tflops") is None
+            or meta.get("peak_bw_gbps") is None
+            or meta.get("ridge_flop_per_byte") is None
+        ):
+            continue
+        target = exp_dir / chart
+        expected.add(target.name)
+        svg = _roofline_svg(
+            problem["problem"],
+            points,
+            meta["peak_tflops"],
+            meta["peak_bw_gbps"],
+            meta["ridge_flop_per_byte"],
+        )
+        target.parent.mkdir(parents=True, exist_ok=True)
+        _atomic_write_text(target, svg)
+    for stale in reports_dir.glob("roofline-*.svg"):
+        if stale.name not in expected:
+            stale.unlink()
+
+
 def _artifacts_section(
     variants: list[dict],
     profilers_present: list[str],
@@ -1276,6 +2043,7 @@ def _render_problem(
     for profiler in profilers_present:
         if profiler == "ncu":
             lines.extend(_ncu_section(variants, batch, merge))
+            lines.extend(_roofline_section(problem, exp_dir, out_dir))
         elif profiler == "nsys":
             lines.extend(_nsys_section(variants, batch, merge))
         elif profiler == "proton":
@@ -1427,6 +2195,21 @@ def render_markdown(
         "kernel (hash-checked); rejected or failed attempts keep their "
         "outcome and are never replaced by another variant's kernel."
     )
+    lines.append(
+        "- The Roofline and SOL section uses NCU's own Speed Of Light "
+        "percentages; its arithmetic intensity and roofs come from the "
+        "capture's executed tensor FLOPs, DRAM traffic, and peak-sustained "
+        "rates, so they need `ncu --set full` and describe what the kernel "
+        "actually executed, not an algorithmic FLOP model. DRAM counters "
+        "exclude traffic served from L2, so a cache-friendly kernel shows a "
+        "higher arithmetic intensity than its total memory work implies."
+    )
+    lines.append(
+        "- Peak-sustained rates are the clocks NCU sampled during the "
+        "capture; laptop power and thermal limits keep sustained "
+        "performance below those peaks, and the limiter flags are "
+        "heuristics over the same metrics."
+    )
     lines.append("")
     return "\n".join(lines) + "\n"
 
@@ -1443,6 +2226,7 @@ def generate_report(
     exp_dir = Path(exp_dir).resolve()
     manifest = _load_manifest(exp_dir)
     data = build_report_data(exp_dir, manifest, capture_id)
+    _write_roofline_charts(exp_dir, data)
     diffs = _write_source_diffs(exp_dir, data)
     data["diffs"] = diffs
 
