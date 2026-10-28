@@ -460,9 +460,9 @@ $(error unknown KA_NCU_SET '$(KA_NCU_SET)'; valid choices: $(KA_NCU_SETS))
 endif
 endif
 
-ifneq (,$(filter kernelagent-experiment-profile kernelagent-experiment-baseline kernelagent-report,$(MAKECMDGOALS)))
+ifneq (,$(filter kernelagent-experiment-profile kernelagent-experiment-baseline kernelagent-report kernelagent-report-llm,$(MAKECMDGOALS)))
 ifeq ($(strip $(KA_EXPERIMENT)),)
-$(error KA_EXPERIMENT=<id> is required for kernelagent-experiment-profile, kernelagent-experiment-baseline, and kernelagent-report)
+$(error KA_EXPERIMENT=<id> is required for kernelagent-experiment-profile, kernelagent-experiment-baseline, kernelagent-report, and kernelagent-report-llm)
 endif
 endif
 ifneq (,$(filter kernelagent-experiment-baseline,$(MAKECMDGOALS)))
@@ -493,7 +493,7 @@ endif
 endif
 endif
 
-ifneq (,$(filter kernelagent-experiment-profile kernelagent-experiment-baseline kernelagent-report,$(MAKECMDGOALS)))
+ifneq (,$(filter kernelagent-experiment-profile kernelagent-experiment-baseline kernelagent-report kernelagent-report-llm,$(MAKECMDGOALS)))
 ifneq ($(strip $(KA_EXPERIMENT)),)
 ifeq (,$(shell test -f "$(KA_EXPERIMENT_DIR)/manifest.json" && echo yes))
 $(error no experiment '$(KA_EXPERIMENT)' at $(KA_EXPERIMENT_DIR))
@@ -502,8 +502,9 @@ endif
 endif
 
 # The container can only see an experiment that lives under the results
-# mount (the report target runs on the host, so it is exempt).
-ifneq (,$(filter kernelagent-experiment-profile kernelagent-experiment-baseline,$(MAKECMDGOALS)))
+# mount (the report target runs on the host, so it is exempt;
+# kernelagent-report-llm runs in the container).
+ifneq (,$(filter kernelagent-experiment-profile kernelagent-experiment-baseline kernelagent-report-llm,$(MAKECMDGOALS)))
 ifneq ($(strip $(KA_EXPERIMENT)),)
 ifeq (,$(filter $(KERNELAGENT_WORKSPACE)/results/%,$(KA_EXPERIMENT_DIR)))
 $(error experiment directory '$(KA_EXPERIMENT_DIR)' is outside the results mount $(KERNELAGENT_WORKSPACE)/results/)
@@ -802,6 +803,21 @@ kernelagent-report:
 		$(if $(KA_REPORT_OUT),--out $(KA_REPORT_OUT)) \
 		$(if $(KA_CAPTURE_BATCH),--capture-batch $(KA_CAPTURE_BATCH))
 
+# Add optional LLM commentary to an experiment's deterministic code-diff
+# analysis. Runs in the KernelAgent container with the configured LLM,
+# regenerates the analysis in memory, and writes sidecar files:
+# reports/code-diff-analysis.llm.md and .llm.json. The deterministic
+# reports/code-diff-analysis.{md,json} remain authoritative and are never
+# overwritten; the manifest, kernels, records, and experiment status are
+# not modified. KA_CAPTURE_BATCH selects the analysis batch like
+# kernelagent-report.
+.PHONY: kernelagent-report-llm
+kernelagent-report-llm: kernelagent-image _ka_require_llm
+	$(KA_RUN) $(ka_llm_env) $(IMAGE_REPO)/$(KA_IMAGE_TAG) \
+		enrich-code-diffs.py $(KA_EXPERIMENT_CONTAINER_PATH) \
+		$(if $(KA_CAPTURE_BATCH),--capture-batch $(KA_CAPTURE_BATCH))
+	@echo "LLM analysis: $(KA_EXPERIMENT_DIR)/reports/code-diff-analysis.llm.md"
+
 .PHONY: clean
 clean:
 	rm -rf workspace/.ipynb_checkpoints
@@ -843,6 +859,7 @@ help:
 	@echo "  kernelagent-experiment-profile     Re-profile an experiment's archived kernels with any KA_PROFILER (KA_EXPERIMENT, KA_CAPTURE_BATCH)"
 	@echo "  kernelagent-experiment-baseline    Add an external kernel baseline to an experiment (KA_EXPERIMENT, KA_PROBLEM, KA_LABEL, KA_KERNEL_SOURCE)"
 	@echo "  kernelagent-report                 Render an experiment's Markdown report on the host (KA_EXPERIMENT, KA_CAPTURE_BATCH)"
+	@echo "  kernelagent-report-llm             Add optional LLM commentary to an experiment's code-diff analysis (KA_EXPERIMENT)"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  clean                              Remove notebook checkpoints"
@@ -879,3 +896,4 @@ help:
 	@echo "  make kernelagent-experiment-profile KA_EXPERIMENT=webinar-v1 KA_PROFILER=ncu KA_CAPTURE_BATCH=latest-per-profiler  # re-profile, keep other profilers"
 	@echo "  make kernelagent-experiment-profile KA_EXPERIMENT=webinar-v1 KA_PROFILER='ncu nsys proton' KA_CAPTURE_BATCH=latest-per-profiler"
 	@echo "  make kernelagent-report KA_EXPERIMENT=webinar-v1 KA_REPORT_OUT=slides/comparison.md  # optional: re-render / relocate"
+	@echo "  make kernelagent-report-llm KA_EXPERIMENT=webinar-v1 OPENAI_MODEL=gpt-5.2  # optional LLM commentary sidecars"

@@ -1,0 +1,1679 @@
+{
+  "schema_version": 1,
+  "experiment_id": "flashattention-ada5000_v1",
+  "generated_at": "2026-10-28T17:19:41.411927",
+  "capture_selection": {
+    "capture_batch": {
+      "capture_id": "capture_20261026_212117_4e7d",
+      "created_at": "2026-10-26T21:21:17.381965",
+      "profilers": [
+        "ncu"
+      ],
+      "iters": {
+        "default": 10
+      },
+      "warmup": 10,
+      "ncu_set": "full",
+      "status": "completed"
+    },
+    "capture_merge": {
+      "mode": "latest-per-profiler",
+      "capture_ids": [
+        "capture_20261026_151913_e52e",
+        "capture_20261026_211955_fdad",
+        "capture_20261026_212117_4e7d"
+      ],
+      "profiler_batches": {
+        "ncu": [
+          "capture_20261026_212117_4e7d"
+        ]
+      }
+    }
+  },
+  "fingerprint": "sha256:f86629691354120bb4be77ed2cb9746dd83028ddee2591b7bdd3c8efcb5b3d9c",
+  "coverage": {
+    "variants_total": 4,
+    "variants_with_source": 4,
+    "pairs_expected": 6,
+    "pairs_analyzed": 6,
+    "skipped": []
+  },
+  "problems": [
+    {
+      "problem": "flash_attention",
+      "case": 0,
+      "case_spec": "(2, 8, 1024, 64, False, 'float16')",
+      "case_context": {
+        "case_spec": "(2, 8, 1024, 64, False, 'float16')",
+        "fields": {
+          "B": 2,
+          "H": 8,
+          "S": 1024,
+          "D": 64,
+          "causal": false,
+          "dtype": "float16"
+        },
+        "integer_fields": {
+          "B": 2,
+          "H": 8,
+          "S": 1024,
+          "D": 64
+        },
+        "causal": false,
+        "tiles": {
+          "BLOCK_M": [
+            32,
+            64,
+            128
+          ],
+          "BLOCK_N": [
+            32,
+            64,
+            128
+          ]
+        },
+        "divisibility": [
+          {
+            "symbol": "SEQ",
+            "dim": 1024,
+            "tile_symbol": "BLOCK_M",
+            "tile_values": [
+              32,
+              64,
+              128
+            ],
+            "all_divide": true
+          },
+          {
+            "symbol": "SEQ",
+            "dim": 1024,
+            "tile_symbol": "BLOCK_N",
+            "tile_values": [
+              32,
+              64,
+              128
+            ],
+            "all_divide": true
+          }
+        ]
+      },
+      "siblings": [
+        {
+          "source_kernel_sha256": "d1c93f8eb4837df3292414db089c5e46727010177ac5883913dc66d4185b0b08",
+          "variants": [
+            "rounds_5",
+            "rounds_10"
+          ]
+        }
+      ],
+      "pairs": [
+        {
+          "problem": "flash_attention",
+          "from": "generated",
+          "to": "rounds_5",
+          "from_role": "internal",
+          "to_role": "internal",
+          "diff_path": "reports/source-diffs/flash_attention__generated_to_rounds_5.diff",
+          "diff_link": "source-diffs/flash_attention__generated_to_rounds_5.diff",
+          "source": {
+            "from": {
+              "path": "problems/flash_attention/generated/flash_attention/final_kernel.py",
+              "sha256": "d1c93f8eb4837df3292414db089c5e46727010177ac5883913dc66d4185b0b08",
+              "link": "../problems/flash_attention/generated/flash_attention/final_kernel.py"
+            },
+            "to": {
+              "path": "problems/flash_attention/case_0/rounds_5/flash_attention/optimized_kernel.py",
+              "sha256": "138f765d4df325b4ac22258049ae820cee3fdae58e1ae503ae2176663f0ea130",
+              "link": "../problems/flash_attention/case_0/rounds_5/flash_attention/optimized_kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 158,
+            "added": 132
+          },
+          "external": {
+            "from": false,
+            "to": false,
+            "source_path": null
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.1338,
+              "to_ms": 0.4374,
+              "from_tflops": 32.1,
+              "to_tflops": 9.82,
+              "from_ref_ms": 0.0677,
+              "to_ref_ms": 0.3296,
+              "ratio_from_over_to": 0.3058984910836763,
+              "delta_pct": 226.90582959641256,
+              "faster_side": "from",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_flash_attention_kernel",
+                "duration_avg_us": 185.454,
+                "sm_pct": 41.756,
+                "mem_pct": 51.616,
+                "dram_pct": 7.24,
+                "occupancy_pct": 16.162,
+                "regs": 64.0,
+                "tflops": 23.158955741523595,
+                "sol_pct": 51.616,
+                "bound": "memory",
+                "limiter": "memory hierarchy (51.6%); cache-level pressure (DRAM 7.2%); low occupancy (16.2%)",
+                "grid": 1024.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_flash_attention_kernel",
+                "duration_avg_us": 72.624,
+                "sm_pct": 54.565,
+                "mem_pct": 20.845,
+                "dram_pct": 16.678,
+                "occupancy_pct": 12.984,
+                "regs": 248.0,
+                "tflops": 59.139778805904385,
+                "sol_pct": 54.565,
+                "bound": "compute",
+                "limiter": "tensor pipelines (54.6%); low occupancy (13.0%); register pressure (248/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 2.553618638466623,
+              "delta_pct": -60.83988482319066,
+              "faster_side": "to",
+              "material": true,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_flash_attention_kernel",
+                "to": "_flash_attention_kernel"
+              }
+            },
+            "methodology_conflict": {
+              "bench_faster_side": "from",
+              "ncu_faster_side": "to"
+            },
+            "ncu_below_fixed_harness": [
+              "rounds_5"
+            ],
+            "caveats": [
+              "The PyTorch reference times differ between the two records (0.068 ms vs 0.330 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+              "The fixed harness and NCU disagree on direction. NCU locks clocks at or below boost, so its duration should be greater than or equal to the fixed-harness time; this pattern is most plausibly a different autotune configuration or a clock/power difference. Use NCU for code-level attribution and do not claim a fixed-harness win for this pair.",
+              "NCU duration is below the fixed-harness time for `rounds_5`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks."
+            ]
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "pipelining",
+                "causal_specialization",
+                "constexpr_addressing",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 8,
+                "to_start": 6,
+                "to_end": 28
+              },
+              "excerpt": "+def _attention_inner(\n+    q, K, V, base, rows, dims,\n+    acc, normalizer, maximum,\n+    lo, hi,\n+    SEQ: tl.constexpr,\n+    HEAD_DIM: tl.constexpr,\n+    BLOCK_M: tl.constexpr,\n+    BLOCK_N: tl.constexpr,\n+    MASK_CAUSAL: tl.constexpr,\n+):\n+    cols = tl.arange(0, BLOCK_N)\n+    scale: tl.constexpr = 1.4426950408889634 * HEAD_DIM ** -0.5\n+\n+    k_ptrs = K + base + dims[:, None] + cols[None, :] * HEAD_DIM\n+    v_ptrs = V + base + cols[:, None] * HEAD_DIM + dims[None, :]\n+\n+    for start in tl.range(lo, hi, BLOCK_N):\n+        keys = start + cols\n+\n+        if SEQ % BLOCK_N == 0:\n+            k = tl.load(k_ptrs + start * HEAD_DIM)\n+            v = tl.load(v_ptrs + start * HEAD_DIM)",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "causal_specialization",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 8,
+                "to_start": 28,
+                "to_end": 48
+              },
+              "excerpt": "+        else:\n+            k = tl.load(\n+                k_ptrs + start * HEAD_DIM,\n+                mask=keys[None, :] < SEQ,\n+                other=0.0,\n+            )\n+            v = tl.load(\n+                v_ptrs + start * HEAD_DIM,\n+                mask=keys[:, None] < SEQ,\n+                other=0.0,\n+            )\n+\n+        scores = tl.dot(q, k)\n+\n+        if SEQ % BLOCK_N != 0:\n+            scores = tl.where(keys[None, :] < SEQ, scores, -float(\"inf\"))\n+        if MASK_CAUSAL:\n+            scores = tl.where(\n+                rows[:, None] >= keys[None, :], scores, -float(\"inf\")\n+            )",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space expanded or changed",
+              "direction": "to_adds",
+              "matched_categories": [
+                "autotune_space",
+                "pipelining",
+                "online_softmax",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 8,
+                "to_start": 48,
+                "to_end": 73
+              },
+              "excerpt": "+\n+        new_maximum = tl.maximum(maximum, tl.max(scores, axis=1) * scale)\n+        probabilities = tl.exp2(scores * scale - new_maximum[:, None])\n+        correction = tl.exp2(maximum - new_maximum)\n+        block_sum = tl.sum(probabilities, axis=1)\n+\n+        acc = acc * correction[:, None]\n+        acc = tl.dot(probabilities.to(q.dtype), v, acc)\n+        normalizer = normalizer * correction + block_sum\n+        maximum = new_maximum\n+\n+    return acc, normalizer, maximum\n... 1 changed lines omitted ...\n+\n+@triton.autotune(\n+    configs=[\n+        triton.Config({\"BLOCK_M\": 32, \"BLOCK_N\": 32}, num_warps=4, num_stages=2),\n+        triton.Config({\"BLOCK_M\": 64, \"BLOCK_N\": 32}, num_warps=4, num_stages=2),\n+        triton.Config({\"BLOCK_M\": 64, \"BLOCK_N\": 64}, num_warps=4, num_stages=2),\n+        triton.Config({\"BLOCK_M\": 64, \"BLOCK_N\": 64}, num_warps=4, num_stages=3),\n+        triton.Config({\"BLOCK_M\": 128, \"BLOCK_N\": 32}, num_warps=4, num_stages=2),\n+        triton.Config({\"BLOCK_M\": 128, \"BLOCK_N\": 64}, num_warps=4, num_stages=2),\n+    ],\n+    key=[\"SEQ\", \"HEAD_DIM\", \"BATCH_HEADS\", \"CAUSAL\"],\n+)",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "constexpr_addressing",
+              "priority": 7,
+              "title": "Compile-time strides and index arithmetic \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "constexpr_addressing",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 8,
+                "to_start": 73,
+                "to_end": 79
+              },
+              "excerpt": "+@triton.jit\n+def _flash_attention_kernel(\n+    Q, K, V, O,\n+    SEQ: tl.constexpr,\n+    HEAD_DIM: tl.constexpr,\n+    BATCH_HEADS: tl.constexpr,",
+              "why_it_matters": "Runtime dimensions/strides become `tl.constexpr` and/or modulo wrapping is removed. Compile-time constants let Triton fold address arithmetic, remove integer divide/modulo from every element's index path, and prove alignment.",
+              "repeated_from": null
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "grid_addressing",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 123,
+                "from_end": 123,
+                "to_start": 132,
+                "to_end": 147
+              },
+              "excerpt": "+    batch, heads, seq, head_dim = Q.shape\n+    output = torch.empty(Q.shape, device=Q.device, dtype=Q.dtype)\n+    if seq == 0 or batch * heads == 0:\n+        return output\n+\n+    grid = lambda meta: (\n+        triton.cdiv(seq, meta[\"BLOCK_M\"]),\n+        batch * heads,\n+    )\n+    _flash_attention_kernel[grid](\n+        Q, K, V, output,\n+        SEQ=seq,\n+        HEAD_DIM=head_dim,\n+        BATCH_HEADS=batch * heads,\n+        CAUSAL=bool(causal),",
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": null
+            },
+            {
+              "category": "host_launch",
+              "priority": 4,
+              "title": "Host wrapper and launch contract \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 123,
+                "from_end": 144,
+                "to_start": 132,
+                "to_end": 132
+              },
+              "excerpt": "-    \"\"\"Compute scaled dot-product attention with a single fused Triton kernel.\n-\n-    The kernel fuses QK^T, scaling, optional causal masking, numerically stable\n-    online softmax, and the weighted V reduction. It does not materialize the\n-    attention-score or probability matrices.\n-    \"\"\"\n-    if Q.ndim != 4 or K.ndim != 4 or V.ndim != 4:\n-        raise ValueError(\"Q, K, and V must have shape [batch, heads, seq, dim]\")\n-    if Q.shape != K.shape or Q.shape != V.shape:\n-        raise ValueError(\"Q, K, and V must have identical shapes\")\n-    if Q.dtype != K.dtype or Q.dtype != V.dtype:\n-        raise ValueError(\"Q, K, and V must have the same dtype\")\n-    if Q.device != K.device or Q.device != V.device:\n-        raise ValueError(\"Q, K, and V must be on the same device\")\n-    if not Q.is_cuda:\n-        raise ValueError(\"Q, K, and V must be CUDA tensors\")\n-\n-    batch, heads, seq, head_dim = Q.shape\n-    output = torch.empty(\n-        (batch, heads, seq, head_dim), device=Q.device, dtype=Q.dtype\n-    )",
+              "why_it_matters": "Host-side wrapper, launch geometry, or contract checks change. This can alter grid shape and argument passing without changing device code; assertions and validation are not performance-relevant.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 61,
+              "to_line": 96
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 116,
+              "to_line": 127
+            },
+            {
+              "key": "kernel_entry",
+              "title": "Kernel entry signature preserved",
+              "detail": "Both expose the same `kernel_function` signature.",
+              "from_line": 123,
+              "to_line": 132
+            }
+          ],
+          "caveats": [
+            "The PyTorch reference times differ between the two records (0.068 ms vs 0.330 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+            "The fixed harness and NCU disagree on direction. NCU locks clocks at or below boost, so its duration should be greater than or equal to the fixed-harness time; this pattern is most plausibly a different autotune configuration or a clock/power difference. Use NCU for code-level attribution and do not claim a fixed-harness win for this pair.",
+            "NCU duration is below the fixed-harness time for `rounds_5`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks."
+          ],
+          "takeaway": "Detected mask_elision, autotune_space, constexpr_addressing, grid_addressing, host_launch; fixed harness 0.134 \u2192 0.437 ms; NCU 185.454 \u2192 72.624 \u00b5s.",
+          "error": null
+        },
+        {
+          "problem": "flash_attention",
+          "from": "generated",
+          "to": "rounds_10",
+          "from_role": "internal",
+          "to_role": "internal",
+          "diff_path": "reports/source-diffs/flash_attention__generated_to_rounds_10.diff",
+          "diff_link": "source-diffs/flash_attention__generated_to_rounds_10.diff",
+          "source": {
+            "from": {
+              "path": "problems/flash_attention/generated/flash_attention/final_kernel.py",
+              "sha256": "d1c93f8eb4837df3292414db089c5e46727010177ac5883913dc66d4185b0b08",
+              "link": "../problems/flash_attention/generated/flash_attention/final_kernel.py"
+            },
+            "to": {
+              "path": "problems/flash_attention/case_0/rounds_10/flash_attention/optimized_kernel.py",
+              "sha256": "9b1431e00661389fb25f70b141a99a89a54194ca048ed1e91555db98b73c953b",
+              "link": "../problems/flash_attention/case_0/rounds_10/flash_attention/optimized_kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 154,
+            "added": 164
+          },
+          "external": {
+            "from": false,
+            "to": false,
+            "source_path": null
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.1338,
+              "to_ms": 0.3072,
+              "from_tflops": 32.1,
+              "to_tflops": 13.98,
+              "from_ref_ms": 0.0677,
+              "to_ref_ms": 0.354,
+              "ratio_from_over_to": 0.43554687500000006,
+              "delta_pct": 129.5964125560538,
+              "faster_side": "from",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_flash_attention_kernel",
+                "duration_avg_us": 185.454,
+                "sm_pct": 41.756,
+                "mem_pct": 51.616,
+                "dram_pct": 7.24,
+                "occupancy_pct": 16.162,
+                "regs": 64.0,
+                "tflops": 23.158955741523595,
+                "sol_pct": 51.616,
+                "bound": "memory",
+                "limiter": "memory hierarchy (51.6%); cache-level pressure (DRAM 7.2%); low occupancy (16.2%)",
+                "grid": 1024.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_flash_attention",
+                "duration_avg_us": 68.59700000000001,
+                "sm_pct": 58.061,
+                "mem_pct": 22.142000000000003,
+                "dram_pct": 17.146,
+                "occupancy_pct": 13.307999999999998,
+                "regs": 244.0,
+                "tflops": 62.61031301021598,
+                "sol_pct": 58.061,
+                "bound": "compute",
+                "limiter": "tensor pipelines (58.1%); low occupancy (13.3%); register pressure (244/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 2.7035293088619032,
+              "delta_pct": -63.01131277837091,
+              "faster_side": "to",
+              "material": true,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_flash_attention_kernel",
+                "to": "_flash_attention"
+              }
+            },
+            "methodology_conflict": {
+              "bench_faster_side": "from",
+              "ncu_faster_side": "to"
+            },
+            "ncu_below_fixed_harness": [
+              "rounds_10"
+            ],
+            "caveats": [
+              "The PyTorch reference times differ between the two records (0.068 ms vs 0.354 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+              "The fixed harness and NCU disagree on direction. NCU locks clocks at or below boost, so its duration should be greater than or equal to the fixed-harness time; this pattern is most plausibly a different autotune configuration or a clock/power difference. Use NCU for code-level attribution and do not claim a fixed-harness win for this pair.",
+              "NCU duration is below the fixed-harness time for `rounds_10`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks."
+            ]
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "causal_specialization",
+                "dtype_math",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 8,
+                "to_start": 26,
+                "to_end": 51
+              },
+              "excerpt": "+        if SEQ % BLOCK_N == 0:\n+            k = tl.load(k_ptrs + start * HEAD_DIM)\n+            v = tl.load(v_ptrs + start * HEAD_DIM)\n+        else:\n+            k = tl.load(\n+                k_ptrs + start * HEAD_DIM,\n+                mask=keys[None, :] < SEQ,\n+                other=0,\n+            )\n+            v = tl.load(\n+                v_ptrs + start * HEAD_DIM,\n+                mask=keys[:, None] < SEQ,\n... 1 changed lines omitted ...\n+            )\n+\n+        scores = tl.dot(q, k) * scale\n+\n+        if SEQ % BLOCK_N != 0:\n+            scores = tl.where(keys[None, :] < SEQ, scores, -float(\"inf\"))\n+        if MASK_CAUSAL:\n+            scores = tl.where(\n+                keys[None, :] <= rows[:, None],\n+                scores,\n+                -float(\"inf\"),\n+            )",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "causal_specialization",
+                "grid_addressing",
+                "dtype_math",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 32,
+                "from_end": 32,
+                "to_start": 120,
+                "to_end": 144
+              },
+              "excerpt": "+    query_block = tl.program_id(0)\n+    batch_head = tl.program_id(1)\n+    base = batch_head * SEQ * HEAD_DIM\n+\n+    rows = query_block * BLOCK_M + tl.arange(0, BLOCK_M)\n+    dims = tl.arange(0, HEAD_DIM)\n+    q_ptrs = Q + base + rows[:, None] * HEAD_DIM + dims[None, :]\n+\n+    if SEQ % BLOCK_M == 0:\n+        q = tl.load(q_ptrs)\n+    else:\n+        q = tl.load(q_ptrs, mask=rows[:, None] < SEQ, other=0)\n+\n+    m = tl.full((BLOCK_M,), -float(\"inf\"), tl.float32)\n+    l = tl.zeros((BLOCK_M,), tl.float32)\n+    acc = tl.zeros((BLOCK_M, HEAD_DIM), tl.float32)\n+\n+    if CAUSAL:\n+        prefix_end = (query_block * BLOCK_M // BLOCK_N) * BLOCK_N\n+\n+        m, l, acc = _attention_blocks(\n+            q, K, V, base, rows, m, l, acc,\n+            0, prefix_end,\n+            SEQ, HEAD_DIM, BLOCK_M, BLOCK_N, False,",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space expanded or changed",
+              "direction": "to_adds",
+              "matched_categories": [
+                "autotune_space",
+                "pipelining",
+                "online_softmax",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 8,
+                "to_start": 51,
+                "to_end": 101
+              },
+              "excerpt": "+\n+        next_m = tl.maximum(m, tl.max(scores, axis=1))\n+        p = tl.exp2(scores - next_m[:, None])\n+        alpha = tl.exp2(m - next_m)\n+        block_l = tl.sum(p, axis=1)\n+\n+        acc = acc * alpha[:, None]\n+        acc = tl.dot(p.to(q.dtype), v, acc)\n+        l = l * alpha + block_l\n+        m = next_m\n+\n+    return m, l, acc\n... 26 changed lines omitted ...\n+            num_warps=4,\n+            num_stages=3,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 128, \"BLOCK_N\": 32},\n+            num_warps=4,\n+            num_stages=3,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 128, \"BLOCK_N\": 64},\n+            num_warps=4,\n+            num_stages=3,",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "pipelining",
+              "priority": 8,
+              "title": "Software pipelining \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "pipelining",
+                "causal_specialization",
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 8,
+                "to_start": 6,
+                "to_end": 26
+              },
+              "excerpt": "+def _attention_blocks(\n+    q, K, V, base, rows, m, l, acc,\n+    begin, end,\n+    SEQ: tl.constexpr,\n+    HEAD_DIM: tl.constexpr,\n+    BLOCK_M: tl.constexpr,\n+    BLOCK_N: tl.constexpr,\n+    MASK_CAUSAL: tl.constexpr,\n+):\n+    cols = tl.arange(0, BLOCK_N)\n+    dims = tl.arange(0, HEAD_DIM)\n+    scale: tl.constexpr = 1.4426950408889634 * HEAD_DIM ** -0.5\n+\n+    k_ptrs = K + base + dims[:, None] + cols[None, :] * HEAD_DIM\n+    v_ptrs = V + base + cols[:, None] * HEAD_DIM + dims[None, :]\n+\n+    for start in tl.range(begin, end, BLOCK_N):\n+        start = tl.multiple_of(start, BLOCK_N)\n+        keys = start + cols\n+",
+              "why_it_matters": "Pipeline depth or loop form changes: more stages overlap global loads with tensor-core work at higher shared-memory/register cost; fewer stages reduce pressure but expose load latency.",
+              "repeated_from": null
+            },
+            {
+              "category": "constexpr_addressing",
+              "priority": 7,
+              "title": "Compile-time strides and index arithmetic \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 28,
+                "to_start": 6,
+                "to_end": 6
+              },
+              "excerpt": "-def _flash_attention_kernel(\n-    q_ptr,\n-    k_ptr,\n-    v_ptr,\n-    out_ptr,\n-    S,\n-    stride_qb,\n-    stride_qh,\n-    stride_qs,\n-    stride_qd,\n-    stride_kb,\n-    stride_kh,\n-    stride_ks,\n-    stride_kd,\n-    stride_vb,\n-    stride_vh,\n-    stride_vs,\n-    stride_vd,\n-    H: tl.constexpr,\n-    HEAD_DIM: tl.constexpr,",
+              "why_it_matters": "Runtime dimensions/strides become `tl.constexpr` and/or modulo wrapping is removed. Compile-time constants let Triton fold address arithmetic, remove integer divide/modulo from every element's index path, and prove alignment.",
+              "repeated_from": null
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "grid_addressing",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 123,
+                "from_end": 143,
+                "to_start": 169,
+                "to_end": 175
+              },
+              "excerpt": " \n \n def kernel_function(Q, K, V, causal):\n-    \"\"\"Compute scaled dot-product attention with a single fused Triton kernel.\n-\n-    The kernel fuses QK^T, scaling, optional causal masking, numerically stable\n-    online softmax, and the weighted V reduction. It does not materialize the\n-    attention-score or probability matrices.\n-    \"\"\"\n-    if Q.ndim != 4 or K.ndim != 4 or V.ndim != 4:\n-        raise ValueError(\"Q, K, and V must have shape [batch, heads, seq, dim]\")\n-    if Q.shape != K.shape or Q.shape != V.shape:\n-        raise ValueError(\"Q, K, and V must have identical shapes\")\n-    if Q.dtype != K.dtype or Q.dtype != V.dtype:\n-        raise ValueError(\"Q, K, and V must have the same dtype\")\n... 2 changed lines omitted ...\n-    if not Q.is_cuda:\n-        raise ValueError(\"Q, K, and V must be CUDA tensors\")\n-\n-    batch, heads, seq, head_dim = Q.shape\n-    output = torch.empty(\n-        (batch, heads, seq, head_dim), device=Q.device, dtype=Q.dtype\n+    batch, heads, seq, head_dim = Q.shape\n+    output = torch.empty(Q.shape, dtype=Q.dtype, device=Q.device)\n+\n+    grid = lambda meta: (\n+        triton.cdiv(seq, meta[\"BLOCK_M\"]),\n+        batch * heads,\n     )\n ",
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 61,
+              "to_line": 134
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 116,
+              "to_line": 164
+            },
+            {
+              "key": "kernel_entry",
+              "title": "Kernel entry signature preserved",
+              "detail": "Both expose the same `kernel_function` signature.",
+              "from_line": 123,
+              "to_line": 169
+            }
+          ],
+          "caveats": [
+            "The PyTorch reference times differ between the two records (0.068 ms vs 0.354 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+            "The fixed harness and NCU disagree on direction. NCU locks clocks at or below boost, so its duration should be greater than or equal to the fixed-harness time; this pattern is most plausibly a different autotune configuration or a clock/power difference. Use NCU for code-level attribution and do not claim a fixed-harness win for this pair.",
+            "NCU duration is below the fixed-harness time for `rounds_10`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks."
+          ],
+          "takeaway": "Detected mask_elision, autotune_space, pipelining, constexpr_addressing, grid_addressing; fixed harness 0.134 \u2192 0.307 ms; NCU 185.454 \u2192 68.597 \u00b5s.",
+          "error": null
+        },
+        {
+          "problem": "flash_attention",
+          "from": "generated",
+          "to": "vllm_triton_prefill",
+          "from_role": "internal",
+          "to_role": "external",
+          "diff_path": "reports/source-diffs/flash_attention__generated_to_vllm_triton_prefill.diff",
+          "diff_link": "source-diffs/flash_attention__generated_to_vllm_triton_prefill.diff",
+          "source": {
+            "from": {
+              "path": "problems/flash_attention/generated/flash_attention/final_kernel.py",
+              "sha256": "d1c93f8eb4837df3292414db089c5e46727010177ac5883913dc66d4185b0b08",
+              "link": "../problems/flash_attention/generated/flash_attention/final_kernel.py"
+            },
+            "to": {
+              "path": "problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py",
+              "sha256": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441",
+              "link": "../problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 159,
+            "added": 372
+          },
+          "external": {
+            "from": false,
+            "to": true,
+            "source_path": "flash_attention/baselines/vllm_triton_prefill.py"
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.1338,
+              "to_ms": 0.0818,
+              "from_tflops": 32.1,
+              "to_tflops": 52.51,
+              "from_ref_ms": 0.0677,
+              "to_ref_ms": 0.0638,
+              "ratio_from_over_to": 1.6356968215158925,
+              "delta_pct": -38.86397608370703,
+              "faster_side": "to",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_flash_attention_kernel",
+                "duration_avg_us": 185.454,
+                "sm_pct": 41.756,
+                "mem_pct": 51.616,
+                "dram_pct": 7.24,
+                "occupancy_pct": 16.162,
+                "regs": 64.0,
+                "tflops": 23.158955741523595,
+                "sol_pct": 51.616,
+                "bound": "memory",
+                "limiter": "memory hierarchy (51.6%); cache-level pressure (DRAM 7.2%); low occupancy (16.2%)",
+                "grid": 1024.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_fwd_kernel",
+                "duration_avg_us": 80.74,
+                "sm_pct": 49.47,
+                "mem_pct": 36.277,
+                "dram_pct": 16.077,
+                "occupancy_pct": 13.894,
+                "regs": 255.0,
+                "tflops": 53.19556418691293,
+                "sol_pct": 49.47,
+                "bound": "compute",
+                "limiter": "tensor pipelines (49.5%); low occupancy (13.9%); register pressure (255/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 2.296928412187268,
+              "delta_pct": -56.46359744195326,
+              "faster_side": "to",
+              "material": true,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_flash_attention_kernel",
+                "to": "_fwd_kernel"
+              }
+            },
+            "methodology_conflict": null,
+            "ncu_below_fixed_harness": [],
+            "caveats": [
+              "`vllm_triton_prefill` is an archived external baseline (`flash_attention/baselines/vllm_triton_prefill.py`). This is a source comparison, not a controlled one-change A/B; it also supports variable sequence lengths, GQA, attention sinks."
+            ]
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 8,
+                "to_start": 144,
+                "to_end": 148
+              },
+              "excerpt": "+\n+    q = tl.load(\n+        Q + off_q,\n+        mask=(offs_m[:, None] < cur_batch_seq_len) & (mask_d[None, :]),",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary.",
+              "repeated_from": null
+            },
+            {
+              "category": "causal_specialization",
+              "priority": 8,
+              "title": "Causal loop specialization \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "causal_specialization",
+                "grid_addressing",
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 8,
+                "to_start": 92,
+                "to_end": 123
+              },
+              "excerpt": "+def _fwd_kernel(\n+    Q,\n+    K,\n+    V,\n+    Sinks,\n+    sm_scale,\n+    B_Start_Loc,\n+    B_Seqlen,\n+    Out,\n+    stride_qbs,\n+    stride_qh,\n+    stride_kbs,\n... 7 changed lines omitted ...\n+    BLOCK_DMODEL: tl.constexpr,\n+    BLOCK_N: tl.constexpr,\n+    IS_CAUSAL: tl.constexpr,\n+    SLIDING_WINDOW_Q: tl.constexpr,\n+    SLIDING_WINDOW_K: tl.constexpr,\n+    SINKS_BIAS_KEY0: tl.constexpr,\n+    USE_SINKS: tl.constexpr,\n+    Lk: tl.constexpr,\n+):\n+    cur_batch = tl.program_id(0)\n+    cur_head = tl.program_id(1)\n+    start_m = tl.program_id(2)",
+              "why_it_matters": "The causal loop is split into an unmasked prefix and a masked diagonal, or fully masked blocks are pruned. Only causal cases are affected. This case is non-causal, so the change cannot affect its hot loop; it matters for causal cases.",
+              "repeated_from": null
+            },
+            {
+              "category": "pipelining",
+              "priority": 8,
+              "title": "Software pipelining \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "pipelining",
+                "causal_specialization",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 122,
+                "from_end": 122,
+                "to_start": 313,
+                "to_end": 343
+              },
+              "excerpt": "+\n+    _fwd_kernel[grid](\n+        q,\n+        k,\n+        v,\n+        sinks if sinks is not None else q,\n+        sm_scale,\n+        b_start_loc,\n+        b_seq_len,\n+        o,\n+        q.stride(0),\n+        q.stride(1),\n... 6 changed lines omitted ...\n+        kv_group_num=kv_group_num,\n+        BLOCK_M=BLOCK,\n+        BLOCK_DMODEL=triton.next_power_of_2(Lk),\n+        BLOCK_N=BLOCK_N,\n+        IS_CAUSAL=is_causal,\n+        SLIDING_WINDOW_Q=sliding_window_q,\n+        SLIDING_WINDOW_K=sliding_window_k,\n+        USE_SINKS=sinks is not None,\n+        SINKS_BIAS_KEY0=sinks_bias_key0,\n+        num_warps=num_warps,\n+        num_stages=1,\n+        Lk=Lk,",
+              "why_it_matters": "Pipeline depth or loop form changes: more stages overlap global loads with tensor-core work at higher shared-memory/register cost; fewer stages reduce pressure but expose load latency.",
+              "repeated_from": null
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "grid_addressing",
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 8,
+                "to_start": 123,
+                "to_end": 144
+              },
+              "excerpt": "+\n+    cur_kv_head = cur_head // kv_group_num\n+\n+    cur_batch_seq_len = tl.load(B_Seqlen + cur_batch)\n+    cur_batch_in_all_start_index = tl.load(B_Start_Loc + cur_batch)\n+\n+    block_start_loc = BLOCK_M * start_m\n+\n+    # initialize offsets\n+    offs_n = tl.arange(0, BLOCK_N)\n+    offs_d = tl.arange(0, BLOCK_DMODEL)\n+    offs_m = start_m * BLOCK_M + tl.arange(0, BLOCK_M)\n+    off_q = (\n+        (cur_batch_in_all_start_index + offs_m[:, None]) * stride_qbs\n+        + cur_head * stride_qh\n+        + offs_d[None, :]\n+    )\n+    off_k = offs_n[None, :] * stride_kbs + cur_kv_head * stride_kh + offs_d[:, None]\n+    off_v = offs_n[:, None] * stride_vbs + cur_kv_head * stride_vh + offs_d[None, :]\n+\n+    mask_d = offs_d < Lk",
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": null
+            },
+            {
+              "category": "constexpr_addressing",
+              "priority": 7,
+              "title": "Compile-time strides and index arithmetic \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 8,
+                "from_end": 32,
+                "to_start": 92,
+                "to_end": 92
+              },
+              "excerpt": "-def _flash_attention_kernel(\n-    q_ptr,\n-    k_ptr,\n-    v_ptr,\n-    out_ptr,\n-    S,\n-    stride_qb,\n-    stride_qh,\n-    stride_qs,\n-    stride_qd,\n-    stride_kb,\n-    stride_kh,\n-    stride_ks,\n-    stride_kd,\n-    stride_vb,\n-    stride_vh,\n-    stride_vs,\n-    stride_vd,\n-    H: tl.constexpr,\n-    HEAD_DIM: tl.constexpr,\n-    CAUSAL: tl.constexpr,\n-    BLOCK_M: tl.constexpr,\n-    BLOCK_N: tl.constexpr,\n-):",
+              "why_it_matters": "Runtime dimensions/strides become `tl.constexpr` and/or modulo wrapping is removed. Compile-time constants let Triton fold address arithmetic, remove integer divide/modulo from every element's index path, and prove alignment.",
+              "repeated_from": null
+            },
+            {
+              "category": "host_launch",
+              "priority": 4,
+              "title": "Host wrapper and launch contract \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 122,
+                "from_end": 143,
+                "to_start": 261,
+                "to_end": 261
+              },
+              "excerpt": null,
+              "why_it_matters": "Host-side wrapper, launch geometry, or contract checks change. This can alter grid shape and argument passing without changing device code; assertions and validation are not performance-relevant.",
+              "repeated_from": "`generated` \u2192 `rounds_5`"
+            }
+          ],
+          "invariants": [
+            {
+              "key": "online_softmax",
+              "title": "Online-softmax recurrence preserved",
+              "detail": "Both use the online-softmax recurrence (running max/denominator, `exp2`, and a P\u00b7V dot); no full score matrix is materialized.",
+              "from_line": 104,
+              "to_line": 231
+            },
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 61,
+              "to_line": 161
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 116,
+              "to_line": 257
+            },
+            {
+              "key": "kernel_entry",
+              "title": "Kernel entry signature preserved",
+              "detail": "Both expose the same `kernel_function` signature.",
+              "from_line": 123,
+              "to_line": 369
+            }
+          ],
+          "caveats": [
+            "`vllm_triton_prefill` is an archived external baseline (`flash_attention/baselines/vllm_triton_prefill.py`). This is a source comparison, not a controlled one-change A/B; it also supports variable sequence lengths, GQA, attention sinks."
+          ],
+          "takeaway": "Detected mask_elision, causal_specialization, pipelining, grid_addressing, constexpr_addressing, host_launch; fixed harness 0.134 \u2192 0.082 ms; NCU 185.454 \u2192 80.740 \u00b5s.",
+          "error": null
+        },
+        {
+          "problem": "flash_attention",
+          "from": "rounds_5",
+          "to": "rounds_10",
+          "from_role": "internal",
+          "to_role": "internal",
+          "diff_path": "reports/source-diffs/flash_attention__rounds_5_to_rounds_10.diff",
+          "diff_link": "source-diffs/flash_attention__rounds_5_to_rounds_10.diff",
+          "source": {
+            "from": {
+              "path": "problems/flash_attention/case_0/rounds_5/flash_attention/optimized_kernel.py",
+              "sha256": "138f765d4df325b4ac22258049ae820cee3fdae58e1ae503ae2176663f0ea130",
+              "link": "../problems/flash_attention/case_0/rounds_5/flash_attention/optimized_kernel.py"
+            },
+            "to": {
+              "path": "problems/flash_attention/case_0/rounds_10/flash_attention/optimized_kernel.py",
+              "sha256": "9b1431e00661389fb25f70b141a99a89a54194ca048ed1e91555db98b73c953b",
+              "link": "../problems/flash_attention/case_0/rounds_10/flash_attention/optimized_kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 56,
+            "added": 92
+          },
+          "external": {
+            "from": false,
+            "to": false,
+            "source_path": null
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.4374,
+              "to_ms": 0.3072,
+              "from_tflops": 9.82,
+              "to_tflops": 13.98,
+              "from_ref_ms": 0.3296,
+              "to_ref_ms": 0.354,
+              "ratio_from_over_to": 1.4238281250000002,
+              "delta_pct": -29.766803840877927,
+              "faster_side": "to",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_flash_attention_kernel",
+                "duration_avg_us": 72.624,
+                "sm_pct": 54.565,
+                "mem_pct": 20.845,
+                "dram_pct": 16.678,
+                "occupancy_pct": 12.984,
+                "regs": 248.0,
+                "tflops": 59.139778805904385,
+                "sol_pct": 54.565,
+                "bound": "compute",
+                "limiter": "tensor pipelines (54.6%); low occupancy (13.0%); register pressure (248/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_flash_attention",
+                "duration_avg_us": 68.59700000000001,
+                "sm_pct": 58.061,
+                "mem_pct": 22.142000000000003,
+                "dram_pct": 17.146,
+                "occupancy_pct": 13.307999999999998,
+                "regs": 244.0,
+                "tflops": 62.61031301021598,
+                "sol_pct": 58.061,
+                "bound": "compute",
+                "limiter": "tensor pipelines (58.1%); low occupancy (13.3%); register pressure (244/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 1.0587051911891188,
+              "delta_pct": -5.544998898435761,
+              "faster_side": "to",
+              "material": true,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_flash_attention_kernel",
+                "to": "_flash_attention"
+              }
+            },
+            "methodology_conflict": null,
+            "ncu_below_fixed_harness": [
+              "rounds_5",
+              "rounds_10"
+            ],
+            "caveats": [
+              "NCU duration is below the fixed-harness time for `rounds_5`, `rounds_10`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks."
+            ]
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Masking or predication changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "mask_elision"
+              ],
+              "line_ranges": {
+                "from_start": 32,
+                "from_end": 33,
+                "to_start": 33,
+                "to_end": 34
+              },
+              "excerpt": "             k = tl.load(\n                 k_ptrs + start * HEAD_DIM,\n                 mask=keys[None, :] < SEQ,\n-                other=0.0,\n+                other=0,\n             )\n             v = tl.load(\n                 v_ptrs + start * HEAD_DIM,",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space expanded or changed",
+              "direction": "to_adds",
+              "matched_categories": [
+                "autotune_space",
+                "pipelining"
+              ],
+              "line_ranges": {
+                "from_start": 64,
+                "from_end": 70,
+                "to_start": 67,
+                "to_end": 107
+              },
+              "excerpt": " \n @triton.autotune(\n     configs=[\n-        triton.Config({\"BLOCK_M\": 32, \"BLOCK_N\": 32}, num_warps=4, num_stages=2),\n-        triton.Config({\"BLOCK_M\": 64, \"BLOCK_N\": 32}, num_warps=4, num_stages=2),\n-        triton.Config({\"BLOCK_M\": 64, \"BLOCK_N\": 64}, num_warps=4, num_stages=2),\n-        triton.Config({\"BLOCK_M\": 64, \"BLOCK_N\": 64}, num_warps=4, num_stages=3),\n-        triton.Config({\"BLOCK_M\": 128, \"BLOCK_N\": 32}, num_warps=4, num_stages=2),\n-        triton.Config({\"BLOCK_M\": 128, \"BLOCK_N\": 64}, num_warps=4, num_stages=2),\n+        triton.Config(\n+            {\"BLOCK_M\": 32, \"BLOCK_N\": 64},\n+            num_warps=2,\n+            num_stages=3,\n+        ),\n+        triton.Config(\n... 22 changed lines omitted ...\n+            num_stages=3,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 128, \"BLOCK_N\": 64},\n+            num_warps=4,\n+            num_stages=3,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 128, \"BLOCK_N\": 64},\n+            num_warps=8,\n+            num_stages=2,\n+        ),\n     ],\n     key=[\"SEQ\", \"HEAD_DIM\", \"BATCH_HEADS\", \"CAUSAL\"],\n )",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "pipelining",
+              "priority": 8,
+              "title": "Software pipelining \u2014 changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "pipelining",
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 22,
+                "from_end": 23,
+                "to_start": 22,
+                "to_end": 24
+              },
+              "excerpt": "     k_ptrs = K + base + dims[:, None] + cols[None, :] * HEAD_DIM\n     v_ptrs = V + base + cols[:, None] * HEAD_DIM + dims[None, :]\n \n-    for start in tl.range(lo, hi, BLOCK_N):\n+    for start in tl.range(begin, end, BLOCK_N):\n+        start = tl.multiple_of(start, BLOCK_N)\n         keys = start + cols\n \n         if SEQ % BLOCK_N == 0:",
+              "why_it_matters": "Pipeline depth or loop form changes: more stages overlap global loads with tensor-core work at higher shared-memory/register cost; fewer stages reduce pressure but expose load latency.",
+              "repeated_from": null
+            },
+            {
+              "category": "causal_specialization",
+              "priority": 8,
+              "title": "Causal loop specialization \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "causal_specialization"
+              ],
+              "line_ranges": {
+                "from_start": 100,
+                "from_end": 105,
+                "to_start": 138,
+                "to_end": 143
+              },
+              "excerpt": "     acc = tl.zeros((BLOCK_M, HEAD_DIM), tl.float32)\n \n     if CAUSAL:\n-        diagonal_start = tile * BLOCK_M\n-        acc, normalizer, maximum = _attention_inner(\n-            q, K, V, base, rows, dims,\n-            acc, normalizer, maximum,\n-            0, diagonal_start,\n+        prefix_end = (query_block * BLOCK_M // BLOCK_N) * BLOCK_N\n+\n+        m, l, acc = _attention_blocks(\n+            q, K, V, base, rows, m, l, acc,\n+            0, prefix_end,\n             SEQ, HEAD_DIM, BLOCK_M, BLOCK_N, False,\n         )",
+              "why_it_matters": "The causal loop is split into an unmasked prefix and a masked diagonal, or fully masked blocks are pruned. Only causal cases are affected. This case is non-causal, so the change cannot affect its hot loop; it matters for causal cases.",
+              "repeated_from": null
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "grid_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 83,
+                "from_end": 90,
+                "to_start": 120,
+                "to_end": 128
+              },
+              "excerpt": "     BLOCK_M: tl.constexpr,\n     BLOCK_N: tl.constexpr,\n ):\n-    tile = tl.program_id(0)\n-    head = tl.program_id(1)\n-    base = head * SEQ * HEAD_DIM\n-    rows = tile * BLOCK_M + tl.arange(0, BLOCK_M)\n-    dims = tl.arange(0, HEAD_DIM)\n-\n-    q_ptrs = Q + base + rows[:, None] * HEAD_DIM + dims[None, :]\n+    query_block = tl.program_id(0)\n+    batch_head = tl.program_id(1)\n+    base = batch_head * SEQ * HEAD_DIM\n+\n+    rows = query_block * BLOCK_M + tl.arange(0, BLOCK_M)\n+    dims = tl.arange(0, HEAD_DIM)\n+    q_ptrs = Q + base + rows[:, None] * HEAD_DIM + dims[None, :]\n+\n     if SEQ % BLOCK_M == 0:\n         q = tl.load(q_ptrs)\n     else:",
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": null
+            },
+            {
+              "category": "online_softmax",
+              "priority": 6,
+              "title": "Online-softmax recurrence \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "online_softmax",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 49,
+                "from_end": 60,
+                "to_start": 52,
+                "to_end": 63
+              },
+              "excerpt": "             )\n \n-        new_maximum = tl.maximum(maximum, tl.max(scores, axis=1) * scale)\n-        probabilities = tl.exp2(scores * scale - new_maximum[:, None])\n-        correction = tl.exp2(maximum - new_maximum)\n-        block_sum = tl.sum(probabilities, axis=1)\n-\n-        acc = acc * correction[:, None]\n-        acc = tl.dot(probabilities.to(q.dtype), v, acc)\n-        normalizer = normalizer * correction + block_sum\n-        maximum = new_maximum\n-\n-    return acc, normalizer, maximum\n+        next_m = tl.maximum(m, tl.max(scores, axis=1))\n+        p = tl.exp2(scores - next_m[:, None])\n+        alpha = tl.exp2(m - next_m)\n+        block_l = tl.sum(p, axis=1)\n+\n+        acc = acc * alpha[:, None]\n+        acc = tl.dot(p.to(q.dtype), v, acc)\n+        l = l * alpha + block_l\n+        m = next_m\n+\n+    return m, l, acc\n \n \n @triton.autotune(",
+              "why_it_matters": "The online-softmax recurrence is touched. This is correctness-critical: changes affect numerical stability and rescale/dot work, not just scheduling; verify with the fixed test.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 96,
+              "to_line": 134
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 127,
+              "to_line": 164
+            },
+            {
+              "key": "autotune_key",
+              "title": "Autotune key preserved",
+              "detail": "Both autotune on the same key list.",
+              "from_line": 72,
+              "to_line": 109
+            },
+            {
+              "key": "kernel_entry",
+              "title": "Kernel entry signature preserved",
+              "detail": "Both expose the same `kernel_function` signature.",
+              "from_line": 132,
+              "to_line": 169
+            }
+          ],
+          "caveats": [
+            "NCU duration is below the fixed-harness time for `rounds_5`, `rounds_10`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks."
+          ],
+          "takeaway": "Detected mask_elision, autotune_space, pipelining, causal_specialization, grid_addressing, online_softmax; fixed harness 0.437 \u2192 0.307 ms; NCU 72.624 \u2192 68.597 \u00b5s.",
+          "error": null
+        },
+        {
+          "problem": "flash_attention",
+          "from": "rounds_5",
+          "to": "vllm_triton_prefill",
+          "from_role": "internal",
+          "to_role": "external",
+          "diff_path": "reports/source-diffs/flash_attention__rounds_5_to_vllm_triton_prefill.diff",
+          "diff_link": "source-diffs/flash_attention__rounds_5_to_vllm_triton_prefill.diff",
+          "source": {
+            "from": {
+              "path": "problems/flash_attention/case_0/rounds_5/flash_attention/optimized_kernel.py",
+              "sha256": "138f765d4df325b4ac22258049ae820cee3fdae58e1ae503ae2176663f0ea130",
+              "link": "../problems/flash_attention/case_0/rounds_5/flash_attention/optimized_kernel.py"
+            },
+            "to": {
+              "path": "problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py",
+              "sha256": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441",
+              "link": "../problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 139,
+            "added": 378
+          },
+          "external": {
+            "from": false,
+            "to": true,
+            "source_path": "flash_attention/baselines/vllm_triton_prefill.py"
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.4374,
+              "to_ms": 0.0818,
+              "from_tflops": 9.82,
+              "to_tflops": 52.51,
+              "from_ref_ms": 0.3296,
+              "to_ref_ms": 0.0638,
+              "ratio_from_over_to": 5.34718826405868,
+              "delta_pct": -81.29858253315044,
+              "faster_side": "to",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_flash_attention_kernel",
+                "duration_avg_us": 72.624,
+                "sm_pct": 54.565,
+                "mem_pct": 20.845,
+                "dram_pct": 16.678,
+                "occupancy_pct": 12.984,
+                "regs": 248.0,
+                "tflops": 59.139778805904385,
+                "sol_pct": 54.565,
+                "bound": "compute",
+                "limiter": "tensor pipelines (54.6%); low occupancy (13.0%); register pressure (248/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_fwd_kernel",
+                "duration_avg_us": 80.74,
+                "sm_pct": 49.47,
+                "mem_pct": 36.277,
+                "dram_pct": 16.077,
+                "occupancy_pct": 13.894,
+                "regs": 255.0,
+                "tflops": 53.19556418691293,
+                "sol_pct": 49.47,
+                "bound": "compute",
+                "limiter": "tensor pipelines (49.5%); low occupancy (13.9%); register pressure (255/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 0.8994798117413921,
+              "delta_pct": 11.1753690240141,
+              "faster_side": "from",
+              "material": true,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_flash_attention_kernel",
+                "to": "_fwd_kernel"
+              }
+            },
+            "methodology_conflict": {
+              "bench_faster_side": "to",
+              "ncu_faster_side": "from"
+            },
+            "ncu_below_fixed_harness": [
+              "rounds_5"
+            ],
+            "caveats": [
+              "The PyTorch reference times differ between the two records (0.330 ms vs 0.064 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+              "The fixed harness and NCU disagree on direction. NCU locks clocks at or below boost, so its duration should be greater than or equal to the fixed-harness time; this pattern is most plausibly a different autotune configuration or a clock/power difference. Use NCU for code-level attribution and do not claim a fixed-harness win for this pair.",
+              "NCU duration is below the fixed-harness time for `rounds_5`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks.",
+              "`vllm_triton_prefill` is an archived external baseline (`flash_attention/baselines/vllm_triton_prefill.py`). This is a source comparison, not a controlled one-change A/B; it also supports variable sequence lengths, GQA, attention sinks."
+            ]
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "grid_addressing",
+                "online_softmax",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 6,
+                "from_end": 6,
+                "to_start": 144,
+                "to_end": 166
+              },
+              "excerpt": "+\n+    q = tl.load(\n+        Q + off_q,\n+        mask=(offs_m[:, None] < cur_batch_seq_len) & (mask_d[None, :]),\n+        other=0.0,\n+    )\n+\n+    k_ptrs = K + off_k\n+    v_ptrs = V + off_v\n+\n+    # initialize pointer to m and l\n+    if USE_SINKS:\n+        sink = tl.load(Sinks + cur_head) * 1.4426950408889634\n+        if SINKS_BIAS_KEY0:\n+            # Sinks bias the logit of key 0, so the softmax starts empty and\n+            # normalizes over the biased scores as usual.\n+            m_i = tl.zeros([BLOCK_M], dtype=tl.float32) - float(\"inf\")\n+            l_i = tl.zeros([BLOCK_M], dtype=tl.float32)\n+        else:\n+            # Sinks are a null logit that only inflates the denominator.\n+            m_i = tl.full([BLOCK_M], sink, dtype=tl.float32)\n+            l_i = tl.full([BLOCK_M], 1.0, dtype=tl.float32)",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space reduced or changed",
+              "direction": "to_removes",
+              "matched_categories": [
+                "autotune_space",
+                "pipelining",
+                "grid_addressing",
+                "constexpr_addressing",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 62,
+                "from_end": 88,
+                "to_start": 261,
+                "to_end": 261
+              },
+              "excerpt": "-@triton.autotune(\n-    configs=[\n-        triton.Config({\"BLOCK_M\": 32, \"BLOCK_N\": 32}, num_warps=4, num_stages=2),\n-        triton.Config({\"BLOCK_M\": 64, \"BLOCK_N\": 32}, num_warps=4, num_stages=2),\n-        triton.Config({\"BLOCK_M\": 64, \"BLOCK_N\": 64}, num_warps=4, num_stages=2),\n-        triton.Config({\"BLOCK_M\": 64, \"BLOCK_N\": 64}, num_warps=4, num_stages=3),\n-        triton.Config({\"BLOCK_M\": 128, \"BLOCK_N\": 32}, num_warps=4, num_stages=2),\n-        triton.Config({\"BLOCK_M\": 128, \"BLOCK_N\": 64}, num_warps=4, num_stages=2),\n-    ],\n-    key=[\"SEQ\", \"HEAD_DIM\", \"BATCH_HEADS\", \"CAUSAL\"],\n-)\n-@triton.jit\n... 2 changed lines omitted ...\n-    SEQ: tl.constexpr,\n-    HEAD_DIM: tl.constexpr,\n-    BATCH_HEADS: tl.constexpr,\n-    CAUSAL: tl.constexpr,\n-    BLOCK_M: tl.constexpr,\n-    BLOCK_N: tl.constexpr,\n-):\n-    tile = tl.program_id(0)\n-    head = tl.program_id(1)\n-    base = head * SEQ * HEAD_DIM\n-    rows = tile * BLOCK_M + tl.arange(0, BLOCK_M)\n-    dims = tl.arange(0, HEAD_DIM)",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "causal_specialization",
+              "priority": 8,
+              "title": "Causal loop specialization \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "causal_specialization",
+                "grid_addressing",
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 6,
+                "from_end": 6,
+                "to_start": 92,
+                "to_end": 123
+              },
+              "excerpt": "+def _fwd_kernel(\n+    Q,\n+    K,\n+    V,\n+    Sinks,\n+    sm_scale,\n+    B_Start_Loc,\n+    B_Seqlen,\n+    Out,\n+    stride_qbs,\n+    stride_qh,\n+    stride_kbs,\n... 7 changed lines omitted ...\n+    BLOCK_DMODEL: tl.constexpr,\n+    BLOCK_N: tl.constexpr,\n+    IS_CAUSAL: tl.constexpr,\n+    SLIDING_WINDOW_Q: tl.constexpr,\n+    SLIDING_WINDOW_K: tl.constexpr,\n+    SINKS_BIAS_KEY0: tl.constexpr,\n+    USE_SINKS: tl.constexpr,\n+    Lk: tl.constexpr,\n+):\n+    cur_batch = tl.program_id(0)\n+    cur_head = tl.program_id(1)\n+    start_m = tl.program_id(2)",
+              "why_it_matters": "The causal loop is split into an unmasked prefix and a masked diagonal, or fully masked blocks are pruned. Only causal cases are affected. This case is non-causal, so the change cannot affect its hot loop; it matters for causal cases.",
+              "repeated_from": null
+            },
+            {
+              "category": "pipelining",
+              "priority": 8,
+              "title": "Software pipelining \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "pipelining",
+                "causal_specialization",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 62,
+                "from_end": 62,
+                "to_start": 313,
+                "to_end": 344
+              },
+              "excerpt": "+\n+    _fwd_kernel[grid](\n+        q,\n+        k,\n+        v,\n+        sinks if sinks is not None else q,\n+        sm_scale,\n+        b_start_loc,\n+        b_seq_len,\n+        o,\n+        q.stride(0),\n+        q.stride(1),\n... 7 changed lines omitted ...\n+        BLOCK_M=BLOCK,\n+        BLOCK_DMODEL=triton.next_power_of_2(Lk),\n+        BLOCK_N=BLOCK_N,\n+        IS_CAUSAL=is_causal,\n+        SLIDING_WINDOW_Q=sliding_window_q,\n+        SLIDING_WINDOW_K=sliding_window_k,\n+        USE_SINKS=sinks is not None,\n+        SINKS_BIAS_KEY0=sinks_bias_key0,\n+        num_warps=num_warps,\n+        num_stages=1,\n+        Lk=Lk,\n+    )",
+              "why_it_matters": "Pipeline depth or loop form changes: more stages overlap global loads with tensor-core work at higher shared-memory/register cost; fewer stages reduce pressure but expose load latency.",
+              "repeated_from": null
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "grid_addressing",
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 6,
+                "from_end": 6,
+                "to_start": 123,
+                "to_end": 144
+              },
+              "excerpt": "+\n+    cur_kv_head = cur_head // kv_group_num\n+\n+    cur_batch_seq_len = tl.load(B_Seqlen + cur_batch)\n+    cur_batch_in_all_start_index = tl.load(B_Start_Loc + cur_batch)\n+\n+    block_start_loc = BLOCK_M * start_m\n+\n+    # initialize offsets\n+    offs_n = tl.arange(0, BLOCK_N)\n+    offs_d = tl.arange(0, BLOCK_DMODEL)\n+    offs_m = start_m * BLOCK_M + tl.arange(0, BLOCK_M)\n+    off_q = (\n+        (cur_batch_in_all_start_index + offs_m[:, None]) * stride_qbs\n+        + cur_head * stride_qh\n+        + offs_d[None, :]\n+    )\n+    off_k = offs_n[None, :] * stride_kbs + cur_kv_head * stride_kh + offs_d[:, None]\n+    off_v = offs_n[:, None] * stride_vbs + cur_kv_head * stride_vh + offs_d[None, :]\n+\n+    mask_d = offs_d < Lk",
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": null
+            },
+            {
+              "category": "online_softmax",
+              "priority": 6,
+              "title": "Online-softmax recurrence \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "online_softmax",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 48,
+                "from_end": 60,
+                "to_start": 92,
+                "to_end": 92
+              },
+              "excerpt": "-\n-        new_maximum = tl.maximum(maximum, tl.max(scores, axis=1) * scale)\n-        probabilities = tl.exp2(scores * scale - new_maximum[:, None])\n-        correction = tl.exp2(maximum - new_maximum)\n-        block_sum = tl.sum(probabilities, axis=1)\n-\n-        acc = acc * correction[:, None]\n-        acc = tl.dot(probabilities.to(q.dtype), v, acc)\n-        normalizer = normalizer * correction + block_sum\n-        maximum = new_maximum\n-\n-    return acc, normalizer, maximum",
+              "why_it_matters": "The online-softmax recurrence is touched. This is correctness-critical: changes affect numerical stability and rescale/dot work, not just scheduling; verify with the fixed test.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 96,
+              "to_line": 161
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 127,
+              "to_line": 257
+            },
+            {
+              "key": "kernel_entry",
+              "title": "Kernel entry signature preserved",
+              "detail": "Both expose the same `kernel_function` signature.",
+              "from_line": 132,
+              "to_line": 369
+            }
+          ],
+          "caveats": [
+            "The PyTorch reference times differ between the two records (0.330 ms vs 0.064 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+            "The fixed harness and NCU disagree on direction. NCU locks clocks at or below boost, so its duration should be greater than or equal to the fixed-harness time; this pattern is most plausibly a different autotune configuration or a clock/power difference. Use NCU for code-level attribution and do not claim a fixed-harness win for this pair.",
+            "NCU duration is below the fixed-harness time for `rounds_5`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks.",
+            "`vllm_triton_prefill` is an archived external baseline (`flash_attention/baselines/vllm_triton_prefill.py`). This is a source comparison, not a controlled one-change A/B; it also supports variable sequence lengths, GQA, attention sinks."
+          ],
+          "takeaway": "Detected mask_elision, autotune_space, causal_specialization, pipelining, grid_addressing, online_softmax; fixed harness 0.437 \u2192 0.082 ms; NCU 72.624 \u2192 80.740 \u00b5s.",
+          "error": null
+        },
+        {
+          "problem": "flash_attention",
+          "from": "rounds_10",
+          "to": "vllm_triton_prefill",
+          "from_role": "internal",
+          "to_role": "external",
+          "diff_path": "reports/source-diffs/flash_attention__rounds_10_to_vllm_triton_prefill.diff",
+          "diff_link": "source-diffs/flash_attention__rounds_10_to_vllm_triton_prefill.diff",
+          "source": {
+            "from": {
+              "path": "problems/flash_attention/case_0/rounds_10/flash_attention/optimized_kernel.py",
+              "sha256": "9b1431e00661389fb25f70b141a99a89a54194ca048ed1e91555db98b73c953b",
+              "link": "../problems/flash_attention/case_0/rounds_10/flash_attention/optimized_kernel.py"
+            },
+            "to": {
+              "path": "problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py",
+              "sha256": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441",
+              "link": "../problems/flash_attention/baselines/vllm_triton_prefill/flash_attention/kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 175,
+            "added": 378
+          },
+          "external": {
+            "from": false,
+            "to": true,
+            "source_path": "flash_attention/baselines/vllm_triton_prefill.py"
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.3072,
+              "to_ms": 0.0818,
+              "from_tflops": 13.98,
+              "to_tflops": 52.51,
+              "from_ref_ms": 0.354,
+              "to_ref_ms": 0.0638,
+              "ratio_from_over_to": 3.7555012224938875,
+              "delta_pct": -73.37239583333334,
+              "faster_side": "to",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_flash_attention",
+                "duration_avg_us": 68.59700000000001,
+                "sm_pct": 58.061,
+                "mem_pct": 22.142000000000003,
+                "dram_pct": 17.146,
+                "occupancy_pct": 13.307999999999998,
+                "regs": 244.0,
+                "tflops": 62.61031301021598,
+                "sol_pct": 58.061,
+                "bound": "compute",
+                "limiter": "tensor pipelines (58.1%); low occupancy (13.3%); register pressure (244/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_fwd_kernel",
+                "duration_avg_us": 80.74,
+                "sm_pct": 49.47,
+                "mem_pct": 36.277,
+                "dram_pct": 16.077,
+                "occupancy_pct": 13.894,
+                "regs": 255.0,
+                "tflops": 53.19556418691293,
+                "sol_pct": 49.47,
+                "bound": "compute",
+                "limiter": "tensor pipelines (49.5%); low occupancy (13.9%); register pressure (255/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 0.8496036660886799,
+              "delta_pct": 17.70194031808969,
+              "faster_side": "from",
+              "material": true,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_flash_attention",
+                "to": "_fwd_kernel"
+              }
+            },
+            "methodology_conflict": {
+              "bench_faster_side": "to",
+              "ncu_faster_side": "from"
+            },
+            "ncu_below_fixed_harness": [
+              "rounds_10"
+            ],
+            "caveats": [
+              "The PyTorch reference times differ between the two records (0.354 ms vs 0.064 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+              "The fixed harness and NCU disagree on direction. NCU locks clocks at or below boost, so its duration should be greater than or equal to the fixed-harness time; this pattern is most plausibly a different autotune configuration or a clock/power difference. Use NCU for code-level attribution and do not claim a fixed-harness win for this pair.",
+              "NCU duration is below the fixed-harness time for `rounds_10`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks.",
+              "`vllm_triton_prefill` is an archived external baseline (`flash_attention/baselines/vllm_triton_prefill.py`). This is a source comparison, not a controlled one-change A/B; it also supports variable sequence lengths, GQA, attention sinks."
+            ]
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "grid_addressing",
+                "online_softmax",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 6,
+                "from_end": 6,
+                "to_start": 144,
+                "to_end": 166
+              },
+              "excerpt": "+\n+    q = tl.load(\n+        Q + off_q,\n+        mask=(offs_m[:, None] < cur_batch_seq_len) & (mask_d[None, :]),\n+        other=0.0,\n+    )\n+\n+    k_ptrs = K + off_k\n+    v_ptrs = V + off_v\n+\n+    # initialize pointer to m and l\n+    if USE_SINKS:\n+        sink = tl.load(Sinks + cur_head) * 1.4426950408889634\n+        if SINKS_BIAS_KEY0:\n+            # Sinks bias the logit of key 0, so the softmax starts empty and\n+            # normalizes over the biased scores as usual.\n+            m_i = tl.zeros([BLOCK_M], dtype=tl.float32) - float(\"inf\")\n+            l_i = tl.zeros([BLOCK_M], dtype=tl.float32)\n+        else:\n+            # Sinks are a null logit that only inflates the denominator.\n+            m_i = tl.full([BLOCK_M], sink, dtype=tl.float32)\n+            l_i = tl.full([BLOCK_M], 1.0, dtype=tl.float32)",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space reduced or changed",
+              "direction": "to_removes",
+              "matched_categories": [
+                "autotune_space",
+                "pipelining"
+              ],
+              "line_ranges": {
+                "from_start": 65,
+                "from_end": 110,
+                "to_start": 261,
+                "to_end": 261
+              },
+              "excerpt": "-@triton.autotune(\n-    configs=[\n-        triton.Config(\n-            {\"BLOCK_M\": 32, \"BLOCK_N\": 64},\n-            num_warps=2,\n-            num_stages=3,\n-        ),\n-        triton.Config(\n-            {\"BLOCK_M\": 32, \"BLOCK_N\": 128},\n-            num_warps=4,\n-            num_stages=3,\n-        ),\n... 21 changed lines omitted ...\n-            {\"BLOCK_M\": 128, \"BLOCK_N\": 64},\n-            num_warps=4,\n-            num_stages=3,\n-        ),\n-        triton.Config(\n-            {\"BLOCK_M\": 128, \"BLOCK_N\": 64},\n-            num_warps=8,\n-            num_stages=2,\n-        ),\n-    ],\n-    key=[\"SEQ\", \"HEAD_DIM\", \"BATCH_HEADS\", \"CAUSAL\"],\n-)",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "causal_specialization",
+              "priority": 8,
+              "title": "Causal loop specialization \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "causal_specialization",
+                "grid_addressing",
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 6,
+                "from_end": 6,
+                "to_start": 92,
+                "to_end": 123
+              },
+              "excerpt": "+def _fwd_kernel(\n+    Q,\n+    K,\n+    V,\n+    Sinks,\n+    sm_scale,\n+    B_Start_Loc,\n+    B_Seqlen,\n+    Out,\n+    stride_qbs,\n+    stride_qh,\n+    stride_kbs,\n... 7 changed lines omitted ...\n+    BLOCK_DMODEL: tl.constexpr,\n+    BLOCK_N: tl.constexpr,\n+    IS_CAUSAL: tl.constexpr,\n+    SLIDING_WINDOW_Q: tl.constexpr,\n+    SLIDING_WINDOW_K: tl.constexpr,\n+    SINKS_BIAS_KEY0: tl.constexpr,\n+    USE_SINKS: tl.constexpr,\n+    Lk: tl.constexpr,\n+):\n+    cur_batch = tl.program_id(0)\n+    cur_head = tl.program_id(1)\n+    start_m = tl.program_id(2)",
+              "why_it_matters": "The causal loop is split into an unmasked prefix and a masked diagonal, or fully masked blocks are pruned. Only causal cases are affected. This case is non-causal, so the change cannot affect its hot loop; it matters for causal cases.",
+              "repeated_from": null
+            },
+            {
+              "category": "pipelining",
+              "priority": 8,
+              "title": "Software pipelining \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "pipelining",
+                "causal_specialization",
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 6,
+                "from_end": 26,
+                "to_start": 92,
+                "to_end": 92
+              },
+              "excerpt": "-def _attention_blocks(\n-    q, K, V, base, rows, m, l, acc,\n-    begin, end,\n-    SEQ: tl.constexpr,\n-    HEAD_DIM: tl.constexpr,\n-    BLOCK_M: tl.constexpr,\n-    BLOCK_N: tl.constexpr,\n-    MASK_CAUSAL: tl.constexpr,\n-):\n-    cols = tl.arange(0, BLOCK_N)\n-    dims = tl.arange(0, HEAD_DIM)\n-    scale: tl.constexpr = 1.4426950408889634 * HEAD_DIM ** -0.5\n-\n-    k_ptrs = K + base + dims[:, None] + cols[None, :] * HEAD_DIM\n-    v_ptrs = V + base + cols[:, None] * HEAD_DIM + dims[None, :]\n-\n-    for start in tl.range(begin, end, BLOCK_N):\n-        start = tl.multiple_of(start, BLOCK_N)\n-        keys = start + cols\n-",
+              "why_it_matters": "Pipeline depth or loop form changes: more stages overlap global loads with tensor-core work at higher shared-memory/register cost; fewer stages reduce pressure but expose load latency.",
+              "repeated_from": null
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "grid_addressing",
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 6,
+                "from_end": 6,
+                "to_start": 123,
+                "to_end": 144
+              },
+              "excerpt": "+\n+    cur_kv_head = cur_head // kv_group_num\n+\n+    cur_batch_seq_len = tl.load(B_Seqlen + cur_batch)\n+    cur_batch_in_all_start_index = tl.load(B_Start_Loc + cur_batch)\n+\n+    block_start_loc = BLOCK_M * start_m\n+\n+    # initialize offsets\n+    offs_n = tl.arange(0, BLOCK_N)\n+    offs_d = tl.arange(0, BLOCK_DMODEL)\n+    offs_m = start_m * BLOCK_M + tl.arange(0, BLOCK_M)\n+    off_q = (\n+        (cur_batch_in_all_start_index + offs_m[:, None]) * stride_qbs\n+        + cur_head * stride_qh\n+        + offs_d[None, :]\n+    )\n+    off_k = offs_n[None, :] * stride_kbs + cur_kv_head * stride_kh + offs_d[:, None]\n+    off_v = offs_n[:, None] * stride_vbs + cur_kv_head * stride_vh + offs_d[None, :]\n+\n+    mask_d = offs_d < Lk",
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": null
+            },
+            {
+              "category": "online_softmax",
+              "priority": 6,
+              "title": "Online-softmax recurrence \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "online_softmax",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 51,
+                "from_end": 63,
+                "to_start": 92,
+                "to_end": 92
+              },
+              "excerpt": "-\n-        next_m = tl.maximum(m, tl.max(scores, axis=1))\n-        p = tl.exp2(scores - next_m[:, None])\n-        alpha = tl.exp2(m - next_m)\n-        block_l = tl.sum(p, axis=1)\n-\n-        acc = acc * alpha[:, None]\n-        acc = tl.dot(p.to(q.dtype), v, acc)\n-        l = l * alpha + block_l\n-        m = next_m\n-\n-    return m, l, acc",
+              "why_it_matters": "The online-softmax recurrence is touched. This is correctness-critical: changes affect numerical stability and rescale/dot work, not just scheduling; verify with the fixed test.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 134,
+              "to_line": 161
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 164,
+              "to_line": 257
+            },
+            {
+              "key": "kernel_entry",
+              "title": "Kernel entry signature preserved",
+              "detail": "Both expose the same `kernel_function` signature.",
+              "from_line": 169,
+              "to_line": 369
+            }
+          ],
+          "caveats": [
+            "The PyTorch reference times differ between the two records (0.354 ms vs 0.064 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+            "The fixed harness and NCU disagree on direction. NCU locks clocks at or below boost, so its duration should be greater than or equal to the fixed-harness time; this pattern is most plausibly a different autotune configuration or a clock/power difference. Use NCU for code-level attribution and do not claim a fixed-harness win for this pair.",
+            "NCU duration is below the fixed-harness time for `rounds_10`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks.",
+            "`vllm_triton_prefill` is an archived external baseline (`flash_attention/baselines/vllm_triton_prefill.py`). This is a source comparison, not a controlled one-change A/B; it also supports variable sequence lengths, GQA, attention sinks."
+          ],
+          "takeaway": "Detected mask_elision, autotune_space, causal_specialization, pipelining, grid_addressing, online_softmax; fixed harness 0.307 \u2192 0.082 ms; NCU 68.597 \u2192 80.740 \u00b5s.",
+          "error": null
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "pairs_analyzed": 6,
+    "changes_detected": 36,
+    "changes_by_category": {
+      "mask_elision": 8,
+      "autotune_space": 5,
+      "constexpr_addressing": 3,
+      "grid_addressing": 6,
+      "host_launch": 2,
+      "pipelining": 5,
+      "causal_specialization": 4,
+      "online_softmax": 3
+    },
+    "methodology_conflicts": 4
+  },
+  "paths": {
+    "markdown": "reports/code-diff-analysis.md",
+    "json": "reports/code-diff-analysis.json"
+  },
+  "error": null
+}

@@ -2,7 +2,7 @@
 
 - Status: **completed**
 - Created: 2026-10-26T14:09:36.676368
-- Report generated: 2026-10-28T15:09:07.267520
+- Report generated: 2026-10-28T17:19:40.222123
 - Capture selection: newest capture of each profiler across 2 batch(es) (`latest-per-profiler`)
 - Capture batches: `capture_20261026_143346_e551`, `capture_20261026_153544_0129`
 - Profiler batches: ncu ← `capture_20261026_143346_e551`, `capture_20261026_153544_0129`
@@ -106,6 +106,7 @@ The roofline derives arithmetic intensity from executed tensor FLOPs (`sm__ops_p
 
 ## Source diffs
 
+- Code diff analysis: [code-diff-analysis.md](code-diff-analysis.md) — 6 pairs, 36 change groups
 - matmul_bias: `generated` → `rounds_5`: [matmul_bias__generated_to_rounds_5.diff](source-diffs/matmul_bias__generated_to_rounds_5.diff)
 - matmul_bias: `generated` → `rounds_10`: [matmul_bias__generated_to_rounds_10.diff](source-diffs/matmul_bias__generated_to_rounds_10.diff)
 - matmul_bias: `generated` → `rocm_blog_fusion`: [matmul_bias__generated_to_rocm_blog_fusion.diff](source-diffs/matmul_bias__generated_to_rocm_blog_fusion.diff)

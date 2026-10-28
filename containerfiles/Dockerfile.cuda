@@ -236,8 +236,10 @@ COPY --chmod=0755 workspace/KernelAgent/scripts/generate-kernel.py \
     workspace/KernelAgent/scripts/profile-kernel.py \
     workspace/KernelAgent/scripts/experiment-kernels.py \
     workspace/KernelAgent/scripts/report-experiment.py \
+    workspace/KernelAgent/scripts/enrich-code-diffs.py \
     workspace/KernelAgent/scripts/verify-llm.py \
     workspace/KernelAgent/scripts/ka_common.py \
+    workspace/KernelAgent/scripts/diff_analysis.py \
     /usr/local/bin/
 COPY workspace/KernelAgent/problems/ /workspace/user/problems/
 

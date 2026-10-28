@@ -2,7 +2,7 @@
 
 - Status: **completed**
 - Created: 2026-10-26T14:41:49.397753
-- Report generated: 2026-10-28T15:09:07.606731
+- Report generated: 2026-10-28T17:19:40.938081
 - Capture selection: newest capture of each profiler across 3 batch(es) (`latest-per-profiler`)
 - Capture batches: `capture_20261026_151913_e52e`, `capture_20261026_211955_fdad`, `capture_20261026_212117_4e7d`
 - Profiler batches: ncu ← `capture_20261026_212117_4e7d`
@@ -106,6 +106,7 @@ The roofline derives arithmetic intensity from executed tensor FLOPs (`sm__ops_p
 
 ## Source diffs
 
+- Code diff analysis: [code-diff-analysis.md](code-diff-analysis.md) — 6 pairs, 36 change groups
 - flash_attention: `generated` → `rounds_5`: [flash_attention__generated_to_rounds_5.diff](source-diffs/flash_attention__generated_to_rounds_5.diff)
 - flash_attention: `generated` → `rounds_10`: [flash_attention__generated_to_rounds_10.diff](source-diffs/flash_attention__generated_to_rounds_10.diff)
 - flash_attention: `generated` → `vllm_triton_prefill`: [flash_attention__generated_to_vllm_triton_prefill.diff](source-diffs/flash_attention__generated_to_vllm_triton_prefill.diff)

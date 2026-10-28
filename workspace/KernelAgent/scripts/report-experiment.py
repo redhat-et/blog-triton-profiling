@@ -18,6 +18,11 @@ runs on the host with a plain Python 3 standard library:
   - Nsight Systems tables come from the nsys stats CSV exports
   - Proton tables come from the JSON .hatchet capture
   - kernel sources are diffed pairwise into reports/source-diffs/
+  - those diffs are analyzed deterministically into
+    reports/code-diff-analysis.md and .json: curated excerpts, mechanism
+    text, benchmark/NCU evidence, and explicit caveats. The analysis is
+    offline and heuristic; the optional enrich-code-diffs.py CLI can add
+    LLM commentary in separate sidecar files.
   - external baselines added with 'experiment-kernels.py add-baseline'
     render beside the generated and optimized variants, marked as
     external with the source they were archived from, and diff against
@@ -61,9 +66,11 @@ import json
 import math
 import os
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 
+import diff_analysis
 from ka_common import (
     GENERATED_VARIANT,
     LATEST_PER_PROFILER,
@@ -78,8 +85,10 @@ from ka_common import (
 
 # The comparison.json document's own schema version — a separate contract
 # from the manifest's (ka_common.MANIFEST_SCHEMA_VERSION, checked by the
-# shared _load_manifest both CLIs call).
-SCHEMA_VERSION = 1
+# shared _load_manifest both CLIs call). Version 2 adds the optional
+# code_diff_analysis pointer; the analysis document beside it has its own
+# schema version (diff_analysis.ANALYSIS_SCHEMA_VERSION).
+SCHEMA_VERSION = 2
 
 RESULTS_MOUNT = Path(
     os.environ.get("RESULTS_MOUNT", RESULTS_MOUNT_DEFAULT)
@@ -1228,6 +1237,27 @@ def _write_source_diffs(exp_dir: Path, data: dict) -> list[dict]:
     return records
 
 
+def source_diff_records(exp_dir: Path, data: dict) -> list[dict]:
+    """Read-only pairwise diff records, for --format json and the
+    optional LLM enrichment CLI."""
+    return [
+        record
+        for record, _, _ in _source_diff_records(
+            exp_dir, data, with_text=False
+        )
+    ]
+
+
+def _analyze_source_diffs(
+    exp_dir: Path, data: dict, diffs: list[dict]
+) -> dict:
+    """Build and write the deterministic code-diff analysis. A failure
+    here must not cost the experiment its main comparison report, so the
+    caller records an error document and continues."""
+    doc = diff_analysis.build_analysis(exp_dir, data, diffs)
+    return diff_analysis.write(exp_dir, doc)
+
+
 # ---------------------------------------------------------------------------
 # Markdown rendering
 
@@ -2170,6 +2200,20 @@ def render_markdown(
     if diffs:
         lines.append("## Source diffs")
         lines.append("")
+        analysis = data.get("code_diff_analysis") or {}
+        if analysis.get("markdown"):
+            link = _artifact_link(exp_dir, analysis["markdown"], out_dir)
+            suffix = ""
+            if analysis.get("error"):
+                suffix = f" — analysis error: {analysis['error']}"
+            elif analysis.get("pairs_analyzed") is not None:
+                suffix = (
+                    f" — {analysis.get('pairs_analyzed', 0)} pairs, "
+                    f"{analysis.get('changes_detected', 0)} change groups"
+                )
+            lines.append(
+                f"- Code diff analysis: {link}{suffix}"
+            )
         for diff in diffs:
             lines.append(
                 f"- {diff['problem']}: `{diff['from']}` → `{diff['to']}`: "
@@ -2229,6 +2273,22 @@ def generate_report(
     _write_roofline_charts(exp_dir, data)
     diffs = _write_source_diffs(exp_dir, data)
     data["diffs"] = diffs
+    try:
+        data["code_diff_analysis"] = _analyze_source_diffs(
+            exp_dir, data, diffs
+        )
+    except Exception as exc:  # noqa: BLE001 - the comparison report must
+        # still render if the optional analysis fails
+        print(
+            f"WARNING: code diff analysis failed: {exc}",
+            file=sys.stderr,
+        )
+        doc = diff_analysis.error_document(
+            exp_dir, data.get("experiment_id"), exc
+        )
+        data["code_diff_analysis"] = diff_analysis.pointer(
+            doc, written=True
+        )
 
     reports_dir = exp_dir / "reports"
     _atomic_write_json(reports_dir / "comparison.json", data)
@@ -2282,14 +2342,31 @@ def main() -> int:
     if args.format == "json":
         manifest = _load_manifest(exp_dir)
         data = build_report_data(exp_dir, manifest, args.capture_batch)
-        # The diff records are computed, not written: this is a read-only
-        # query, and a following markdown render (re)writes the files.
-        data["diffs"] = [
-            record
-            for record, _, _ in _source_diff_records(
-                exp_dir, data, with_text=False
+        # The diff records and analysis are computed, not written: this is
+        # a read-only query, and a following markdown render (re)writes
+        # the files.
+        data["diffs"] = source_diff_records(exp_dir, data)
+        try:
+            doc = diff_analysis.build_analysis(
+                exp_dir, data, data["diffs"]
             )
-        ]
+            data["code_diff_analysis"] = diff_analysis.pointer(
+                doc, written=False
+            )
+        except Exception as exc:  # noqa: BLE001 - a read-only query still
+            # returns the comparison data when the analysis fails
+            data["code_diff_analysis"] = {
+                "markdown": diff_analysis.REPORT_MARKDOWN,
+                "json": diff_analysis.REPORT_JSON,
+                "pairs_analyzed": 0,
+                "changes_detected": 0,
+                "changes_by_category": {},
+                "methodology_conflicts": 0,
+                "fingerprint": None,
+                "generated_at": None,
+                "written": False,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
         print(json.dumps(data, indent=2))
         return 0
     out = generate_report(exp_dir, args.out, args.capture_batch)

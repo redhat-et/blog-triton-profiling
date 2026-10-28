@@ -615,14 +615,15 @@ def main() -> int:
     def clis() -> None:
         for name in ("generate-kernel.py", "profile-kernel.py",
                      "experiment-kernels.py", "report-experiment.py",
-                     "verify-llm.py"):
+                     "enrich-code-diffs.py", "verify-llm.py"):
             cli = args.cli_dir / name
             require(cli.is_file() and cli.stat().st_mode & 0o111,
                     f"missing or non-executable {cli}")
-        # The shared helper module the CLIs import beside themselves; a
+        # The shared helper modules the CLIs import beside themselves; a
         # COPY-list regression must fail the build here, not at runtime.
-        require((args.cli_dir / "ka_common.py").is_file(),
-                "missing ka_common.py")
+        for name in ("ka_common.py", "diff_analysis.py"):
+            require((args.cli_dir / name).is_file(),
+                    f"missing {name}")
         for tool in ("ncu", "nsys"):
             require(shutil.which(tool) is not None, f"{tool} not on PATH")
         proton = workspace / "bin" / "proton"
@@ -631,13 +632,15 @@ def main() -> int:
     check("CLI helpers and profilers in place", clis)
 
     def experiment_clis() -> None:
-        for name in ("experiment-kernels.py", "report-experiment.py"):
+        for name in ("experiment-kernels.py", "report-experiment.py",
+                     "enrich-code-diffs.py"):
             path = args.cli_dir / name
-            # Both must stay standard-library-only: the report runs on
-            # hosts with no torch/triton installed, and the runner must
-            # never initialize CUDA ahead of the optimizer's forks. The
-            # child imports the CLI and fails on torch/triton; the parent
-            # only turns that into a build failure.
+            # These CLIs must stay standard-library-only at import time:
+            # the report runs on hosts with no torch/triton installed, the
+            # runner must never initialize CUDA ahead of the optimizer's
+            # forks, and the enrichment CLI imports the provider lazily.
+            # The child imports the CLI and fails on torch/triton; the
+            # parent only turns that into a build failure.
             proc = subprocess.run(
                 [
                     sys.executable,

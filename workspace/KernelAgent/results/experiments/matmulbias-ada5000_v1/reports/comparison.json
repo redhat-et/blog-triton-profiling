@@ -1,9 +1,9 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "experiment_id": "matmulbias-ada5000_v1",
   "status": "completed",
   "created_at": "2026-10-26T14:09:36.676368",
-  "report_generated_at": "2026-10-28T15:09:07.267520",
+  "report_generated_at": "2026-10-28T17:19:40.222123",
   "configuration": {
     "problems": [
       "matmul_bias"
@@ -484,5 +484,25 @@
       "to": "rocm_blog_fusion",
       "path": "reports/source-diffs/matmul_bias__rounds_10_to_rocm_blog_fusion.diff"
     }
-  ]
+  ],
+  "code_diff_analysis": {
+    "markdown": "reports/code-diff-analysis.md",
+    "json": "reports/code-diff-analysis.json",
+    "pairs_analyzed": 6,
+    "changes_detected": 36,
+    "changes_by_category": {
+      "mask_elision": 12,
+      "autotune_space": 6,
+      "grouped_swizzle": 6,
+      "constexpr_addressing": 3,
+      "grid_addressing": 5,
+      "dtype_math": 3,
+      "host_launch": 1
+    },
+    "methodology_conflicts": 1,
+    "fingerprint": "sha256:b7190918fcd2d4d16905ac0a3d5e11aed8710acc079c98b3cfe9263e02368527",
+    "generated_at": "2026-10-28T17:19:40.569925",
+    "written": true,
+    "error": null
+  }
 }

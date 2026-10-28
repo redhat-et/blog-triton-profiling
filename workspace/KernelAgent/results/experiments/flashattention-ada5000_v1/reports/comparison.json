@@ -1,9 +1,9 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "experiment_id": "flashattention-ada5000_v1",
   "status": "completed",
   "created_at": "2026-10-26T14:41:49.397753",
-  "report_generated_at": "2026-10-28T15:09:07.606731",
+  "report_generated_at": "2026-10-28T17:19:40.938081",
   "configuration": {
     "problems": [
       "flash_attention"
@@ -484,5 +484,26 @@
       "to": "vllm_triton_prefill",
       "path": "reports/source-diffs/flash_attention__rounds_10_to_vllm_triton_prefill.diff"
     }
-  ]
+  ],
+  "code_diff_analysis": {
+    "markdown": "reports/code-diff-analysis.md",
+    "json": "reports/code-diff-analysis.json",
+    "pairs_analyzed": 6,
+    "changes_detected": 36,
+    "changes_by_category": {
+      "mask_elision": 8,
+      "autotune_space": 5,
+      "constexpr_addressing": 3,
+      "grid_addressing": 6,
+      "host_launch": 2,
+      "pipelining": 5,
+      "causal_specialization": 4,
+      "online_softmax": 3
+    },
+    "methodology_conflicts": 4,
+    "fingerprint": "sha256:f86629691354120bb4be77ed2cb9746dd83028ddee2591b7bdd3c8efcb5b3d9c",
+    "generated_at": "2026-10-28T17:19:41.411927",
+    "written": true,
+    "error": null
+  }
 }

@@ -124,6 +124,7 @@ Kernel generation and optimization
     generate-kernel.py    Generate / verify / optimize kernels from the fixed specs
     experiment-kernels.py Run comparison experiments (generate, optimize, profile)
     report-experiment.py  Render a comparison report for a saved experiment
+    enrich-code-diffs.py  Add optional LLM commentary to a saved experiment's diff analysis
 Profiling
     proton                Proton lightweight Triton profiler
     proton-viewer         Proton profiler results viewer
