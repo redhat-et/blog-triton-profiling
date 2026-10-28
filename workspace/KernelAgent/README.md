@@ -606,6 +606,7 @@ results/experiments/webinar-v1/
   reports/
     comparison.md                 The rendered comparison report
     comparison.json               The same data, machine-readable
+    roofline-<problem>.svg        Generated roofline chart
     source-diffs/                 Pairwise diffs of the archived kernels
 ```
 
@@ -649,12 +650,26 @@ speedup vs the generated kernel and the PyTorch baseline, completed
 rounds, correctness and acceptance status), the optimizer's own
 acceptance timings, one section per profiler (ncu duration, tensor
 TFLOPS, and SOL metrics aggregated over the profiled launches, nsys
-kernel and CUDA API summaries, Proton timing entries), artifact links
-(kernel sources, records, native captures, source diffs), and explicit
-failure rows.
+kernel and CUDA API summaries, Proton timing entries), a Roofline and
+SOL section with a generated SVG chart, artifact links (kernel sources,
+records, native captures, source diffs), and explicit failure rows.
 Profiler timings stay in their own sections — they measure captured
 launches, not the benchmark's `do_bench` means — and missing metrics
 render as `—`.
+
+The Roofline and SOL section reports Nsight Compute's own GPU Speed Of
+Light percentages (`Compute (SM) Throughput`, `Memory Throughput` — the
+busiest memory level — and `DRAM Throughput`); `SOL %` is the larger of
+compute and memory, and `Bound` names it. Its roofline derives
+arithmetic intensity from the capture's executed tensor FLOPs and DRAM
+read+write bytes, with peaks from NCU's peak-sustained counters, so it
+requires `ncu --set full`. It is a classic DRAM roofline: a kernel can
+sit on the compute side of the ridge while NCU's cache-level memory SOL
+is the larger percentage. FLOPs and bytes are totals over the profiled
+launches, peaks are duration-weighted, and the `Limiter` column adds
+heuristic occupancy/register notes rather than a second model. The SVG
+is written under `<experiment>/reports/` even when `KA_REPORT_OUT`
+points elsewhere, and the Markdown link follows the report file.
 
 ### Additional capture batches
 
