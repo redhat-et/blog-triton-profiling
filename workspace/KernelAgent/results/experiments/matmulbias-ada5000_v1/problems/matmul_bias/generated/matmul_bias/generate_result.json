@@ -1,0 +1,15 @@
+{
+  "problem": "matmul_bias",
+  "model": "gpt-6-luna",
+  "llm_backend": "openai",
+  "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "workers": 1,
+  "rounds": 5,
+  "elapsed_s": 18.2,
+  "success": true,
+  "session_dir": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/generated/matmul_bias/session_20261026_140942_114895",
+  "generated_at": "2026-10-26T14:10:00.328083",
+  "worker_id": 0,
+  "rounds_used": 1,
+  "kernel_path": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/generated/matmul_bias/final_kernel.py"
+}

@@ -1,0 +1,20 @@
+{
+  "collected_at": "2026-10-26T14:41:49.397766",
+  "cuda_visible_devices": "0",
+  "cuda_device_order": null,
+  "kernelagent": "0.1.0",
+  "ncu_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+  "nsys_version": "NVIDIA Nsight Systems version 2024.6.2.225-246235244400v0",
+  "gpu": {
+    "name": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+    "uuid": "GPU-580461a3-fcfe-83da-7b91-06fe5f26379c",
+    "driver_version": "615.78.08",
+    "memory_total": "16376 MiB"
+  },
+  "cuda": "nvcc: NVIDIA (R) Cuda compiler driver",
+  "torch": "2.13.0+cu129",
+  "triton": "3.7.1",
+  "python": "3.12.15",
+  "platform": "Linux-7.2.11-200.fc44.x86_64-x86_64-with-glibc2.34",
+  "git": null
+}

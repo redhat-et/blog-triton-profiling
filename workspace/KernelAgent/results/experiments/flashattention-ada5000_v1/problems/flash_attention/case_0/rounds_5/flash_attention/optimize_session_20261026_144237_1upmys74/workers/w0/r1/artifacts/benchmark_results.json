@@ -1,0 +1,14 @@
+{
+  "problem": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_5/flash_attention/optimize_session_20261026_144237_1upmys74/problem.py",
+  "size": 4096,
+  "device": "cuda",
+  "dtype": "torch.float32",
+  "warmup": 25,
+  "repeat": 100,
+  "kernels": {
+    "kernel_round_1": {
+      "time_ms": 0.09987258035125154,
+      "path": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_5/flash_attention/optimize_session_20261026_144237_1upmys74/workers/w0/r1/artifacts/kernel_round_1.py"
+    }
+  }
+}

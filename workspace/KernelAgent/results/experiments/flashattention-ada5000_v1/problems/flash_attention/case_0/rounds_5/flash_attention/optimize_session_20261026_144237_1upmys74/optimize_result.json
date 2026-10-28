@@ -1,0 +1,37 @@
+{
+  "problem": "flash_attention",
+  "case": 0,
+  "case_spec": "(2, 8, 1024, 64, False, 'float16')",
+  "model": "gpt-6.1-sol",
+  "llm_backend": "openai",
+  "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "selected_gpu_ids": [
+    0
+  ],
+  "optimizer_gpu_ids": [
+    0
+  ],
+  "workers": 1,
+  "strategy": "greedy",
+  "rounds": 5,
+  "source_kernel_path": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_5/flash_attention/final_kernel.py",
+  "source_kernel_snapshot": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_5/flash_attention/optimize_session_20261026_144237_1upmys74/source_kernel.py",
+  "source_kernel_sha256": "d1c93f8eb4837df3292414db089c5e46727010177ac5883913dc66d4185b0b08",
+  "session_dir": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_5/flash_attention/optimize_session_20261026_144237_1upmys74",
+  "elapsed_s": 657.2,
+  "manager_result": {
+    "best_time_ms": 0.09887310362861541,
+    "total_rounds": 5,
+    "initial_kernel_time_ms": 0.270673559569731,
+    "pytorch_baseline_ms": 0.06373727925121785,
+    "pytorch_compile_ms": 0.06892447959631681
+  },
+  "generated_at": "2026-10-26T14:53:35.398156",
+  "source_case_ms": 0.4419,
+  "candidate_case_ms": 0.4374,
+  "success": true,
+  "reason": null,
+  "optimized_kernel_path": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_5/flash_attention/optimized_kernel.py",
+  "optimized_kernel_sha256": "138f765d4df325b4ac22258049ae820cee3fdae58e1ae503ae2176663f0ea130",
+  "speedup": 1.01
+}

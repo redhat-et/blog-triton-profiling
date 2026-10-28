@@ -1,0 +1,107 @@
+From 3f26e19bc22e8fd7cd43816b543bbe9d67aa2de0 Mon Sep 17 00:00:00 2001
+From: KernelSmith <kernelsmith@localhost>
+Date: Thu, 8 Oct 2026 09:00:00 -0400
+Subject: [PATCH 1/5] Route every model id by LLM_BACKEND and OPENAI_BASE_URL
+
+Pick the provider for a model id from the environment before consulting
+KernelAgent's registry: the Anthropic provider when LLM_BACKEND=anthropic
+(so any claude-* id works against the Anthropic API), OpenAIProvider when
+LLM_BACKEND=openai or OPENAI_BASE_URL is set (so public and local
+OpenAI-compatible servers both work for every id, including registry names
+served by a proxy), and the registry with its relay fallback for unknown
+ids otherwise. Also honor OPENAI_BASE_URL in OpenAIProvider.
+---
+ utils/providers/models.py          | 39 ++++++++++++++++++++++++------
+ utils/providers/openai_provider.py |  7 +++++-
+ 2 files changed, 38 insertions(+), 8 deletions(-)
+
+diff --git a/utils/providers/models.py b/utils/providers/models.py
+index 563205e..8be3d0d 100644
+--- a/utils/providers/models.py
++++ b/utils/providers/models.py
+@@ -14,6 +14,7 @@
+ 
+ """Model registry and configuration for KernelAgent."""
+ 
++import os
+ from typing import Type
+ 
+ from .base import BaseProvider
+@@ -67,18 +68,42 @@ def get_model_provider(
+     Raises:
+         ValueError: If model is not found or no provider is available
+     """
+-    model_name_to_config = _get_model_name_to_config()
+-    if model_name not in model_name_to_config:
+-        # Default to RelayProvider for unknown models
+-        from .relay_provider import RelayProvider
++    backend = os.getenv("LLM_BACKEND")
++    if backend == "anthropic":
++        # Route every model id to the Anthropic API (LLM_BACKEND=anthropic)
++        from .anthropic_provider import AnthropicProvider
+ 
+         model_config = ModelConfig(
+             name=model_name,
+-            provider_classes=[RelayProvider],
+-            description=f"Unknown model '{model_name}' (defaulting to Relay)",
++            provider_classes=[AnthropicProvider],
++            description=f"Anthropic model '{model_name}' (LLM_BACKEND=anthropic)",
++        )
++    elif backend == "openai" or os.getenv("OPENAI_BASE_URL"):
++        # Route every model id through the OpenAI-compatible API
++        # (LLM_BACKEND=openai, or OPENAI_BASE_URL auto-detection)
++        from .openai_provider import OpenAIProvider
++
++        model_config = ModelConfig(
++            name=model_name,
++            provider_classes=[OpenAIProvider],
++            description=(
++                f"OpenAI-compatible model '{model_name}' "
++                f"(LLM_BACKEND={backend or 'auto'})"
++            ),
+         )
+     else:
+-        model_config = model_name_to_config[model_name]
++        model_name_to_config = _get_model_name_to_config()
++        if model_name not in model_name_to_config:
++            # Default to RelayProvider for unknown models
++            from .relay_provider import RelayProvider
++
++            model_config = ModelConfig(
++                name=model_name,
++                provider_classes=[RelayProvider],
++                description=f"Unknown model '{model_name}' (defaulting to Relay)",
++            )
++        else:
++            model_config = model_name_to_config[model_name]
+ 
+     # Determine which providers to try
+     if preferred_provider is not None:
+diff --git a/utils/providers/openai_provider.py b/utils/providers/openai_provider.py
+index 9a21d98..69e85dc 100644
+--- a/utils/providers/openai_provider.py
++++ b/utils/providers/openai_provider.py
+@@ -14,6 +14,8 @@
+ 
+ """OpenAI provider implementation."""
+ 
++import os
++
+ from .openai_base import OpenAICompatibleProvider
+ 
+ 
+@@ -21,7 +23,10 @@ class OpenAIProvider(OpenAICompatibleProvider):
+     """OpenAI API provider."""
+ 
+     def __init__(self):
+-        super().__init__(api_key_env="OPENAI_API_KEY")
++        super().__init__(
++            api_key_env="OPENAI_API_KEY",
++            base_url=os.getenv("OPENAI_BASE_URL") or None,
++        )
+ 
+     @property
+     def name(self) -> str:
+-- 
+2.56.0
+

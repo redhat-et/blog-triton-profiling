@@ -1,0 +1,54 @@
+# Resolved inputs for the shared CUDA image's Python environment
+# (containerfiles/Dockerfile.cuda, python-base stage).
+#
+# KernelAgent itself is NOT listed here: the image builds it from the
+# pinned upstream source (KERNELAGENT_REV) into a wheel and installs it
+# with --no-deps, so its declared dependency set is locked here instead.
+#
+# Regenerate requirements.lock with (uv records only part of this in the
+# lock header — the index flags matter, they put the cu129 index first):
+#
+#   uv pip compile requirements.in \
+#     --index-url https://pypi.org/simple \
+#     --extra-index-url https://download.pytorch.org/whl/cu129 \
+#     --python-version 3.12 --python-platform linux \
+#     --index-strategy first-index \
+#     -o requirements.lock
+#
+# uv gives --extra-index-url priority over --index-url (unlike pip), so
+# the cu129 index wins for the packages it mirrors (torch, its nvidia-*
+# dependencies) while everything else resolves from PyPI.
+#
+# The committed lock is generated and tested for the image's default
+# configuration: CUDA 12.9 (cu129 torch index), Python 3.12, linux
+# x86_64. Other CUDA/Python combinations need their own lock, generated
+# and validated the same way, or the build fails on the torch pin (the
+# +cu129 wheel does not exist on other indexes).
+#
+# Maintainer lock policy and validation steps: see AGENTS.md.
+
+# torch: the CUDA 12.9 build, available only on the cu129 index
+torch
+
+# Profiling and notebook stack
+triton
+jupyter
+jupyterlab-nvidia-nsight
+llnl-hatchet
+nvtx
+
+# Imported by KernelAgent's NCU profiler at module level; upstream leaves
+# it undeclared (gradio pulls it in transitively today) — lock it
+# explicitly so it no longer depends on gradio's dependency tree.
+pandas
+
+# KernelAgent runtime dependencies (its pyproject [project] dependencies),
+# locked here because the wheel installs with --no-deps:
+openai
+anthropic<1.0
+jinja2
+python-dotenv
+gradio>=5.5.0
+requests
+numpy
+omegaconf

@@ -1,0 +1,106 @@
+2026-10-26 14:53:58,452 - OptimizationManager - INFO - OptimizationManager initialized: strategy=greedy, workers=1, gpus=[0]
+2026-10-26 14:53:58,452 - OptimizationManager - INFO - ================================================================================
+2026-10-26 14:53:58,452 - OptimizationManager - INFO - STARTING OPTIMIZATION
+2026-10-26 14:53:58,452 - OptimizationManager - INFO - ================================================================================
+2026-10-26 14:53:58,452 - OptimizationManager - INFO - GreedyStrategy initialized with 1 worker
+2026-10-26 14:54:01,130 - OptimizationManager - INFO - Initial kernel passed correctness verification
+2026-10-26 14:54:02,487 - OptimizationManager - INFO - ⏳ Waiting for benchmark lock (worker -1)...
+2026-10-26 14:54:02,487 - OptimizationManager - INFO - 🔓 Acquired benchmark lock (worker -1)
+2026-10-26 14:54:02,813 - OptimizationManager - INFO - 🔒 Released benchmark lock (worker -1)
+2026-10-26 14:54:02,813 - OptimizationManager - INFO - PyTorch baseline: 0.6030ms
+2026-10-26 14:54:02,813 - OptimizationManager - INFO - ⏳ Waiting for benchmark lock (worker -1)...
+2026-10-26 14:54:02,813 - OptimizationManager - INFO - 🔓 Acquired benchmark lock (worker -1)
+2026-10-26 14:54:05,662 - OptimizationManager - INFO - 🔒 Released benchmark lock (worker -1)
+2026-10-26 14:54:05,662 - OptimizationManager - INFO - PyTorch compile baseline: 0.1669ms
+2026-10-26 14:54:05,663 - OptimizationManager - INFO - ⏳ Waiting for benchmark lock (worker -1)...
+2026-10-26 14:54:05,663 - OptimizationManager - INFO - 🔓 Acquired benchmark lock (worker -1)
+2026-10-26 14:54:08,681 - OptimizationManager - INFO - 🔒 Released benchmark lock (worker -1)
+2026-10-26 14:54:08,683 - OptimizationManager - INFO - Initial kernel time: 0.8056ms
+2026-10-26 14:54:08,683 - OptimizationManager - INFO - 
+2026-10-26 14:54:08,683 - OptimizationManager - INFO - ==================== ROUND 1/10 ====================
+2026-10-26 14:54:08,915 - OptimizationManager - INFO - Created NCU wrapper: /workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_10/flash_attention/optimize_session_20261026_145356_5tnt44e_/baseline_profiles/ncu_wrapper.py
+2026-10-26 14:54:08,915 - OptimizationManager - INFO - [Round 1] Waiting for profiling semaphore...
+2026-10-26 14:54:08,915 - OptimizationManager - INFO - [Round 1] Acquired profiling semaphore
+2026-10-26 14:54:08,915 - OptimizationManager - INFO - [Round 1] NCU profiling attempt 1/2...
+2026-10-26 14:54:14,070 - OptimizationManager - INFO - ✅ NCU profiling completed for round 1
+2026-10-26 14:54:14,071 - OptimizationManager - INFO - Baseline profiled for parent initial: underutilized-bound, 51.7% SOL
+2026-10-26 14:56:01,357 - OptimizationManager - INFO - Round 1: 1/1 workers succeeded (1 results received)
+2026-10-26 14:56:01,358 - OptimizationManager - INFO - New best: 0.1150ms (nan% improvement)
+2026-10-26 14:56:01,358 - OptimizationManager - INFO - Round 1 best: worker 0 at 0.1150 ms
+2026-10-26 14:56:01,358 - OptimizationManager - INFO - 
+2026-10-26 14:56:01,358 - OptimizationManager - INFO - ==================== ROUND 2/10 ====================
+2026-10-26 14:56:01,358 - OptimizationManager - INFO - Created NCU wrapper: /workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_10/flash_attention/optimize_session_20261026_145356_5tnt44e_/baseline_profiles/ncu_wrapper.py
+2026-10-26 14:56:01,359 - OptimizationManager - INFO - [Round 2] Waiting for profiling semaphore...
+2026-10-26 14:56:01,359 - OptimizationManager - INFO - [Round 2] Acquired profiling semaphore
+2026-10-26 14:56:01,359 - OptimizationManager - INFO - [Round 2] NCU profiling attempt 1/2...
+2026-10-26 14:56:11,624 - OptimizationManager - INFO - ✅ NCU profiling completed for round 2
+2026-10-26 14:56:11,624 - OptimizationManager - INFO - Baseline profiled for parent r1_w0: memory-bound, 81.2% SOL
+2026-10-26 14:58:04,745 - OptimizationManager - INFO - Round 2: 1/1 workers succeeded (1 results received)
+2026-10-26 14:58:04,746 - OptimizationManager - INFO - No improvement (1/5)
+2026-10-26 14:58:04,747 - OptimizationManager - INFO - Round 2 best: worker 0 at 0.1150 ms
+2026-10-26 14:58:04,747 - OptimizationManager - INFO - 
+2026-10-26 14:58:04,747 - OptimizationManager - INFO - ==================== ROUND 3/10 ====================
+2026-10-26 15:00:46,956 - OptimizationManager - INFO - Round 3: 1/1 workers succeeded (1 results received)
+2026-10-26 15:00:46,956 - OptimizationManager - INFO - New best: 0.1014ms (11.8% improvement)
+2026-10-26 15:00:46,957 - OptimizationManager - INFO - Round 3 best: worker 0 at 0.1014 ms
+2026-10-26 15:00:46,957 - OptimizationManager - INFO - 
+2026-10-26 15:00:46,957 - OptimizationManager - INFO - ==================== ROUND 4/10 ====================
+2026-10-26 15:00:46,957 - OptimizationManager - INFO - Created NCU wrapper: /workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_10/flash_attention/optimize_session_20261026_145356_5tnt44e_/baseline_profiles/ncu_wrapper.py
+2026-10-26 15:00:46,957 - OptimizationManager - INFO - [Round 4] Waiting for profiling semaphore...
+2026-10-26 15:00:46,957 - OptimizationManager - INFO - [Round 4] Acquired profiling semaphore
+2026-10-26 15:00:46,957 - OptimizationManager - INFO - [Round 4] NCU profiling attempt 1/2...
+2026-10-26 15:00:58,609 - OptimizationManager - INFO - ✅ NCU profiling completed for round 4
+2026-10-26 15:00:58,609 - OptimizationManager - INFO - Baseline profiled for parent r3_w0: memory-bound, 83.1% SOL
+2026-10-26 15:03:13,761 - OptimizationManager - INFO - Round 4: 1/1 workers succeeded (1 results received)
+2026-10-26 15:03:13,762 - OptimizationManager - INFO - No improvement (1/5)
+2026-10-26 15:03:13,762 - OptimizationManager - INFO - Round 4 best: worker 0 at 0.1014 ms
+2026-10-26 15:03:13,762 - OptimizationManager - INFO - 
+2026-10-26 15:03:13,763 - OptimizationManager - INFO - ==================== ROUND 5/10 ====================
+2026-10-26 15:05:07,879 - OptimizationManager - INFO - Round 5: 1/1 workers succeeded (1 results received)
+2026-10-26 15:05:07,880 - OptimizationManager - INFO - No improvement (2/5)
+2026-10-26 15:05:07,881 - OptimizationManager - INFO - Round 5 best: worker 0 at 0.1014 ms
+2026-10-26 15:05:07,881 - OptimizationManager - INFO - 
+2026-10-26 15:05:07,881 - OptimizationManager - INFO - ==================== ROUND 6/10 ====================
+2026-10-26 15:07:22,620 - OptimizationManager - INFO - Round 6: 1/1 workers succeeded (1 results received)
+2026-10-26 15:07:22,620 - OptimizationManager - INFO - No improvement (3/5)
+2026-10-26 15:07:22,621 - OptimizationManager - INFO - Round 6 best: worker 0 at 0.1014 ms
+2026-10-26 15:07:22,621 - OptimizationManager - INFO - 
+2026-10-26 15:07:22,621 - OptimizationManager - INFO - ==================== ROUND 7/10 ====================
+2026-10-26 15:09:53,431 - OptimizationManager - INFO - Round 7: 1/1 workers succeeded (1 results received)
+2026-10-26 15:09:53,431 - OptimizationManager - INFO - New best: 0.1003ms (1.1% improvement)
+2026-10-26 15:09:53,432 - OptimizationManager - INFO - Round 7 best: worker 0 at 0.1003 ms
+2026-10-26 15:09:53,432 - OptimizationManager - INFO - 
+2026-10-26 15:09:53,433 - OptimizationManager - INFO - ==================== ROUND 8/10 ====================
+2026-10-26 15:09:53,433 - OptimizationManager - INFO - Created NCU wrapper: /workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_10/flash_attention/optimize_session_20261026_145356_5tnt44e_/baseline_profiles/ncu_wrapper.py
+2026-10-26 15:09:53,433 - OptimizationManager - INFO - [Round 8] Waiting for profiling semaphore...
+2026-10-26 15:09:53,433 - OptimizationManager - INFO - [Round 8] Acquired profiling semaphore
+2026-10-26 15:09:53,433 - OptimizationManager - INFO - [Round 8] NCU profiling attempt 1/2...
+2026-10-26 15:10:04,489 - OptimizationManager - INFO - ✅ NCU profiling completed for round 8
+2026-10-26 15:10:04,489 - OptimizationManager - INFO - Baseline profiled for parent r7_w0: memory-bound, 86.5% SOL
+2026-10-26 15:13:11,876 - OptimizationManager - INFO - Round 8: 1/1 workers succeeded (1 results received)
+2026-10-26 15:13:11,886 - OptimizationManager - INFO - No improvement (1/5)
+2026-10-26 15:13:11,887 - OptimizationManager - INFO - Round 8 best: worker 0 at 0.1003 ms
+2026-10-26 15:13:11,887 - OptimizationManager - INFO - 
+2026-10-26 15:13:11,887 - OptimizationManager - INFO - ==================== ROUND 9/10 ====================
+2026-10-26 15:16:00,971 - OptimizationManager - INFO - Round 9: 1/1 workers succeeded (1 results received)
+2026-10-26 15:16:00,971 - OptimizationManager - INFO - New best: 0.0988ms (1.4% improvement)
+2026-10-26 15:16:00,972 - OptimizationManager - INFO - Round 9 best: worker 0 at 0.0988 ms
+2026-10-26 15:16:00,972 - OptimizationManager - INFO - 
+2026-10-26 15:16:00,973 - OptimizationManager - INFO - ==================== ROUND 10/10 ====================
+2026-10-26 15:16:00,974 - OptimizationManager - INFO - Created NCU wrapper: /workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_10/flash_attention/optimize_session_20261026_145356_5tnt44e_/baseline_profiles/ncu_wrapper.py
+2026-10-26 15:16:00,974 - OptimizationManager - INFO - [Round 10] Waiting for profiling semaphore...
+2026-10-26 15:16:00,974 - OptimizationManager - INFO - [Round 10] Acquired profiling semaphore
+2026-10-26 15:16:00,974 - OptimizationManager - INFO - [Round 10] NCU profiling attempt 1/2...
+2026-10-26 15:16:15,950 - OptimizationManager - INFO - ✅ NCU profiling completed for round 10
+2026-10-26 15:16:15,950 - OptimizationManager - INFO - Baseline profiled for parent r9_w0: memory-bound, 87.6% SOL
+2026-10-26 15:18:52,787 - OptimizationManager - INFO - Round 10: 1/1 workers succeeded (1 results received)
+2026-10-26 15:18:52,787 - OptimizationManager - INFO - No improvement (1/5)
+2026-10-26 15:18:52,788 - OptimizationManager - INFO - Round 10 best: worker 0 at 0.0988 ms
+2026-10-26 15:18:52,788 - OptimizationManager - INFO - Strategy signaled termination
+2026-10-26 15:18:52,788 - OptimizationManager - INFO - 
+2026-10-26 15:18:52,788 - OptimizationManager - INFO - ================================================================================
+2026-10-26 15:18:52,788 - OptimizationManager - INFO - OPTIMIZATION COMPLETE
+2026-10-26 15:18:52,788 - OptimizationManager - INFO - ================================================================================
+2026-10-26 15:18:52,788 - OptimizationManager - INFO - Best time: 0.0988ms
+2026-10-26 15:18:52,788 - OptimizationManager - INFO - Speedup vs initial kernel: 8.15x
+2026-10-26 15:18:52,788 - OptimizationManager - INFO - Speedup vs PyTorch eager: 6.10x

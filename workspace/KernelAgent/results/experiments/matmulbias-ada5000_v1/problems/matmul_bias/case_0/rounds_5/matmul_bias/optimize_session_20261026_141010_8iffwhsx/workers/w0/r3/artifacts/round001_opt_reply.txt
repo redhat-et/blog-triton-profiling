@@ -1,0 +1,217 @@
+```python
+import torch
+import triton
+import triton.language as tl
+
+
+@triton.autotune(
+    configs=[
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 32},
+            num_warps=4, num_stages=4,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 128, "BLOCK_K": 32},
+            num_warps=4, num_stages=4,
+        ),
+        triton.Config(
+            {"BLOCK_M": 128, "BLOCK_N": 64, "BLOCK_K": 32},
+            num_warps=4, num_stages=4,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 64},
+            num_warps=4, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 128, "BLOCK_K": 64},
+            num_warps=4, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 32},
+            num_warps=4, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 32},
+            num_warps=8, num_stages=3,
+        ),
+    ],
+    key=["M", "N", "K", "SPLIT_K"],
+)
+@triton.jit
+def _matmul_kernel(
+    A,
+    B,
+    Bias,
+    Out,
+    M: tl.constexpr,
+    N: tl.constexpr,
+    K: tl.constexpr,
+    STRIDE_AM: tl.constexpr,
+    STRIDE_AK: tl.constexpr,
+    STRIDE_BK: tl.constexpr,
+    STRIDE_BN: tl.constexpr,
+    STRIDE_BIAS: tl.constexpr,
+    SPLIT_K: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+):
+    pid = tl.program_id(0)
+    split = tl.program_id(1)
+
+    num_m = tl.cdiv(M, BLOCK_M)
+    num_n = tl.cdiv(N, BLOCK_N)
+    group_width = 8 * num_n
+    group = pid // group_width
+    first_m = group * 8
+    group_m = tl.minimum(num_m - first_m, 8)
+    local = pid % group_width
+    pid_m = first_m + local % group_m
+    pid_n = local // group_m
+
+    iterations = tl.cdiv(K, BLOCK_K * SPLIT_K)
+    start_k = split * iterations * BLOCK_K
+
+    a_block = tl.make_block_ptr(
+        base=A,
+        shape=(M, K),
+        strides=(STRIDE_AM, STRIDE_AK),
+        offsets=(pid_m * BLOCK_M, start_k),
+        block_shape=(BLOCK_M, BLOCK_K),
+        order=(1, 0),
+    )
+    b_block = tl.make_block_ptr(
+        base=B,
+        shape=(K, N),
+        strides=(STRIDE_BK, STRIDE_BN),
+        offsets=(start_k, pid_n * BLOCK_N),
+        block_shape=(BLOCK_K, BLOCK_N),
+        order=(1, 0),
+    )
+
+    acc = tl.zeros((BLOCK_M, BLOCK_N), tl.float32)
+
+    for _ in range(iterations):
+        if M % BLOCK_M == 0 and K % (BLOCK_K * SPLIT_K) == 0:
+            a = tl.load(a_block)
+        else:
+            a = tl.load(
+                a_block, boundary_check=(0, 1), padding_option="zero"
+            )
+
+        if N % BLOCK_N == 0 and K % (BLOCK_K * SPLIT_K) == 0:
+            b = tl.load(b_block)
+        else:
+            b = tl.load(
+                b_block, boundary_check=(0, 1), padding_option="zero"
+            )
+
+        acc = tl.dot(a, b, acc)
+        a_block = tl.advance(a_block, (0, BLOCK_K))
+        b_block = tl.advance(b_block, (BLOCK_K, 0))
+
+    rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+    cols = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+
+    if SPLIT_K == 1:
+        bias = tl.load(
+            Bias + cols * STRIDE_BIAS,
+            mask=cols < N,
+            other=0,
+        ).to(tl.float32)
+        acc = acc + bias[None, :]
+
+    offsets = split * M * N + rows[:, None] * N + cols[None, :]
+    tl.store(
+        Out + offsets,
+        acc,
+        mask=(rows[:, None] < M) & (cols[None, :] < N),
+    )
+
+
+@triton.jit
+def _reduce_bias_kernel(
+    Partial,
+    Bias,
+    Out,
+    M: tl.constexpr,
+    N: tl.constexpr,
+    STRIDE_BIAS: tl.constexpr,
+    SPLIT_K: tl.constexpr,
+    BLOCK: tl.constexpr,
+):
+    offsets = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    valid = offsets < M * N
+    acc = tl.full((BLOCK,), 0, tl.float32)
+
+    for split in tl.static_range(SPLIT_K):
+        acc += tl.load(
+            Partial + split * M * N + offsets,
+            mask=valid,
+            other=0,
+        )
+
+    bias = tl.load(
+        Bias + (offsets % N) * STRIDE_BIAS,
+        mask=valid,
+        other=0,
+    ).to(tl.float32)
+    tl.store(Out + offsets, acc + bias, mask=valid)
+
+
+def kernel_function(A, B, bias):
+    M, K = A.shape
+    N = B.shape[1]
+
+    output = torch.empty((M, N), device=A.device, dtype=A.dtype)
+    if M == 0 or N == 0:
+        return output
+
+    split_k = 4 if M * N <= 1024 * 1024 and K >= 1024 else 1
+    partial = (
+        torch.empty(
+            (split_k, M, N),
+            device=A.device,
+            dtype=torch.float32,
+        )
+        if split_k > 1
+        else output
+    )
+
+    grid = lambda meta: (
+        triton.cdiv(M, meta["BLOCK_M"])
+        * triton.cdiv(N, meta["BLOCK_N"]),
+        split_k,
+    )
+
+    _matmul_kernel[grid](
+        A,
+        B,
+        bias,
+        partial,
+        M,
+        N,
+        K,
+        A.stride(0),
+        A.stride(1),
+        B.stride(0),
+        B.stride(1),
+        bias.stride(0),
+        split_k,
+    )
+
+    if split_k > 1:
+        _reduce_bias_kernel[(triton.cdiv(M * N, 1024),)](
+            partial,
+            bias,
+            output,
+            M,
+            N,
+            bias.stride(0),
+            split_k,
+            BLOCK=1024,
+            num_warps=4,
+        )
+
+    return output
+```

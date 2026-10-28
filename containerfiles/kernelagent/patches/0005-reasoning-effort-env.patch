@@ -1,0 +1,155 @@
+From 32c68ca8bb7a417d801056a84962478fe5594695 Mon Sep 17 00:00:00 2001
+From: KernelSmith <kernelsmith@localhost>
+Date: Wed, 21 Oct 2026 14:43:17 -0400
+Subject: [PATCH 5/5] Add a KA_REASONING_EFFORT reasoning-level knob
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The parameter builder only sent reasoning_effort for GPT-5-prefixed
+ids (hardcoded high) and o1/o3 ids, so any other model — including the
+default gpt-6.1-sol and any model served by an OpenAI-compatible router
+— was requested with no reasoning parameter at all, and the Anthropic
+provider had no thinking support whatsoever.
+
+Read a KA_REASONING_EFFORT environment variable (low | medium | high)
+in the provider layer, following the LLM_BACKEND/OPENAI_BASE_URL
+precedent. When set, it overrides the model-name gating on the
+OpenAI-compatible path (any model id gets reasoning_effort) and enables
+adaptive thinking with an explicit output_config effort on the Anthropic
+path; a non-empty invalid value raises ValueError so a typo fails fast
+instead of silently running at the wrong level. Unset or empty preserves
+the existing behavior exactly.
+
+On the Anthropic path thinking is incompatible with an explicit
+temperature other than 1, so the explicit default temperature is only
+sent when thinking is off. The response extraction also moves from
+content[0].text to the first text block: with thinking enabled,
+content[0] is a thinking block and the old indexing raised
+AttributeError. If the response contains no text block at all (a
+refusal or an early max_tokens stop), the provider raises a RuntimeError
+with the stop reason instead of letting next() raise StopIteration.
+---
+ utils/providers/anthropic_provider.py | 37 ++++++++++++++++++++-------
+ utils/providers/base.py               | 17 ++++++++++++
+ utils/providers/openai_base.py        |  9 +++++--
+ 3 files changed, 52 insertions(+), 11 deletions(-)
+
+diff --git a/utils/providers/anthropic_provider.py b/utils/providers/anthropic_provider.py
+index 7fca461..ccdf5c5 100644
+--- a/utils/providers/anthropic_provider.py
++++ b/utils/providers/anthropic_provider.py
+@@ -14,7 +14,7 @@
+ 
+ """Anthropic provider implementation."""
+ 
+-from .base import BaseProvider, LLMResponse
++from .base import BaseProvider, LLMResponse, reasoning_effort_from_env
+ from .env_config import configure_proxy_environment
+ 
+ try:
+@@ -49,18 +49,37 @@ class AnthropicProvider(BaseProvider):
+             raise RuntimeError("Anthropic client not available")
+ 
+         user_content = messages[-1]["content"] if messages else ""
+-        response = self.client.messages.create(
+-            model=model_name,
+-            max_tokens=min(
++        params = {
++            "model": model_name,
++            "max_tokens": min(
+                 kwargs.get("max_tokens", 8192), self.get_max_tokens_limit(model_name)
+             ),
+-            temperature=kwargs.get("temperature", 0.7),
+-            messages=[{"role": "user", "content": user_content}],
+-        )
++            "messages": [{"role": "user", "content": user_content}],
++        }
++        effort = reasoning_effort_from_env()
++        if effort is not None:
++            # Adaptive thinking with an explicit effort level; budget_tokens
++            # is deprecated on current models. Thinking is incompatible with
++            # an explicit temperature other than 1, so let the API default
++            # apply rather than sending one.
++            params["thinking"] = {"type": "adaptive"}
++            params["output_config"] = {"effort": effort}
++        else:
++            params["temperature"] = kwargs.get("temperature", 0.7)
++        response = self.client.messages.create(**params)
+ 
+-        return LLMResponse(
+-            content=response.content[0].text, model=model_name, provider=self.name
++        # With thinking enabled, content[0] can be a thinking block, and a
++        # refusal or a max_tokens stop can leave no text block at all.
++        content = next(
++            (block.text for block in response.content if block.type == "text"),
++            None,
+         )
++        if content is None:
++            raise RuntimeError(
++                f"Anthropic returned no text block for {model_name!r} "
++                f"(stop_reason={getattr(response, 'stop_reason', None)!r})"
++            )
++        return LLMResponse(content=content, model=model_name, provider=self.name)
+ 
+     def get_multiple_responses(
+         self, model_name: str, messages: list[dict[str, str]], n: int = 1, **kwargs
+diff --git a/utils/providers/base.py b/utils/providers/base.py
+index a77bfc7..e1003a4 100644
+--- a/utils/providers/base.py
++++ b/utils/providers/base.py
+@@ -19,6 +19,23 @@ from dataclasses import dataclass
+ from typing import Any
+ import os
+ 
++REASONING_EFFORT_LEVELS = ("low", "medium", "high")
++
++
++def reasoning_effort_from_env() -> str | None:
++    """Reasoning effort requested via KA_REASONING_EFFORT.
++
++    None (unset or empty) preserves each provider's model-name gating.
++    """
++    level = (os.getenv("KA_REASONING_EFFORT") or "").strip().lower()
++    if not level:
++        return None
++    if level not in REASONING_EFFORT_LEVELS:
++        raise ValueError(
++            f"KA_REASONING_EFFORT must be one of {REASONING_EFFORT_LEVELS}, got {level!r}"
++        )
++    return level
++
+ 
+ @dataclass
+ class LLMResponse:
+diff --git a/utils/providers/openai_base.py b/utils/providers/openai_base.py
+index 3c0a946..8216a7b 100644
+--- a/utils/providers/openai_base.py
++++ b/utils/providers/openai_base.py
+@@ -16,7 +16,7 @@
+ 
+ from typing import Any
+ import logging
+-from .base import BaseProvider, LLMResponse
++from .base import BaseProvider, LLMResponse, reasoning_effort_from_env
+ from .env_config import configure_proxy_environment
+ 
+ try:
+@@ -129,8 +129,13 @@ class OpenAICompatibleProvider(BaseProvider):
+         if "n" in kwargs:
+             params["n"] = kwargs["n"]
+ 
++        # KA_REASONING_EFFORT overrides the model-name gating below, so any
++        # model can be given an explicit reasoning level
++        env_effort = reasoning_effort_from_env()
++        if env_effort is not None:
++            params["reasoning_effort"] = env_effort
+         # Auto-enable high reasoning for GPT-5
+-        if model_name.startswith("gpt-5"):
++        elif model_name.startswith("gpt-5"):
+             params["reasoning_effort"] = "high"
+         elif kwargs.get("high_reasoning_effort") and model_name.startswith(
+             ("o3", "o1")
+-- 
+2.56.0
+

@@ -1,0 +1,437 @@
+{
+  "schema_version": 1,
+  "experiment_id": "matmulbias-ada5000_v1",
+  "status": "completed",
+  "created_at": "2026-10-26T14:09:36.676368",
+  "report_generated_at": "2026-10-27T17:30:05.756444",
+  "configuration": {
+    "problems": [
+      "matmul_bias"
+    ],
+    "case": 0,
+    "generation_rounds": 5,
+    "optimization_rounds": [
+      5,
+      10
+    ],
+    "workers": 1,
+    "test_timeout_s": 180,
+    "llm_backend": "openai",
+    "generation_backend": "openai",
+    "generation_model": "gpt-6-luna",
+    "generation_reasoning_effort": null,
+    "optimization_backend": "openai",
+    "optimization_model": "gpt-6.1-sol",
+    "optimization_reasoning_effort": null,
+    "profilers": [
+      "ncu"
+    ],
+    "profile_iters": 10,
+    "profile_warmup": 10,
+    "ncu_set": "full"
+  },
+  "environment": {
+    "collected_at": "2026-10-26T14:09:36.676384",
+    "cuda_visible_devices": "0",
+    "cuda_device_order": null,
+    "kernelagent": "0.1.0",
+    "ncu_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+    "nsys_version": "NVIDIA Nsight Systems version 2024.6.2.225-246235244400v0",
+    "gpu": {
+      "name": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+      "uuid": "GPU-580461a3-fcfe-83da-7b91-06fe5f26379c",
+      "driver_version": "615.78.08",
+      "memory_total": "16376 MiB"
+    },
+    "cuda": "nvcc: NVIDIA (R) Cuda compiler driver",
+    "torch": "2.13.0+cu129",
+    "triton": "3.7.1",
+    "python": "3.12.15",
+    "platform": "Linux-7.2.11-200.fc44.x86_64-x86_64-with-glibc2.34",
+    "git": null
+  },
+  "capture_batch": {
+    "capture_id": "capture_20261026_153544_0129",
+    "created_at": "2026-10-26T15:35:44.653910",
+    "profilers": [
+      "ncu"
+    ],
+    "iters": {
+      "default": 10
+    },
+    "warmup": 10,
+    "ncu_set": "full",
+    "status": "completed"
+  },
+  "problems": [
+    {
+      "problem": "matmul_bias",
+      "case": 0,
+      "case_spec": "(1024, 1024, 1024, 'float16')",
+      "status": "verified",
+      "variants": [
+        {
+          "variant": "generated",
+          "status": "verified",
+          "verify_status": null,
+          "kind": null,
+          "rounds_requested": 5,
+          "rounds_completed": 1,
+          "kernel_path": "problems/matmul_bias/generated/matmul_bias/final_kernel.py",
+          "kernel_sha256": "5ba2fb340021645983fbd0519bd2c31b1829979724947b7f27b005b98da9f3bd",
+          "source_kernel_sha256": null,
+          "source_path": null,
+          "summary_path": "problems/matmul_bias/generated/matmul_bias/generate_result.json",
+          "record_path": "problems/matmul_bias/generated/matmul_bias/verify.json",
+          "speedup": null,
+          "acceptance": null,
+          "bench": {
+            "kernel_ms": 0.0404,
+            "ref_ms": 0.0262,
+            "speedup": 0.647,
+            "kernel_tflops": 53.1,
+            "ref_tflops": 82.09
+          },
+          "failure": null,
+          "captures": {
+            "ncu": {
+              "problem": "matmul_bias",
+              "variant": "generated",
+              "profiler": "ncu",
+              "label": "generated",
+              "iters": 10,
+              "status": "ok",
+              "report_path": "captures/capture_20261026_143346_e551/matmul_bias/generated_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_143346_e551/matmul_bias/generated_ncu_case0.json",
+              "exports": [
+                {
+                  "name": "ncu_details_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/generated_ncu_case0.details.csv"
+                  ]
+                },
+                {
+                  "name": "ncu_raw_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/generated_ncu_case0.raw.csv"
+                  ]
+                }
+              ],
+              "kernel_sha256": "5ba2fb340021645983fbd0519bd2c31b1829979724947b7f27b005b98da9f3bd",
+              "failure": null,
+              "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+              "torch": "2.13.0+cu129",
+              "triton": "3.7.1",
+              "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+              "kernels": [
+                {
+                  "kernel": "_matmul_bias_kernel",
+                  "launches": 10,
+                  "duration_avg_us": 53.15599999999999,
+                  "duration_total_us": 531.56,
+                  "sm_pct": 38.158,
+                  "mem_pct": 83.757,
+                  "dram_pct": 14.9,
+                  "occupancy_pct": 53.983000000000004,
+                  "regs": 53,
+                  "grid": 512.0,
+                  "block": 128.0,
+                  "cycles": 73352.6,
+                  "tflops": 40.400255252543495
+                }
+              ],
+              "metric_source": "details"
+            }
+          }
+        },
+        {
+          "variant": "rounds_5",
+          "status": "accepted",
+          "verify_status": "verified",
+          "kind": null,
+          "rounds_requested": 5,
+          "rounds_completed": 5,
+          "kernel_path": "problems/matmul_bias/case_0/rounds_5/matmul_bias/optimized_kernel.py",
+          "kernel_sha256": "e71fe54ed298b313df7d04c170a5ac2c8c4acc9ff7559be753704e006216fa5d",
+          "source_kernel_sha256": "5ba2fb340021645983fbd0519bd2c31b1829979724947b7f27b005b98da9f3bd",
+          "source_path": null,
+          "summary_path": "problems/matmul_bias/case_0/rounds_5/matmul_bias/optimize_result.json",
+          "record_path": "problems/matmul_bias/case_0/rounds_5/matmul_bias/verify_optimized.json",
+          "speedup": 1.593,
+          "acceptance": {
+            "source_case_ms": 0.0403,
+            "candidate_case_ms": 0.0253
+          },
+          "bench": {
+            "kernel_ms": 0.0253,
+            "ref_ms": 0.0241,
+            "speedup": 0.956,
+            "kernel_tflops": 85.05,
+            "ref_tflops": 88.94
+          },
+          "failure": null,
+          "captures": {
+            "ncu": {
+              "problem": "matmul_bias",
+              "variant": "rounds_5",
+              "profiler": "ncu",
+              "label": "rounds_5",
+              "iters": 10,
+              "status": "ok",
+              "report_path": "captures/capture_20261026_143346_e551/matmul_bias/rounds_5_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_143346_e551/matmul_bias/rounds_5_ncu_case0.json",
+              "exports": [
+                {
+                  "name": "ncu_details_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/rounds_5_ncu_case0.details.csv"
+                  ]
+                },
+                {
+                  "name": "ncu_raw_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/rounds_5_ncu_case0.raw.csv"
+                  ]
+                }
+              ],
+              "kernel_sha256": "e71fe54ed298b313df7d04c170a5ac2c8c4acc9ff7559be753704e006216fa5d",
+              "failure": null,
+              "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+              "torch": "2.13.0+cu129",
+              "triton": "3.7.1",
+              "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+              "kernels": [
+                {
+                  "kernel": "_matmul_bias_kernel",
+                  "launches": 10,
+                  "duration_avg_us": 35.613,
+                  "duration_total_us": 356.13,
+                  "sm_pct": 57.470000000000006,
+                  "mem_pct": 124.31800000000001,
+                  "dram_pct": 22.131,
+                  "occupancy_pct": 14.208000000000002,
+                  "regs": 150,
+                  "grid": 128.0,
+                  "block": 128.0,
+                  "cycles": 48589.5,
+                  "tflops": 60.30089316200917
+                }
+              ],
+              "metric_source": "details"
+            }
+          }
+        },
+        {
+          "variant": "rounds_10",
+          "status": "accepted",
+          "verify_status": "verified",
+          "kind": null,
+          "rounds_requested": 10,
+          "rounds_completed": 8,
+          "kernel_path": "problems/matmul_bias/case_0/rounds_10/matmul_bias/optimized_kernel.py",
+          "kernel_sha256": "30091c7800b195aad30d239dc78dfe0a2b25d7c31fe690b3f0ec9f03fc495a84",
+          "source_kernel_sha256": "5ba2fb340021645983fbd0519bd2c31b1829979724947b7f27b005b98da9f3bd",
+          "source_path": null,
+          "summary_path": "problems/matmul_bias/case_0/rounds_10/matmul_bias/optimize_result.json",
+          "record_path": "problems/matmul_bias/case_0/rounds_10/matmul_bias/verify_optimized.json",
+          "speedup": 1.622,
+          "acceptance": {
+            "source_case_ms": 0.0404,
+            "candidate_case_ms": 0.0249
+          },
+          "bench": {
+            "kernel_ms": 0.0249,
+            "ref_ms": 0.0243,
+            "speedup": 0.972,
+            "kernel_tflops": 86.09,
+            "ref_tflops": 88.53
+          },
+          "failure": null,
+          "captures": {
+            "ncu": {
+              "problem": "matmul_bias",
+              "variant": "rounds_10",
+              "profiler": "ncu",
+              "label": "rounds_10",
+              "iters": 10,
+              "status": "ok",
+              "report_path": "captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.json",
+              "exports": [
+                {
+                  "name": "ncu_details_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.details.csv"
+                  ]
+                },
+                {
+                  "name": "ncu_raw_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.raw.csv"
+                  ]
+                }
+              ],
+              "kernel_sha256": "30091c7800b195aad30d239dc78dfe0a2b25d7c31fe690b3f0ec9f03fc495a84",
+              "failure": null,
+              "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+              "torch": "2.13.0+cu129",
+              "triton": "3.7.1",
+              "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+              "kernels": [
+                {
+                  "kernel": "_matmul_bias_kernel",
+                  "launches": 10,
+                  "duration_avg_us": 35.589999999999996,
+                  "duration_total_us": 355.9,
+                  "sm_pct": 57.547000000000004,
+                  "mem_pct": 122.34700000000001,
+                  "dram_pct": 21.779,
+                  "occupancy_pct": 14.225999999999999,
+                  "regs": 150,
+                  "grid": 128.0,
+                  "block": 128.0,
+                  "cycles": 48518.1,
+                  "tflops": 60.338845531379256
+                }
+              ],
+              "metric_source": "details"
+            }
+          }
+        },
+        {
+          "variant": "rocm_blog_fusion",
+          "status": "verified",
+          "verify_status": null,
+          "kind": "external",
+          "rounds_requested": null,
+          "rounds_completed": null,
+          "kernel_path": "problems/matmul_bias/baselines/rocm_blog_fusion/matmul_bias/kernel.py",
+          "kernel_sha256": "ef1f4165e29f73e060cfa8d140d72416fd335d428ac524c26fc81d5fff585b22",
+          "source_kernel_sha256": null,
+          "source_path": "matmul_bias/baselines/rocm_blog_fusion.py",
+          "summary_path": null,
+          "record_path": "problems/matmul_bias/baselines/rocm_blog_fusion/matmul_bias/verify_rocm_blog_fusion.json",
+          "speedup": null,
+          "acceptance": null,
+          "bench": {
+            "kernel_ms": 0.0429,
+            "ref_ms": 0.1819,
+            "speedup": 4.244,
+            "kernel_tflops": 50.1,
+            "ref_tflops": 11.81
+          },
+          "failure": null,
+          "captures": {
+            "ncu": {
+              "problem": "matmul_bias",
+              "variant": "rocm_blog_fusion",
+              "profiler": "ncu",
+              "label": "rocm_blog_fusion",
+              "iters": 10,
+              "status": "ok",
+              "report_path": "captures/capture_20261026_153544_0129/matmul_bias/rocm_blog_fusion_ncu_case0.ncu-rep",
+              "metadata_path": "captures/capture_20261026_153544_0129/matmul_bias/rocm_blog_fusion_ncu_case0.json",
+              "exports": [
+                {
+                  "name": "ncu_details_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_153544_0129/matmul_bias/rocm_blog_fusion_ncu_case0.details.csv"
+                  ]
+                },
+                {
+                  "name": "ncu_raw_csv",
+                  "status": "ok",
+                  "paths": [
+                    "captures/capture_20261026_153544_0129/matmul_bias/rocm_blog_fusion_ncu_case0.raw.csv"
+                  ]
+                }
+              ],
+              "kernel_sha256": "ef1f4165e29f73e060cfa8d140d72416fd335d428ac524c26fc81d5fff585b22",
+              "failure": null,
+              "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+              "torch": "2.13.0+cu129",
+              "triton": "3.7.1",
+              "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+              "kernels": [
+                {
+                  "kernel": "matmulbias_kernel",
+                  "launches": 10,
+                  "duration_avg_us": 34.956,
+                  "duration_total_us": 349.56,
+                  "sm_pct": 59.414,
+                  "mem_pct": 136.052,
+                  "dram_pct": 24.226999999999997,
+                  "occupancy_pct": 8.317,
+                  "regs": 255,
+                  "grid": 64.0,
+                  "block": 128.0,
+                  "cycles": 46935.1,
+                  "tflops": 61.432500915415595
+                }
+              ],
+              "metric_source": "details"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "capture_merge": {
+    "mode": "latest-per-profiler",
+    "capture_ids": [
+      "capture_20261026_143346_e551",
+      "capture_20261026_153544_0129"
+    ],
+    "profiler_batches": {
+      "ncu": [
+        "capture_20261026_143346_e551",
+        "capture_20261026_153544_0129"
+      ]
+    }
+  },
+  "diffs": [
+    {
+      "problem": "matmul_bias",
+      "from": "generated",
+      "to": "rounds_5",
+      "path": "reports/source-diffs/matmul_bias__generated_to_rounds_5.diff"
+    },
+    {
+      "problem": "matmul_bias",
+      "from": "generated",
+      "to": "rounds_10",
+      "path": "reports/source-diffs/matmul_bias__generated_to_rounds_10.diff"
+    },
+    {
+      "problem": "matmul_bias",
+      "from": "generated",
+      "to": "rocm_blog_fusion",
+      "path": "reports/source-diffs/matmul_bias__generated_to_rocm_blog_fusion.diff"
+    },
+    {
+      "problem": "matmul_bias",
+      "from": "rounds_5",
+      "to": "rounds_10",
+      "path": "reports/source-diffs/matmul_bias__rounds_5_to_rounds_10.diff"
+    },
+    {
+      "problem": "matmul_bias",
+      "from": "rounds_5",
+      "to": "rocm_blog_fusion",
+      "path": "reports/source-diffs/matmul_bias__rounds_5_to_rocm_blog_fusion.diff"
+    },
+    {
+      "problem": "matmul_bias",
+      "from": "rounds_10",
+      "to": "rocm_blog_fusion",
+      "path": "reports/source-diffs/matmul_bias__rounds_10_to_rocm_blog_fusion.diff"
+    }
+  ]
+}

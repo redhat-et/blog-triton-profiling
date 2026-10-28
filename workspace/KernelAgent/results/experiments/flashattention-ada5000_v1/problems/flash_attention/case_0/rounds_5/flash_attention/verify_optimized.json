@@ -1,0 +1,31 @@
+{
+  "problem": "flash_attention",
+  "impl": "optimized",
+  "kernel_path": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/case_0/rounds_5/flash_attention/optimized_kernel.py",
+  "kernel_sha256": "138f765d4df325b4ac22258049ae820cee3fdae58e1ae503ae2176663f0ea130",
+  "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "verified_at": "2026-10-26T14:53:51.641378",
+  "success": true,
+  "test_passed": true,
+  "benchmark": {
+    "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+    "torch": "2.13.0+cu129",
+    "triton": "3.7.1",
+    "cases": [
+      {
+        "case": 0,
+        "B": 2,
+        "H": 8,
+        "S": 1024,
+        "D": 64,
+        "causal": false,
+        "dtype": "float16",
+        "kernel_ms": 0.4374,
+        "ref_ms": 0.3296,
+        "speedup": 0.754,
+        "kernel_tflops": 9.82,
+        "ref_tflops": 13.03
+      }
+    ]
+  }
+}

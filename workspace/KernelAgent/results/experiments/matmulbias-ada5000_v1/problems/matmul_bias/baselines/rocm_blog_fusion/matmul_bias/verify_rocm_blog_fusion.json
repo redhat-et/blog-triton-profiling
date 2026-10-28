@@ -1,0 +1,66 @@
+{
+  "problem": "matmul_bias",
+  "impl": "external",
+  "kernel_path": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/baselines/rocm_blog_fusion/matmul_bias/kernel.py",
+  "kernel_sha256": "ef1f4165e29f73e060cfa8d140d72416fd335d428ac524c26fc81d5fff585b22",
+  "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "verified_at": "2026-10-26T15:33:24.762010",
+  "label": "rocm_blog_fusion",
+  "success": true,
+  "test_passed": true,
+  "benchmark": {
+    "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+    "torch": "2.13.0+cu129",
+    "triton": "3.7.1",
+    "cases": [
+      {
+        "case": 0,
+        "M": 1024,
+        "K": 1024,
+        "N": 1024,
+        "dtype": "float16",
+        "kernel_ms": 0.0429,
+        "ref_ms": 0.1819,
+        "speedup": 4.244,
+        "kernel_tflops": 50.1,
+        "ref_tflops": 11.81
+      },
+      {
+        "case": 1,
+        "M": 2048,
+        "K": 1024,
+        "N": 2048,
+        "dtype": "float16",
+        "kernel_ms": 0.4248,
+        "ref_ms": 0.6722,
+        "speedup": 1.582,
+        "kernel_tflops": 20.22,
+        "ref_tflops": 12.78
+      },
+      {
+        "case": 2,
+        "M": 2048,
+        "K": 2048,
+        "N": 2048,
+        "dtype": "bfloat16",
+        "kernel_ms": 0.7509,
+        "ref_ms": 1.3147,
+        "speedup": 1.751,
+        "kernel_tflops": 22.88,
+        "ref_tflops": 13.07
+      },
+      {
+        "case": 3,
+        "M": 4096,
+        "K": 4096,
+        "N": 4096,
+        "dtype": "float16",
+        "kernel_ms": 9.0812,
+        "ref_ms": 9.4966,
+        "speedup": 1.046,
+        "kernel_tflops": 15.13,
+        "ref_tflops": 14.47
+      }
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "category": "memory",
+    "summary": "L2-side memory pressure and load dependencies limit throughput, not DRAM bandwidth.",
+    "reasoning": "Memory SOL is 71.35% versus 38.7% compute throughput. L2 throughput reaches 75.21%, while DRAM throughput is only 16.32% with a 95.62% L2 hit rate. Long-scoreboard stalls dominate at 61.98%, indicating memory-dependency delays.",
+    "root_causes": [
+      {
+        "cause": "Partially utilized global-load sectors increase cache traffic per useful byte.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global loads use only half the bytes in transferred sectors."
+          },
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 75.21,
+            "interpretation": "L2 traffic is substantial despite low DRAM utilization."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Inspect the actual A/B strides and profile contiguous or suitably packed operands so adjacent lanes load adjacent, aligned elements.",
+            "rationale": "Improving sector utilization reduces L2 traffic for the same useful operand data."
+          }
+        ]
+      },
+      {
+        "cause": "Insufficient latency hiding leaves operand loads on the critical path.",
+        "evidence": [
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 61.98,
+            "interpretation": "Warps frequently wait for outstanding memory dependencies."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 54.42,
+            "interpretation": "Moderate occupancy limits the pool of warps available to hide load latency."
+          },
+          {
+            "metric": "launch__occupancy_limit_shared_mem",
+            "value": 7,
+            "interpretation": "Shared memory imposes the tightest reported block-residency resource limit."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Extend autotuning with num_stages=2 variants and benchmark them against the existing 3–4-stage configurations.",
+            "rationale": "Reducing pipeline shared-memory usage may increase resident blocks and latency hiding; benchmark to verify that this outweighs reduced prefetch depth."
+          }
+        ]
+      }
+    ]
+  }
+]

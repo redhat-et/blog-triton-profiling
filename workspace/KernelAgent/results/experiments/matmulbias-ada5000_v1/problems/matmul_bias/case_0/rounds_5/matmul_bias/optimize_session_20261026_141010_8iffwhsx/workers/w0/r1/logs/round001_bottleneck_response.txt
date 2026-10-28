@@ -1,0 +1,51 @@
+[
+  {
+    "category": "memory",
+    "summary": "Cache-side memory traffic and load stalls limit performance, rather than DRAM bandwidth or compute throughput.",
+    "reasoning": "Memory SOL is 70.84% versus compute SOL of 38.89%. L2 throughput reaches 75.16%, while DRAM throughput is only 15.54% with a 95.67% L2 hit rate. Long-scoreboard stalls of 62.37% indicate substantial waits for memory dependencies.",
+    "root_causes": [
+      {
+        "cause": "Small output tiles create repeated operand loads across programs, increasing cache-side traffic despite strong L2 reuse.",
+        "evidence": [
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 75.16,
+            "interpretation": "L2 is substantially busier than DRAM, identifying cache-side traffic as the stronger bandwidth pressure."
+          },
+          {
+            "metric": "lts__t_sector_hit_rate.pct",
+            "value": 95.67,
+            "interpretation": "Most accesses hit L2; repeated operand requests largely avoid DRAM but still consume cache bandwidth."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Autotune larger output tiles, including BLOCK_M=64 and BLOCK_N=64 or 128, alongside num_warps.",
+            "rationale": "Larger tiles can reuse each loaded operand across more output elements, reducing operand traffic per FLOP; autotuning accounts for increased register and shared-memory pressure."
+          }
+        ]
+      },
+      {
+        "cause": "Global loads use only half of each fetched sector on average, increasing memory-system work per useful byte.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global-load sector utilization is only 50%, indicating inefficient transaction packing."
+          },
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 62.37,
+            "interpretation": "Warps spend substantial time waiting on memory dependencies, making inefficient loads particularly costly."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Inspect A and B strides and generated load layouts, then specialize contiguous or transposed input paths so adjacent lanes access adjacent, aligned elements.",
+            "rationale": "Better coalescing can improve sector utilization and reduce cache transactions; validate that any layout conversion cost is amortized."
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,28 @@
+# Build context exclusions for cuda-image and rocm-image (both build with
+# the repo root as context, via `-f containerfiles/Dockerfile.<x> .`).
+# Neither Dockerfile reads anything outside what it COPies, so excluding
+# everything else here keeps `podman/docker build` from tarring and
+# hashing workspace/ROCm (~1.9GB), workspace/CUDA (~100MB), .git
+# (~200MB), and any leftover .build/ from the old host-side KernelAgent
+# staging flow on every single build — today, on every `make
+# kernelagent-*` run, since cuda-image is a dependency of all of them.
+# KernelAgent itself is cloned inside the build, never staged here.
+
+.git/
+.build/
+
+# Host-only workspaces unrelated to either image build — mounted at
+# runtime (cuda_vol / rocm_vol), never copied into an image.
+workspace/ROCm/
+workspace/CUDA/
+
+# KernelAgent run artifacts and scratch output — mounted at runtime via
+# ka_vol, never copied into the image.
+workspace/KernelAgent/results/
+workspace/KernelAgent/.tmp-verify/
+
+__pycache__/
+*.py[cod]
+*.ncu-rep
+*.nsys-rep
+*.sqlite

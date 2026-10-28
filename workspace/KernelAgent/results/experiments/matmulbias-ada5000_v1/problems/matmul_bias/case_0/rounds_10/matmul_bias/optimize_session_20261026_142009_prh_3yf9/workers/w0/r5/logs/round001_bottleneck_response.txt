@@ -1,0 +1,56 @@
+[
+  {
+    "category": "memory",
+    "summary": "Cache-side memory delivery limits the kernel, rather than DRAM bandwidth or compute throughput.",
+    "reasoning": "Memory SOL is 71.35% versus 38.7% compute throughput. L2 throughput reaches 75.21%, while DRAM throughput is only 16.32% and L2 hit rate is 95.62%, indicating predominantly cache-served traffic. Long-scoreboard stalls of 61.98% show substantial waiting on memory dependencies.",
+    "root_causes": [
+      {
+        "cause": "Low useful-byte utilization increases memory transaction pressure on the cache hierarchy.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global loads use only half the bytes per sector on average."
+          },
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 75.21,
+            "interpretation": "L2 is substantially busier than DRAM, consistent with cache-side transaction pressure."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Profile A and B loads separately, then tune their tile layouts so neighboring lanes access contiguous elements along the actual unit-stride dimension.",
+            "rationale": "Improving sector utilization reduces transactions required to deliver each operand tile."
+          }
+        ]
+      },
+      {
+        "cause": "Operand-load latency is insufficiently hidden by the available resident warps and pipeline overlap.",
+        "evidence": [
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 61.98,
+            "interpretation": "Warps frequently wait for dependencies associated with L1/global-memory operations."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 54.42,
+            "interpretation": "Moderate achieved occupancy limits the pool of warps available to cover memory latency."
+          },
+          {
+            "metric": "launch__occupancy_limit_shared_mem",
+            "value": 7,
+            "interpretation": "Shared-memory allocation imposes a tighter block-residency limit than registers, whose limit is nine blocks."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Expand autotuning across pipeline stages and tile sizes, selecting the configuration that improves load/compute overlap without sacrificing shared-memory-limited residency.",
+            "rationale": "Balancing buffering against occupancy can reduce exposed load latency; increasing stages alone may worsen residency."
+          }
+        ]
+      }
+    ]
+  }
+]

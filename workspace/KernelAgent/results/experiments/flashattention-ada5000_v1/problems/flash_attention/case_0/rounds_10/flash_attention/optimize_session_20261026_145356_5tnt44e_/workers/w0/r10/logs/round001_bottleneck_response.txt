@@ -1,0 +1,56 @@
+[
+  {
+    "category": "memory",
+    "summary": "The profiled integer-fill kernel is DRAM-bandwidth limited, not compute limited.",
+    "reasoning": "DRAM SOL is 87.59% versus 2.81% compute SOL, with 98.47% active-warps occupancy. The measured bandwidth is 336 GB/s; the reported SOL should not be interpreted as 87.59% of the listed 576 GB/s peak. Importantly, these metrics describe an ATen FillFunctor<int> kernel, not the supplied Triton attention kernel.",
+    "root_causes": [
+      {
+        "cause": "Large, predominantly write-only DRAM traffic dominates the fill operation.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 226789888,
+            "interpretation": "Approximately 226.8 MB of DRAM writes."
+          },
+          {
+            "metric": "dram__bytes_read.sum",
+            "value": 3102848,
+            "interpretation": "Writes account for approximately 98.7% of total DRAM traffic."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 87.59,
+            "interpretation": "DRAM throughput is close to the profiler's sustained bandwidth limit."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Identify the filled allocation and restrict initialization to elements actually requiring an initial value, skipping regions overwritten before any read.",
+            "rationale": "Reducing bytes written directly reduces the dominant bandwidth cost."
+          }
+        ]
+      },
+      {
+        "cause": "A standalone, low-compute initialization pass streams data without substantial arithmetic reuse.",
+        "evidence": [
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 2.81,
+            "interpretation": "Compute throughput is low, consistent with the profiled fill rather than attention matrix products."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 98.47,
+            "interpretation": "High active occupancy argues against insufficient resident warps as the primary limitation."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Trace the ATen fill's caller and, where semantics permit, fold initialization into the first consumer; separately profile _flash_attention to validate attention-specific bottlenecks.",
+            "rationale": "Fusion can remove the standalone memory pass. The supplied metrics cannot justify changes to attention tiling, staging, or tensor-core usage."
+          }
+        ]
+      }
+    ]
+  }
+]

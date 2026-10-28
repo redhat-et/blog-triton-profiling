@@ -1,0 +1,195 @@
+From c5b6f8b9ad11d493775a93bbeaac216e874bfa7f Mon Sep 17 00:00:00 2001
+From: KernelSmith <kernelsmith@localhost>
+Date: Fri, 9 Oct 2026 09:00:00 -0400
+Subject: [PATCH 3/5] Proceed with name-only specs for GPUs missing from the
+ catalog
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+get_gpu_specs() returns None for GPUs absent from GPU_SPECS_DATABASE, but
+OptimizationWorker.__init__ immediately calls self.gpu_specs.get('name',
+...) and the lazy NvidiaBottleneckAnalyzer passes the None through to the
+judger prompt builder, so every optimization worker on such a GPU (e.g.
+"NVIDIA RTX 5000 Ada Generation Laptop GPU") crashes with AttributeError
+before generating a rewrite, and the log claims optimization was disabled
+when it actually crashed.
+
+Normalize missing specs to a name-only dict at both consumers so
+optimization proceeds; the bottleneck prompt's specs section renders as
+N/A and the optimization prompt prints "unknown" for absent numbers
+instead of blanks. Catalog GPUs are unchanged. get_gpu_specs() still
+returns None and keeps its contract; only its warning is reworded.
+
+A GPU missing from the shipped catalog can also be given real specs
+without a rebuild: KA_GPU_SPECS_FILE points at a JSON file mapping the
+device-reported name to a catalog-shaped specs dict, and lookups consult
+those entries (with precedence) before the database. A missing,
+unreadable, or malformed file warns and degrades to no supplement, so a
+bad operator file never crashes optimization. This is how this
+repository's target laptop GPU (RTX 5000 Ada) supplies its figures —
+see the Makefile's KA_GPU_SPECS_FILE and the KernelAgent README.
+---
+ .../kernel_opt/diagnose_prompt/gpu_specs.py   | 51 ++++++++++++++++++-
+ triton_kernel_agent/opt_worker.py             |  5 ++
+ triton_kernel_agent/platform/nvidia.py        |  5 ++
+ .../templates/kernel_optimization.j2          | 20 ++++----
+ 4 files changed, 69 insertions(+), 12 deletions(-)
+
+diff --git a/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs.py b/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs.py
+index 8670c14..1764295 100644
+--- a/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs.py
++++ b/kernel_perf_agent/kernel_opt/diagnose_prompt/gpu_specs.py
+@@ -21,7 +21,9 @@ cache sizes, and SM counts for common NVIDIA GPUs.
+ 
+ """
+ 
++import json
+ import logging
++import os
+ from typing import Any
+ 
+ from kernel_perf_agent.kernel_opt.diagnose_prompt.gpu_specs_database import (
+@@ -33,6 +35,43 @@ __all__ = ["GPU_SPECS_DATABASE", "get_gpu_specs"]
+ logger = logging.getLogger(__name__)
+ 
+ 
++def _supplemental_specs() -> dict[str, dict[str, Any]]:
++    """
++    Operator-supplied catalog entries from KA_GPU_SPECS_FILE.
++
++    The file is a JSON object mapping the GPU name exactly as CUDA and
++    nvidia-smi report it to a specs dict shaped like a GPU_SPECS_DATABASE
++    entry. It fills gaps in (and overrides) the shipped catalog, so a GPU
++    the catalog does not cover can still be optimized with real peak
++    bandwidth/FLOPs context instead of the name-only fallback. A missing,
++    unreadable, or malformed file logs a warning and degrades to no
++    supplement: a bad operator file must not crash optimization.
++    """
++    path = (os.environ.get("KA_GPU_SPECS_FILE") or "").strip()
++    if not path:
++        return {}
++    try:
++        with open(path, encoding="utf-8") as fh:
++            data = json.load(fh)
++    except (OSError, json.JSONDecodeError) as exc:
++        logger.warning(
++            "KA_GPU_SPECS_FILE %r could not be read (%s); proceeding "
++            "without supplemental GPU specs", path, exc,
++        )
++        return {}
++    if not isinstance(data, dict):
++        logger.warning(
++            "KA_GPU_SPECS_FILE %r is not a JSON object of GPU name -> "
++            "specs; proceeding without supplemental GPU specs", path,
++        )
++        return {}
++    return {
++        name: specs
++        for name, specs in data.items()
++        if isinstance(name, str) and isinstance(specs, dict)
++    }
++
++
+ def get_gpu_specs(gpu_name: str) -> dict[str, Any] | None:
+     """
+     Get GPU specifications for bottleneck analysis.
+@@ -41,7 +80,8 @@ def get_gpu_specs(gpu_name: str) -> dict[str, Any] | None:
+     including peak compute performance, memory bandwidth, cache sizes, and SM counts.
+ 
+     Args:
+-        gpu_name: GPU name. Must exactly match a key in GPU_SPECS_DATABASE.
++        gpu_name: GPU name. Must exactly match a key in GPU_SPECS_DATABASE
++            or a KA_GPU_SPECS_FILE supplemental entry.
+ 
+     Returns:
+         Dictionary with GPU specifications, or None if GPU is not in the database.
+@@ -64,6 +104,12 @@ def get_gpu_specs(gpu_name: str) -> dict[str, Any] | None:
+         >>> if specs:
+         ...     print(f"SM Count: {specs['sm_count']}")
+     """
++    supplemental = _supplemental_specs()
++    if gpu_name in supplemental:
++        # Operator-supplied entries take precedence over the shipped
++        # catalog (correcting figures as well as filling gaps); a mutable
++        # copy, like the catalog lookups below.
++        return dict(supplemental[gpu_name])
+     if gpu_name in GPU_SPECS_DATABASE:
+         # GPU_SPECS_DATABASE is a MappingProxyType (read-only), so we return a
+         # mutable copy to allow callers to modify the result without affecting
+@@ -71,7 +117,8 @@ def get_gpu_specs(gpu_name: str) -> dict[str, Any] | None:
+         return dict(GPU_SPECS_DATABASE[gpu_name])
+ 
+     logger.warning(
+-        "Unknown GPU: '%s'. Disable Optimization. Available GPUs: %s",
++        "Unknown GPU: '%s'. No catalog specs; optimization proceeds without "
++        "peak bandwidth/FLOPs numbers. Available GPUs: %s",
+         gpu_name,
+         ", ".join(GPU_SPECS_DATABASE.keys()),
+     )
+diff --git a/triton_kernel_agent/opt_worker.py b/triton_kernel_agent/opt_worker.py
+index 7c70a5a..ed3445b 100644
+--- a/triton_kernel_agent/opt_worker.py
++++ b/triton_kernel_agent/opt_worker.py
+@@ -208,6 +208,11 @@ class OptimizationWorker:
+             if not self.gpu_name:
+                 raise ValueError("gpu_name is required (e.g. 'NVIDIA H100 NVL 94GB')")
+             self.gpu_specs = get_gpu_specs(self.gpu_name)
++        if self.gpu_specs is None:
++            # GPU missing from the specs catalog: fall back to name-only
++            # specs so optimization proceeds without peak bandwidth/FLOPs
++            # numbers instead of crashing on gpu_specs.get(...) below.
++            self.gpu_specs = {"name": self.gpu_name}
+         self.logger.info(
+             f"Initialized for GPU: {self.gpu_specs.get('name', 'unknown')}"
+         )
+diff --git a/triton_kernel_agent/platform/nvidia.py b/triton_kernel_agent/platform/nvidia.py
+index e2ed359..1284f3c 100644
+--- a/triton_kernel_agent/platform/nvidia.py
++++ b/triton_kernel_agent/platform/nvidia.py
+@@ -598,6 +598,11 @@ class NvidiaBottleneckAnalyzer(BottleneckAnalyzerBase):
+                 raise ValueError("gpu_name is required for NvidiaBottleneckAnalyzer")
+             provider = get_model_provider(self._openai_model)
+             gpu_specs = get_gpu_specs(self._gpu_name)
++            if gpu_specs is None:
++                # GPU missing from the specs catalog: name-only specs keep
++                # bottleneck analysis working (the specs section of the
++                # prompts renders as N/A).
++                gpu_specs = {"name": self._gpu_name}
+ 
+             self._delegate = BottleneckAnalyzer(
+                 provider=provider,
+diff --git a/triton_kernel_agent/templates/kernel_optimization.j2 b/triton_kernel_agent/templates/kernel_optimization.j2
+index 6779754..87c7354 100644
+--- a/triton_kernel_agent/templates/kernel_optimization.j2
++++ b/triton_kernel_agent/templates/kernel_optimization.j2
+@@ -19,16 +19,16 @@ TASK: Optimize the following Triton kernel based on hardware profiling analysis
+ {% if gpu_specs %}
+ ## TARGET GPU
+ - GPU: {{ gpu_specs.name }}
+-- Architecture: {{ gpu_specs.architecture }}
+-- Peak Memory Bandwidth: {{ gpu_specs.peak_memory_bw_gbps }} GB/s
+-- Peak FP32: {{ gpu_specs.peak_fp32_tflops }} TFLOPS
+-- Peak FP16: {{ gpu_specs.peak_fp16_tflops }} TFLOPS
+-- Peak BF16: {{ gpu_specs.peak_bf16_tflops }} TFLOPS
+-- SM Count: {{ gpu_specs.sm_count }}
+-- Max Threads per SM: {{ gpu_specs.max_threads_per_sm }}
+-- L1 Cache per SM: {{ gpu_specs.l1_cache_kb }} KB
+-- L2 Cache: {{ gpu_specs.l2_cache_mb }} MB
+-- Memory: {{ gpu_specs.memory_gb }} GB {{ gpu_specs.memory_type }}
++- Architecture: {{ gpu_specs.architecture | default("unknown") }}
++- Peak Memory Bandwidth: {{ gpu_specs.peak_memory_bw_gbps | default("unknown") }} GB/s
++- Peak FP32: {{ gpu_specs.peak_fp32_tflops | default("unknown") }} TFLOPS
++- Peak FP16: {{ gpu_specs.peak_fp16_tflops | default("unknown") }} TFLOPS
++- Peak BF16: {{ gpu_specs.peak_bf16_tflops | default("unknown") }} TFLOPS
++- SM Count: {{ gpu_specs.sm_count | default("unknown") }}
++- Max Threads per SM: {{ gpu_specs.max_threads_per_sm | default("unknown") }}
++- L1 Cache per SM: {{ gpu_specs.l1_cache_kb | default("unknown") }} KB
++- L2 Cache: {{ gpu_specs.l2_cache_mb | default("unknown") }} MB
++- Memory: {{ gpu_specs.memory_gb | default("unknown") }} GB {{ gpu_specs.memory_type | default("") }}
+ {% endif %}
+ 
+ ## PROBLEM DESCRIPTION
+-- 
+2.56.0
+

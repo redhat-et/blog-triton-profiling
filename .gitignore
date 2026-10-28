@@ -6,3 +6,17 @@
 # Jupyer Notebook Server
 .Trash-*
 .ipynb_checkpoints
+__pycache__/
+*.py[cod]
+
+# Leftover local build scratch (nothing in the current build flow writes
+# here; a .build/ from the old KernelAgent source staging may survive)
+.build/
+
+# KernelAgent run artifacts (sessions, kernels, profiles, experiments)
+workspace/KernelAgent/results/*
+!workspace/KernelAgent/results/.gitkeep
+# Legacy capture location (pre results/<problem>/profiles); no longer mounted
+workspace/KernelAgent/profiles/
+workspace/KernelAgent/.env
+workspace/KernelAgent/.tmp-verify/

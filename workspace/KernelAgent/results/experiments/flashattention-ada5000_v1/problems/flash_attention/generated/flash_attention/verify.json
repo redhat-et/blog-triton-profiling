@@ -1,0 +1,73 @@
+{
+  "problem": "flash_attention",
+  "impl": "kernel",
+  "kernel_path": "/workspace/user/results/experiments/flashattention-ada5000_v1/problems/flash_attention/generated/flash_attention/final_kernel.py",
+  "kernel_sha256": "d1c93f8eb4837df3292414db089c5e46727010177ac5883913dc66d4185b0b08",
+  "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "verified_at": "2026-10-26T14:42:28.447019",
+  "success": true,
+  "test_passed": true,
+  "benchmark": {
+    "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+    "torch": "2.13.0+cu129",
+    "triton": "3.7.1",
+    "cases": [
+      {
+        "case": 0,
+        "B": 2,
+        "H": 8,
+        "S": 1024,
+        "D": 64,
+        "causal": false,
+        "dtype": "float16",
+        "kernel_ms": 0.1338,
+        "ref_ms": 0.0677,
+        "speedup": 0.506,
+        "kernel_tflops": 32.1,
+        "ref_tflops": 63.44
+      },
+      {
+        "case": 1,
+        "B": 2,
+        "H": 8,
+        "S": 1024,
+        "D": 64,
+        "causal": true,
+        "dtype": "float16",
+        "kernel_ms": 0.1274,
+        "ref_ms": 0.0617,
+        "speedup": 0.484,
+        "kernel_tflops": 16.87,
+        "ref_tflops": 34.85
+      },
+      {
+        "case": 2,
+        "B": 1,
+        "H": 16,
+        "S": 2048,
+        "D": 64,
+        "causal": true,
+        "dtype": "bfloat16",
+        "kernel_ms": 0.5327,
+        "ref_ms": 0.16,
+        "speedup": 0.3,
+        "kernel_tflops": 16.13,
+        "ref_tflops": 53.72
+      },
+      {
+        "case": 3,
+        "B": 4,
+        "H": 8,
+        "S": 2048,
+        "D": 128,
+        "causal": true,
+        "dtype": "float16",
+        "kernel_ms": 2.3723,
+        "ref_ms": 0.4486,
+        "speedup": 0.189,
+        "kernel_tflops": 14.49,
+        "ref_tflops": 76.63
+      }
+    ]
+  }
+}

@@ -1,0 +1,206 @@
+You are a GPU performance expert analyzing Triton kernel profiling data.
+
+## Task
+Analyze the NCU metrics and identify 1 performance bottleneck(s). For each, classify as:
+- **memory**: Memory bandwidth is the limiting factor
+- **compute**: Compute throughput is the limiting factor
+- **underutilized**: Neither saturated (<60% both), indicating stalls/occupancy issues
+
+## GPU Specifications
+- Name: NVIDIA RTX 5000 Ada Generation Laptop GPU
+- Architecture: Ada Lovelace
+- Peak Memory Bandwidth: 576 GB/s
+- Peak FP32 Performance: 42.6 TFLOPS
+- Peak FP16 Performance: 42.6 TFLOPS
+- SM Count: 76
+- Max Threads per SM: 1536
+- L1 Cache per SM: 128 KB
+- L2 Cache (Total): 64 MB
+- Memory Size: 16 GB GDDR6
+
+## Roofline Analysis
+- Bottleneck: memory
+- Compute SOL: 52.2%
+- Memory SOL: 64.9%
+- Efficiency: 64.9%
+- Headroom: 35.1%
+- At Roofline: No
+- Tensor Cores: No
+- Warnings: None
+
+## NCU Metrics
+### Other Metrics
+  - _matmul_bias_kernel: {'sm__cycles_active.avg': 45682.89, 'sm__warps_active.avg.pct_of_peak_sustained_active': 26.69, 'launch__occupancy_limit_blocks': 24, 'launch__occupancy_limit_registers': 5, 'launch__occupancy_limit_shared_mem': 5, 'launch__registers_per_thread': 85, 'sm__inst_executed.sum': 2605056, 'sm__inst_executed_pipe_tensor.avg.pct_of_peak_sustained_active': 15.1, 'dram__bytes_read.sum': 4516480, 'dram__bytes_write.sum': 0, 'dram__throughput.avg.pct_of_peak_sustained_elapsed': 19.56, 'dram__bytes.sum.per_second': 109836575875.49, 'gpu__dram_throughput.avg.pct_of_peak_sustained_elapsed': 19.56, 'launch__shared_mem_per_block_allocated': 17408, 'l1tex__t_sector_hit_rate.pct': 0.15, 'l1tex__throughput.avg.pct_of_peak_sustained_active': 60.43, 'lts__t_sector_hit_rate.pct': 93.51, 'lts__throughput.avg.pct_of_peak_sustained_active': 71.13, 'sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed': 52.2, 'smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct': 50, 'smsp__warp_issue_stalled_short_scoreboard_per_warp_active.pct': 8.53, 'smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct': 37.17, 'smsp__warp_issue_stalled_barrier_per_warp_active.pct': 9.91, 'smsp__warp_issue_stalled_branch_resolving_per_warp_active.pct': 0.24, 'smsp__sass_average_branch_targets_threads_uniform.pct': 100, 'sm__throughput.avg.pct_of_peak_sustained_elapsed': 52.2, 'gpu__compute_memory_throughput.avg.pct_of_peak_sustained_elapsed': 64.89}
+
+## Kernel Code
+```python
+import torch
+import triton
+import triton.language as tl
+
+
+@triton.autotune(
+    configs=[
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 32},
+            num_warps=4, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 64},
+            num_warps=4, num_stages=4,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 128, "BLOCK_K": 32},
+            num_warps=4, num_stages=4,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 128, "BLOCK_K": 64},
+            num_warps=4, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 128, "BLOCK_N": 64, "BLOCK_K": 32},
+            num_warps=4, num_stages=4,
+        ),
+        triton.Config(
+            {"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 32},
+            num_warps=8, num_stages=3,
+        ),
+    ],
+    key=["M", "N", "K"],
+)
+@triton.jit
+def _matmul_bias_kernel(
+    A,
+    B,
+    Bias,
+    C,
+    M: tl.constexpr,
+    N: tl.constexpr,
+    K: tl.constexpr,
+    STRIDE_AM: tl.constexpr,
+    STRIDE_AK: tl.constexpr,
+    STRIDE_BK: tl.constexpr,
+    STRIDE_BN: tl.constexpr,
+    STRIDE_BIAS: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+):
+    pid = tl.program_id(0)
+    num_m = tl.cdiv(M, BLOCK_M)
+    num_n = tl.cdiv(N, BLOCK_N)
+    group_size = 8 * num_n
+    group_id = pid // group_size
+    first_m = group_id * 8
+    group_m = tl.minimum(num_m - first_m, 8)
+    local_pid = pid % group_size
+    pid_m = first_m + local_pid % group_m
+    pid_n = local_pid // group_m
+
+    rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+    cols = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+    ks = tl.arange(0, BLOCK_K)
+
+    a_ptrs = A + rows[:, None] * STRIDE_AM + ks[None, :] * STRIDE_AK
+    b_ptrs = B + ks[:, None] * STRIDE_BK + cols[None, :] * STRIDE_BN
+
+    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+
+    for block in range(tl.cdiv(K, BLOCK_K)):
+        if M % BLOCK_M == 0 and K % BLOCK_K == 0:
+            a = tl.load(a_ptrs)
+        else:
+            a = tl.load(
+                a_ptrs,
+                mask=(rows[:, None] < M)
+                & (block * BLOCK_K + ks[None, :] < K),
+                other=0,
+            )
+
+        if N % BLOCK_N == 0 and K % BLOCK_K == 0:
+            b = tl.load(b_ptrs)
+        else:
+            b = tl.load(
+                b_ptrs,
+                mask=(block * BLOCK_K + ks[:, None] < K)
+                & (cols[None, :] < N),
+                other=0,
+            )
+
+        acc = tl.dot(a, b, acc)
+        a_ptrs += BLOCK_K * STRIDE_AK
+        b_ptrs += BLOCK_K * STRIDE_BK
+
+    bias = tl.load(
+        Bias + cols * STRIDE_BIAS,
+        mask=cols < N,
+        other=0,
+    ).to(tl.float32)
+    result = (acc + bias[None, :]).to(C.dtype.element_ty)
+    tl.store(
+        C + rows[:, None] * N + cols[None, :],
+        result,
+        mask=(rows[:, None] < M) & (cols[None, :] < N),
+    )
+
+
+def kernel_function(A, B, bias):
+    M, K = A.shape
+    K_b, N = B.shape
+    if K != K_b or bias.ndim != 1 or bias.numel() != N:
+        raise ValueError("Incompatible matrix or bias dimensions")
+    if A.dtype not in (torch.float16, torch.bfloat16):
+        raise TypeError("Only float16 and bfloat16 inputs are supported")
+    if A.dtype != B.dtype or A.dtype != bias.dtype:
+        raise ValueError("All inputs must have the same dtype")
+    if A.device != B.device or A.device != bias.device:
+        raise ValueError("All inputs must be on the same device")
+
+    output = torch.empty((M, N), device=A.device, dtype=A.dtype)
+    if M == 0 or N == 0:
+        return output
+
+    grid = lambda meta: (
+        triton.cdiv(M, meta["BLOCK_M"])
+        * triton.cdiv(N, meta["BLOCK_N"]),
+    )
+    _matmul_bias_kernel[grid](
+        A,
+        B,
+        bias,
+        output,
+        M,
+        N,
+        K,
+        A.stride(0),
+        A.stride(1),
+        B.stride(0),
+        B.stride(1),
+        bias.stride(0),
+    )
+    return output
+```
+
+## Output (JSON array, no markdown fence)
+[
+    {
+        "category": "memory" | "compute" | "underutilized",
+        "summary": "One-line summary",
+        "reasoning": "Explanation citing metrics",
+        "root_causes": [
+            {
+                "cause": "Description",
+                "evidence": [{"metric": "name", "value": 0.0, "interpretation": "meaning"}],
+                "fixes": [
+                    {"fix": "Actionable instruction", "rationale": "Why"}
+                ]
+            }
+        ]
+    }
+]
+
+Requirements:
+- Provide exactly 1 bottleneck analysis object(s) in the array.
+- Order by importance (most critical first).
+- Each bottleneck should have exactly 2 root cause(s), each with 1 fix(es).
+- Keep summaries and reasoning concise and grounded in the provided metrics.

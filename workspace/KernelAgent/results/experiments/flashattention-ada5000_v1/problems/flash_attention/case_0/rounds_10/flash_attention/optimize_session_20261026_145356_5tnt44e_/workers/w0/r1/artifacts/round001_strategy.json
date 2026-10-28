@@ -1,0 +1,66 @@
+[
+  {
+    "category": "underutilized",
+    "summary": "Low occupancy and dependency stalls prevent saturation of compute and memory resources.",
+    "reasoning": "Compute SOL is 41.47% and memory SOL is 51.68%, both below 60%. DRAM throughput is only 6.92%, with a 97.38% L2 hit rate, so external-memory bandwidth is not the limiting factor.",
+    "root_causes": [
+      {
+        "cause": "Shared-memory allocation restricts resident blocks and reduces latency-hiding capacity.",
+        "evidence": [
+          {
+            "metric": "launch__shared_mem_per_block_allocated",
+            "value": 37888,
+            "interpretation": "Each block allocates approximately 37 KB of shared memory."
+          },
+          {
+            "metric": "launch__occupancy_limit_shared_mem",
+            "value": 2,
+            "interpretation": "Shared memory limits residency to two blocks per SM, versus eight allowed by registers."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 16.24,
+            "interpretation": "Low achieved occupancy leaves few warps available to hide execution latency."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Autotune BLOCK_N, including 32 versus the current 64, to reduce shared-memory allocation and increase resident blocks.",
+            "rationale": "Higher residency can improve latency hiding; benchmark the trade-off against additional loop iterations and smaller dot products."
+          }
+        ]
+      },
+      {
+        "cause": "The repeated dot\u2013softmax\u2013dot sequence exposes short-latency dependencies and synchronization overhead.",
+        "evidence": [
+          {
+            "metric": "smsp__warp_issue_stalled_short_scoreboard_per_warp_active.pct",
+            "value": 30.42,
+            "interpretation": "Short-scoreboard waits are substantial, consistent with shared-memory or other short-latency producer-consumer dependencies."
+          },
+          {
+            "metric": "smsp__warp_issue_stalled_barrier_per_warp_active.pct",
+            "value": 14.05,
+            "interpretation": "Barrier waits further reduce instruction-issue opportunities."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Test software pipelining of the key-block loop using tl.range with num_stages=2 to overlap upcoming K/V loads with current-block computation.",
+            "rationale": "Overlapping independent loads can reduce exposed dependency latency; retain the change only if its extra shared-memory usage does not worsen occupancy."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Autotune BLOCK_N, including 32 versus the current 64, to reduce shared-memory allocation and increase resident blocks.",
+        "rationale": "Higher residency can improve latency hiding; benchmark the trade-off against additional loop iterations and smaller dot products."
+      },
+      {
+        "fix": "Test software pipelining of the key-block loop using tl.range with num_stages=2 to overlap upcoming K/V loads with current-block computation.",
+        "rationale": "Overlapping independent loads can reduce exposed dependency latency; retain the change only if its extra shared-memory usage does not worsen occupancy."
+      }
+    ]
+  }
+]

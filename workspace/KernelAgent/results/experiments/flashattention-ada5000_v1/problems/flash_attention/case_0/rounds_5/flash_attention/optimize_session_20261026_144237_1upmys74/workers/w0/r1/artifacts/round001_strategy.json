@@ -1,0 +1,66 @@
+[
+  {
+    "category": "underutilized",
+    "summary": "Low occupancy and synchronization/dependency stalls prevent compute and memory saturation.",
+    "reasoning": "Compute SOL is 39.37% and memory SOL is 51.98%, both below 60%. DRAM utilization is only 6.84%, with a 97.33% L2 hit rate, so external-memory bandwidth is not the primary limit.",
+    "root_causes": [
+      {
+        "cause": "Shared-memory allocation limits resident blocks and reduces latency-hiding capacity.",
+        "evidence": [
+          {
+            "metric": "launch__shared_mem_per_block_allocated",
+            "value": 37888,
+            "interpretation": "Each block requires 37 KiB of shared memory."
+          },
+          {
+            "metric": "launch__occupancy_limit_shared_mem",
+            "value": 2,
+            "interpretation": "Shared memory limits residency to two blocks per SM, versus eight allowed by registers."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 16.19,
+            "interpretation": "Low active-warp occupancy leaves little capacity to hide stalls."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Benchmark BLOCK_N=32 against the current 64 while retaining num_warps=4; check compiled shared-memory allocation and achieved occupancy.",
+            "rationale": "Smaller K/V and score tiles may reduce per-block resource usage and permit more resident blocks; measure runtime because the loop iteration count increases."
+          }
+        ]
+      },
+      {
+        "cause": "Shared-memory dependencies and synchronization in the dot/softmax loop leave resident warps stalled.",
+        "evidence": [
+          {
+            "metric": "smsp__warp_issue_stalled_short_scoreboard_per_warp_active.pct",
+            "value": 30.54,
+            "interpretation": "A substantial share of warp stalls involves short-latency dependencies, commonly shared-memory operations and layout exchanges."
+          },
+          {
+            "metric": "smsp__warp_issue_stalled_barrier_per_warp_active.pct",
+            "value": 17.35,
+            "interpretation": "Barrier waits indicate significant synchronization overhead."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Tune the score/probability layout so row-wise softmax reductions stay warp-local where possible, minimizing shared-memory exchanges between the two dot operations.",
+            "rationale": "Reducing cross-warp reductions and layout conversions can lower barrier and short-scoreboard stalls in each attention-loop iteration."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Benchmark BLOCK_N=32 against the current 64 while retaining num_warps=4; check compiled shared-memory allocation and achieved occupancy.",
+        "rationale": "Smaller K/V and score tiles may reduce per-block resource usage and permit more resident blocks; measure runtime because the loop iteration count increases."
+      },
+      {
+        "fix": "Tune the score/probability layout so row-wise softmax reductions stay warp-local where possible, minimizing shared-memory exchanges between the two dot operations.",
+        "rationale": "Reducing cross-warp reductions and layout conversions can lower barrier and short-scoreboard stalls in each attention-loop iteration."
+      }
+    ]
+  }
+]

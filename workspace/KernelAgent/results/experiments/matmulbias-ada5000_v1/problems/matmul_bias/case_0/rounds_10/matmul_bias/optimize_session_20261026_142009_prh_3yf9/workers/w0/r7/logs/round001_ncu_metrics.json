@@ -1,0 +1,40 @@
+{
+  "metrics": {
+    "_matmul_bias_kernel": {
+      "sm__cycles_active.avg": 63532.83,
+      "sm__warps_active.avg.pct_of_peak_sustained_active": 54.62,
+      "launch__occupancy_limit_blocks": 24,
+      "launch__occupancy_limit_registers": 9,
+      "launch__occupancy_limit_shared_mem": 7,
+      "launch__registers_per_thread": 54,
+      "sm__inst_executed.sum": 2324480,
+      "sm__inst_executed_pipe_tensor.avg.pct_of_peak_sustained_active": 10.86,
+      "dram__bytes_read.sum": 4674176,
+      "dram__bytes_write.sum": 0,
+      "dram__throughput.avg.pct_of_peak_sustained_elapsed": 15.89,
+      "dram__bytes.sum.per_second": 89283618581.91,
+      "gpu__dram_throughput.avg.pct_of_peak_sustained_elapsed": 15.89,
+      "launch__shared_mem_per_block_allocated": 13312,
+      "l1tex__t_sector_hit_rate.pct": 0.09,
+      "l1tex__throughput.avg.pct_of_peak_sustained_active": 65.18,
+      "lts__t_sector_hit_rate.pct": 95.48,
+      "lts__throughput.avg.pct_of_peak_sustained_active": 75.19,
+      "sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed": 38.8,
+      "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct": 50,
+      "smsp__warp_issue_stalled_short_scoreboard_per_warp_active.pct": 8.78,
+      "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct": 61.51,
+      "smsp__warp_issue_stalled_barrier_per_warp_active.pct": 13.61,
+      "smsp__warp_issue_stalled_branch_resolving_per_warp_active.pct": 0.01,
+      "smsp__sass_average_branch_targets_threads_uniform.pct": 0,
+      "sm__throughput.avg.pct_of_peak_sustained_elapsed": 38.8,
+      "gpu__compute_memory_throughput.avg.pct_of_peak_sustained_elapsed": 71.04
+    }
+  },
+  "metadata": {
+    "kernel_file": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_10/matmul_bias/optimize_session_20261026_142009_prh_3yf9/workers/w0/r7/artifacts/kernel_round_1_sol.py",
+    "problem_file": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_10/matmul_bias/optimize_session_20261026_142009_prh_3yf9/problem.py",
+    "round_num": 1,
+    "timestamp": "2026-10-26T14:31:26.337623Z",
+    "ncu_version": "2025.2.1.0"
+  }
+}

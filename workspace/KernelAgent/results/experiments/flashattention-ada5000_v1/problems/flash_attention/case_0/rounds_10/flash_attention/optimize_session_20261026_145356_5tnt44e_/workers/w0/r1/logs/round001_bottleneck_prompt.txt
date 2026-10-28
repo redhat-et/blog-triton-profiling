@@ -1,0 +1,236 @@
+You are a GPU performance expert analyzing Triton kernel profiling data.
+
+## Task
+Analyze the NCU metrics and identify 1 performance bottleneck(s). For each, classify as:
+- **memory**: Memory bandwidth is the limiting factor
+- **compute**: Compute throughput is the limiting factor
+- **underutilized**: Neither saturated (<60% both), indicating stalls/occupancy issues
+
+## GPU Specifications
+- Name: NVIDIA RTX 5000 Ada Generation Laptop GPU
+- Architecture: Ada Lovelace
+- Peak Memory Bandwidth: 576 GB/s
+- Peak FP32 Performance: 42.6 TFLOPS
+- Peak FP16 Performance: 42.6 TFLOPS
+- SM Count: 76
+- Max Threads per SM: 1536
+- L1 Cache per SM: 128 KB
+- L2 Cache (Total): 64 MB
+- Memory Size: 16 GB GDDR6
+
+## Roofline Analysis
+- Bottleneck: underutilized
+- Compute SOL: 41.5%
+- Memory SOL: 51.7%
+- Efficiency: 51.7%
+- Headroom: 48.3%
+- At Roofline: No
+- Tensor Cores: No
+- Warnings: None
+
+## NCU Metrics
+### Other Metrics
+  - _flash_attention_kernel: {'sm__cycles_active.avg': 249268.43, 'sm__warps_active.avg.pct_of_peak_sustained_active': 16.24, 'launch__occupancy_limit_blocks': 24, 'launch__occupancy_limit_registers': 8, 'launch__occupancy_limit_shared_mem': 2, 'launch__registers_per_thread': 64, 'sm__inst_executed.sum': 21692416, 'sm__inst_executed_pipe_tensor.avg.pct_of_peak_sustained_active': 5.54, 'dram__bytes_read.sum': 7172736, 'dram__bytes_write.sum': 0, 'dram__throughput.avg.pct_of_peak_sustained_elapsed': 6.92, 'dram__bytes.sum.per_second': 38948392702.0, 'gpu__dram_throughput.avg.pct_of_peak_sustained_elapsed': 6.92, 'launch__shared_mem_per_block_allocated': 37888, 'l1tex__t_sector_hit_rate.pct': 0, 'l1tex__throughput.avg.pct_of_peak_sustained_active': 44.63, 'lts__t_sector_hit_rate.pct': 97.38, 'lts__throughput.avg.pct_of_peak_sustained_active': 54.33, 'sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed': 21.26, 'smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct': 100, 'smsp__warp_issue_stalled_short_scoreboard_per_warp_active.pct': 30.42, 'smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct': 8.03, 'smsp__warp_issue_stalled_barrier_per_warp_active.pct': 14.05, 'smsp__warp_issue_stalled_branch_resolving_per_warp_active.pct': 1.96, 'smsp__sass_average_branch_targets_threads_uniform.pct': 50, 'sm__throughput.avg.pct_of_peak_sustained_elapsed': 41.47, 'gpu__compute_memory_throughput.avg.pct_of_peak_sustained_elapsed': 51.68}
+
+## Kernel Code
+```python
+import math
+
+import torch
+import triton
+import triton.language as tl
+
+
+@triton.jit
+def _flash_attention_kernel(
+    q_ptr,
+    k_ptr,
+    v_ptr,
+    out_ptr,
+    S,
+    stride_qb,
+    stride_qh,
+    stride_qs,
+    stride_qd,
+    stride_kb,
+    stride_kh,
+    stride_ks,
+    stride_kd,
+    stride_vb,
+    stride_vh,
+    stride_vs,
+    stride_vd,
+    H: tl.constexpr,
+    HEAD_DIM: tl.constexpr,
+    CAUSAL: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+):
+    # Each program handles a block of query rows for one batch/head pair.
+    pid_m = tl.program_id(0)
+    pid_bh = tl.program_id(1)
+    batch = pid_bh // H
+    head = pid_bh % H
+
+    offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+    offs_n = tl.arange(0, BLOCK_N)
+    offs_d = tl.arange(0, HEAD_DIM)
+
+    q_base = batch * stride_qb + head * stride_qh
+    k_base = batch * stride_kb + head * stride_kh
+    v_base = batch * stride_vb + head * stride_vh
+
+    q_ptrs = (
+        q_ptr
+        + q_base
+        + offs_m[:, None] * stride_qs
+        + offs_d[None, :] * stride_qd
+    )
+    q = tl.load(
+        q_ptrs,
+        mask=(offs_m[:, None] < S) & (offs_d[None, :] < HEAD_DIM),
+        other=0.0,
+    )
+
+    # Online softmax state for each query row. The accumulator is the
+    # unnormalized weighted sum of V for the keys seen so far.
+    row_max = tl.full((BLOCK_M,), float("-inf"), dtype=tl.float32)
+    row_sum = tl.zeros((BLOCK_M,), dtype=tl.float32)
+    acc = tl.zeros((BLOCK_M, HEAD_DIM), dtype=tl.float32)
+    scale = 1.0 / tl.sqrt(float(HEAD_DIM))
+
+    for start_n in range(0, S, BLOCK_N):
+        key_rows = start_n + offs_n
+
+        k_ptrs = (
+            k_ptr
+            + k_base
+            + key_rows[:, None] * stride_ks
+            + offs_d[None, :] * stride_kd
+        )
+        v_ptrs = (
+            v_ptr
+            + v_base
+            + key_rows[:, None] * stride_vs
+            + offs_d[None, :] * stride_vd
+        )
+
+        k = tl.load(
+            k_ptrs,
+            mask=(key_rows[:, None] < S) & (offs_d[None, :] < HEAD_DIM),
+            other=0.0,
+        )
+        v = tl.load(
+            v_ptrs,
+            mask=(key_rows[:, None] < S) & (offs_d[None, :] < HEAD_DIM),
+            other=0.0,
+        )
+
+        # QK^T, scaling, and masking are fused with the online softmax.
+        scores = tl.dot(q, tl.trans(k)) * scale
+        key_mask = key_rows < S
+        if CAUSAL:
+            key_mask = key_mask[None, :] & (offs_m[:, None] >= key_rows[None, :])
+        else:
+            key_mask = tl.broadcast_to(key_mask[None, :], (BLOCK_M, BLOCK_N))
+        scores = tl.where(key_mask, scores, float("-inf"))
+
+        block_max = tl.max(scores, axis=1)
+        new_max = tl.maximum(row_max, block_max)
+        alpha = tl.exp(row_max - new_max)
+        probs = tl.exp(scores - new_max[:, None])
+        probs = tl.where(key_mask, probs, 0.0)
+
+        row_sum = row_sum * alpha + tl.sum(probs, axis=1)
+        acc = acc * alpha[:, None] + tl.dot(
+            probs.to(q.dtype), v, out_dtype=tl.float32
+        )
+        row_max = new_max
+
+    result = acc / row_sum[:, None]
+    out_ptrs = out_ptr + (pid_bh * S + offs_m[:, None]) * HEAD_DIM + offs_d[None, :]
+    tl.store(
+        out_ptrs,
+        result,
+        mask=(offs_m[:, None] < S) & (offs_d[None, :] < HEAD_DIM),
+    )
+
+
+def kernel_function(Q, K, V, causal):
+    """Compute scaled dot-product attention with a single fused Triton kernel.
+
+    The kernel fuses QK^T, scaling, optional causal masking, numerically stable
+    online softmax, and the weighted V reduction. It does not materialize the
+    attention-score or probability matrices.
+    """
+    if Q.ndim != 4 or K.ndim != 4 or V.ndim != 4:
+        raise ValueError("Q, K, and V must have shape [batch, heads, seq, dim]")
+    if Q.shape != K.shape or Q.shape != V.shape:
+        raise ValueError("Q, K, and V must have identical shapes")
+    if Q.dtype != K.dtype or Q.dtype != V.dtype:
+        raise ValueError("Q, K, and V must have the same dtype")
+    if Q.device != K.device or Q.device != V.device:
+        raise ValueError("Q, K, and V must be on the same device")
+    if not Q.is_cuda:
+        raise ValueError("Q, K, and V must be CUDA tensors")
+
+    batch, heads, seq, head_dim = Q.shape
+    output = torch.empty(
+        (batch, heads, seq, head_dim), device=Q.device, dtype=Q.dtype
+    )
+
+    block_m = 16
+    block_n = 64
+    grid = (triton.cdiv(seq, block_m), batch * heads)
+
+    _flash_attention_kernel[grid](
+        Q,
+        K,
+        V,
+        output,
+        seq,
+        Q.stride(0),
+        Q.stride(1),
+        Q.stride(2),
+        Q.stride(3),
+        K.stride(0),
+        K.stride(1),
+        K.stride(2),
+        K.stride(3),
+        V.stride(0),
+        V.stride(1),
+        V.stride(2),
+        V.stride(3),
+        H=heads,
+        HEAD_DIM=head_dim,
+        CAUSAL=bool(causal),
+        BLOCK_M=block_m,
+        BLOCK_N=block_n,
+        num_warps=4,
+    )
+    return output
+```
+
+## Output (JSON array, no markdown fence)
+[
+    {
+        "category": "memory" | "compute" | "underutilized",
+        "summary": "One-line summary",
+        "reasoning": "Explanation citing metrics",
+        "root_causes": [
+            {
+                "cause": "Description",
+                "evidence": [{"metric": "name", "value": 0.0, "interpretation": "meaning"}],
+                "fixes": [
+                    {"fix": "Actionable instruction", "rationale": "Why"}
+                ]
+            }
+        ]
+    }
+]
+
+Requirements:
+- Provide exactly 1 bottleneck analysis object(s) in the array.
+- Order by importance (most critical first).
+- Each bottleneck should have exactly 2 root cause(s), each with 1 fix(es).
+- Keep summaries and reasoning concise and grounded in the provided metrics.

@@ -1,0 +1,182 @@
+import torch
+import triton
+import triton.language as tl
+
+
+@triton.autotune(
+    configs=[
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 32},
+            num_warps=4, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 128, "BLOCK_K": 32},
+            num_warps=4, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 32},
+            num_warps=2, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 32},
+            num_warps=4, num_stages=2,
+        ),
+        triton.Config(
+            {"BLOCK_M": 128, "BLOCK_N": 64, "BLOCK_K": 32},
+            num_warps=4, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 32, "BLOCK_N": 64, "BLOCK_K": 64},
+            num_warps=2, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 64, "BLOCK_K": 64},
+            num_warps=4, num_stages=3,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 128, "BLOCK_K": 64},
+            num_warps=4, num_stages=3,
+        ),
+    ],
+    key=["M", "N", "K"],
+)
+@triton.jit
+def _matmul_bias_kernel(
+    A,
+    B,
+    Bias,
+    C,
+    M: tl.constexpr,
+    N: tl.constexpr,
+    K: tl.constexpr,
+    STRIDE_AM: tl.constexpr,
+    STRIDE_AK: tl.constexpr,
+    STRIDE_BK: tl.constexpr,
+    STRIDE_BN: tl.constexpr,
+    STRIDE_BIAS: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+):
+    pid = tl.program_id(0)
+    num_m = tl.cdiv(M, BLOCK_M)
+    num_n = tl.cdiv(N, BLOCK_N)
+
+    group_width = 8 * num_n
+    group_id = pid // group_width
+    first_m = group_id * 8
+    group_m = tl.minimum(num_m - first_m, 8)
+    local_pid = pid % group_width
+    pid_m = first_m + local_pid % group_m
+    pid_n = local_pid // group_m
+
+    rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+    cols = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+    ks = tl.arange(0, BLOCK_K)
+
+    if M % BLOCK_M == 0:
+        load_rows = tl.max_contiguous(
+            tl.multiple_of(rows, BLOCK_M), BLOCK_M
+        )
+    else:
+        load_rows = rows % M
+
+    if N % BLOCK_N == 0:
+        load_cols = tl.max_contiguous(
+            tl.multiple_of(cols, BLOCK_N), BLOCK_N
+        )
+    else:
+        load_cols = cols % N
+
+    a_ptrs = (
+        A
+        + load_rows[:, None] * STRIDE_AM
+        + ks[None, :] * STRIDE_AK
+    )
+    b_ptrs = (
+        B
+        + ks[:, None] * STRIDE_BK
+        + load_cols[None, :] * STRIDE_BN
+    )
+
+    acc = tl.zeros((BLOCK_M, BLOCK_N), tl.float32)
+
+    for block in range(tl.cdiv(K, BLOCK_K)):
+        if K % BLOCK_K == 0:
+            a = tl.load(a_ptrs, cache_modifier=".cg")
+            b = tl.load(b_ptrs, cache_modifier=".cg")
+        else:
+            remaining = block * BLOCK_K + ks < K
+            a = tl.load(
+                a_ptrs,
+                mask=remaining[None, :],
+                other=0.0,
+                cache_modifier=".cg",
+            )
+            b = tl.load(
+                b_ptrs,
+                mask=remaining[:, None],
+                other=0.0,
+                cache_modifier=".cg",
+            )
+
+        acc = tl.dot(a, b, acc)
+        a_ptrs += BLOCK_K * STRIDE_AK
+        b_ptrs += BLOCK_K * STRIDE_BK
+
+    bias = tl.load(
+        Bias + cols * STRIDE_BIAS,
+        mask=cols < N,
+        other=0.0,
+    ).to(tl.float32)
+
+    result = (acc + bias[None, :]).to(C.dtype.element_ty)
+    out_ptrs = C + rows[:, None] * N + cols[None, :]
+
+    if M % BLOCK_M == 0 and N % BLOCK_N == 0:
+        tl.store(out_ptrs, result)
+    else:
+        tl.store(
+            out_ptrs,
+            result,
+            mask=(rows[:, None] < M) & (cols[None, :] < N),
+        )
+
+
+def kernel_function(A, B, bias):
+    M, K = A.shape
+    K_b, N = B.shape
+
+    if K != K_b or bias.ndim != 1 or bias.numel() != N:
+        raise ValueError("Incompatible matrix or bias dimensions")
+    if A.dtype not in (torch.float16, torch.bfloat16):
+        raise TypeError("Only float16 and bfloat16 inputs are supported")
+    if A.dtype != B.dtype or A.dtype != bias.dtype:
+        raise ValueError("All inputs must have the same dtype")
+    if A.device != B.device or A.device != bias.device:
+        raise ValueError("All inputs must be on the same device")
+
+    output = torch.empty((M, N), device=A.device, dtype=A.dtype)
+    if M == 0 or N == 0:
+        return output
+
+    grid = lambda meta: (
+        triton.cdiv(M, meta["BLOCK_M"])
+        * triton.cdiv(N, meta["BLOCK_N"]),
+    )
+
+    _matmul_bias_kernel[grid](
+        A,
+        B,
+        bias,
+        output,
+        M,
+        N,
+        K,
+        A.stride(0),
+        A.stride(1),
+        B.stride(0),
+        B.stride(1),
+        bias.stride(0),
+    )
+    return output

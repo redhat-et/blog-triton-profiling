@@ -1,0 +1,61 @@
+[
+  {
+    "category": "memory",
+    "summary": "Cached operand delivery limits performance, rather than DRAM bandwidth or compute throughput.",
+    "reasoning": "Memory SOL is 69.59% versus 38.1% compute SOL. L2 throughput reaches 74.27% with a 95.71% hit rate, while DRAM throughput is only 15.59%. Long-scoreboard stalls of 62.67% indicate substantial waits for memory dependencies.",
+    "root_causes": [
+      {
+        "cause": "The small 32\u00d764 output tiles provide limited operand reuse, increasing traffic through the heavily used L2 cache.",
+        "evidence": [
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 74.27,
+            "interpretation": "L2 is the most heavily utilized reported memory level."
+          },
+          {
+            "metric": "lts__t_sector_hit_rate.pct",
+            "value": 95.71,
+            "interpretation": "Most accesses hit L2; low DRAM utilization does not rule out a cached-memory bottleneck."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Autotune larger output tiles, including 64\u00d764 and 64\u00d7128, together with num_warps.",
+            "rationale": "Larger tiles reuse each loaded operand across more output elements, reducing cache traffic per operation; tuning is needed to avoid excessive register and shared-memory pressure."
+          }
+        ]
+      },
+      {
+        "cause": "Partial global-load sector utilization wastes transfer capacity and contributes to memory-dependency stalls.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global loads use only half of the transferred sector bytes on average."
+          },
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 62.67,
+            "interpretation": "Warps frequently wait for outstanding memory dependencies."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Specialize operand loading for the actual input strides so adjacent lanes access adjacent FP16/BF16 elements along the contiguous dimension.",
+            "rationale": "Better coalescing can increase useful bytes per sector and reduce memory transactions and associated waits."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Autotune larger output tiles, including 64\u00d764 and 64\u00d7128, together with num_warps.",
+        "rationale": "Larger tiles reuse each loaded operand across more output elements, reducing cache traffic per operation; tuning is needed to avoid excessive register and shared-memory pressure."
+      },
+      {
+        "fix": "Specialize operand loading for the actual input strides so adjacent lanes access adjacent FP16/BF16 elements along the contiguous dimension.",
+        "rationale": "Better coalescing can increase useful bytes per sector and reduce memory transactions and associated waits."
+      }
+    ]
+  }
+]

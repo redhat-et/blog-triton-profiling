@@ -1,0 +1,93 @@
+From 80285299e7d226e6428aa089ca556448ec0c24a0 Mon Sep 17 00:00:00 2001
+From: KernelSmith <kernelsmith@localhost>
+Date: Fri, 9 Oct 2026 09:00:00 -0400
+Subject: [PATCH 2/5] Send max_completion_tokens for GPT-5 and newer models
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The Chat Completions API rejects max_tokens for o-series models and GPT
+models with major version 5 or newer, returning "Unsupported parameter:
+'max_tokens' is not supported with this model. Use 'max_completion_tokens'
+instead." The parameter builder only special-cased ids starting with gpt-5
+or o, so newer releases such as gpt-6-luna fell back to max_tokens (and
+were sent a default temperature).
+
+Detect these models by parsing the GPT major version instead of matching
+the gpt-5 prefix: o-series ids and GPT ids with major version >= 5 now get
+max_completion_tokens and no default temperature, while older GPT ids and
+arbitrary OpenAI-compatible model ids keep max_tokens and temperature.
+The o-series match is anchored — "o" followed by a digit, after stripping
+any provider prefix (openai/, azure/, ...) and folding case — so ids that
+merely start with "o" (openai/gpt-oss-120b, olmo-2-13b, openchat) keep
+max_tokens and temperature. Azure's legacy GPT-3.5 deployment ids spell
+the version 35 (gpt-35-turbo, gpt-35-turbo-16k, gpt-35-turbo-instruct),
+so they are explicitly excluded from the major-version rule and keep
+max_tokens. GPT-5-only behavior (auto reasoning_effort=high) is unchanged.
+---
+ utils/providers/openai_base.py | 37 ++++++++++++++++++++++++++++++----
+ 1 file changed, 33 insertions(+), 4 deletions(-)
+
+diff --git a/utils/providers/openai_base.py b/utils/providers/openai_base.py
+index 3351ace..3c0a946 100644
+--- a/utils/providers/openai_base.py
++++ b/utils/providers/openai_base.py
+@@ -111,15 +111,16 @@ class OpenAICompatibleProvider(BaseProvider):
+             "messages": messages,
+         }
+ 
+-        # GPT-5 and o-series models pin their own sampling behaviour
+-        if not (model_name.startswith("gpt-5") or model_name.startswith("o")):
++        # GPT-5 and newer, and o-series models, pin their own sampling behaviour
++        if not self._requires_max_completion_tokens(model_name):
+             params["temperature"] = kwargs.get("temperature", 0.7)
+ 
+-        # Use max_completion_tokens for newer models like GPT-5, fallback to max_tokens
++        # Use max_completion_tokens for GPT-5 and newer and o-series models,
++        # fallback to max_tokens
+         max_tokens_value = min(
+             kwargs.get("max_tokens", 8192), self.get_max_tokens_limit(model_name)
+         )
+-        if model_name.startswith("gpt-5") or model_name.startswith("o"):
++        if self._requires_max_completion_tokens(model_name):
+             params["max_completion_tokens"] = max_tokens_value
+         else:
+             params["max_tokens"] = max_tokens_value
+@@ -138,6 +139,34 @@ class OpenAICompatibleProvider(BaseProvider):
+ 
+         return params
+ 
++    @staticmethod
++    def _requires_max_completion_tokens(model_name: str) -> bool:
++        """Whether the model only accepts max_completion_tokens.
++
++        True for OpenAI o-series ids and GPT ids with major version 5 or
++        newer (gpt-5, gpt-5.2, gpt-6-luna, ...): the Chat Completions API
++        rejects max_tokens for them. Older GPT ids and arbitrary
++        OpenAI-compatible model ids — including o-prefixed ones like
++        openai/gpt-oss-120b or olmo-2-13b — keep max_tokens. Azure's
++        legacy GPT-3.5 ids spell the version 35 (gpt-35-turbo), which is
++        not a major release.
++        """
++        # Strip any provider prefix (openai/, azure/, ...) and fold case,
++        # then match o-series ids anchored: "o" followed by a digit, so
++        # openai/gpt-oss-120b or olmo-* do not match.
++        model_id = model_name.rsplit("/", 1)[-1].lower()
++        if len(model_id) > 1 and model_id[0] == "o" and model_id[1].isdigit():
++            return True
++        if model_id.startswith("gpt-"):
++            if (
++                model_id == "gpt-35"
++                or model_id.startswith(("gpt-35-", "gpt-35."))
++            ):
++                return False
++            major = model_id[len("gpt-") :].split("-")[0].split(".")[0]
++            return major.isdigit() and int(major) >= 5
++        return False
++
+     def is_available(self) -> bool:
+         """Check if provider is available."""
+         return OPENAI_AVAILABLE and self.client is not None
+-- 
+2.56.0
+

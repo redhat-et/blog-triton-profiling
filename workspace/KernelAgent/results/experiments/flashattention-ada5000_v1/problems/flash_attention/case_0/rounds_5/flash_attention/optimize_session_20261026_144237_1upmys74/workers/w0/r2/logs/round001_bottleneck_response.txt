@@ -1,0 +1,51 @@
+[
+  {
+    "category": "memory",
+    "summary": "The profiled integer-fill kernel is DRAM-bandwidth-bound; these metrics do not characterize the Triton attention kernel.",
+    "reasoning": "DRAM throughput reaches 87.97% (494.9 GB/s), versus 4.22% SM throughput. Active-warp occupancy is 92.48%, making insufficient occupancy unlikely to be the primary limiter. The recorded kernel is at::FillFunctor<int>, not _flash_attention_kernel.",
+    "root_causes": [
+      {
+        "cause": "The fill operation generates predominantly write traffic with very little computation.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 226943744,
+            "interpretation": "Approximately 226.9 MB of writes dominate the approximately 229.0 MB of total DRAM traffic."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 87.97,
+            "interpretation": "DRAM bandwidth is already close to its sustained limit."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Identify the filled buffer and, if semantics permit, initialize only the elements actually consumed rather than the entire allocation.",
+            "rationale": "Reducing bytes written directly reduces the dominant bandwidth cost."
+          }
+        ]
+      },
+      {
+        "cause": "A standalone initialization pass materializes values in memory instead of combining initialization with useful work.",
+        "evidence": [
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 4.22,
+            "interpretation": "The recorded FillFunctor<int> launch performs little computation relative to its memory traffic."
+          },
+          {
+            "metric": "dram__bytes_read.sum",
+            "value": 2081664,
+            "interpretation": "Reads are less than 1% of total traffic, consistent with a standalone fill rather than attention computation."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Trace this fill launch to its caller and, where dependencies allow, fuse initialization into the first consumer or remove it when a producer fully overwrites the buffer.",
+            "rationale": "This can eliminate a separate full-buffer memory pass. The shown torch.empty allocation does not itself establish that this fill is required by the attention implementation."
+          }
+        ]
+      }
+    ]
+  }
+]

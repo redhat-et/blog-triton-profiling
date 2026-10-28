@@ -5,24 +5,137 @@ set -o nounset  # abort on unbound variable
 set -o pipefail # don't hide errors within pipes
 # set -o xtrace   # display expanded commands and arguments
 
+# Workflow selection: every NVIDIA make target (cuda-*, nsight-*,
+# kernelagent-*) runs the same image; the target sets CONTAINER_WORKFLOW
+# to choose this container's use case. It only changes the console help
+# text and the LLM backend configuration below — the profiling tools,
+# Jupyter, and the Nsight UI fixes are available in both workflows.
+#   cuda        (default) Triton profiling
+#   kernelagent agentic Triton kernel generation
+CONTAINER_WORKFLOW="${CONTAINER_WORKFLOW:-cuda}"
+
+# KernelAgent LLM (kernelagent workflow only): the model (OPENAI_MODEL,
+# the same name on the make command line) selects both the
+# model and its backend —
+#   claude-*  - Anthropic API (ANTHROPIC_API_KEY) unless a user-set
+#               OPENAI_BASE_URL points at an OpenAI-compatible server,
+#               which serves every id, claude included (the public URL
+#               this script defaults to does not reroute claude-*)
+#   anything   - OpenAI API or any server presenting an OpenAI-compatible
+#   else         /v1 API (vLLM, llama.cpp, Ollama, LM Studio, ...) via
+#                 OPENAI_BASE_URL
+# LLM_BACKEND is derived here from that rule; set it yourself only to
+# override the inference. The model default below matches the Makefile's
+# OPENAI_MODEL default. KA_REASONING_EFFORT (low | medium | high,
+# optional) passes through untouched: the patched providers read it to
+# set the model's reasoning level on either backend.
+#
+# The backend only configures environment variables here; verification,
+# benchmarking, and profiling do not need an LLM. The cuda workflow
+# never touches the LLM environment.
+if [ "${CONTAINER_WORKFLOW}" = "kernelagent" ]; then
+    # Apply the model default before inferring the backend so a bare
+    # container (no model given) lands on the documented default rather
+    # than the openai branch.
+    export OPENAI_MODEL="${OPENAI_MODEL:-claude-sonnet-4-6}"
+    if [ -n "${LLM_BACKEND:-}" ]; then
+        export LLM_BACKEND
+    else
+        case "${OPENAI_MODEL}" in
+            claude-*)
+                # A public URL this script supplied itself does not
+                # reroute claude-* (same rule as ka_common).
+                if [ -z "${OPENAI_BASE_URL:-}" ] \
+                    || [ "${KA_OPENAI_BASE_URL_DEFAULTED:-}" = 1 ]; then
+                    LLM_BACKEND=anthropic
+                else
+                    LLM_BACKEND=openai
+                fi
+                ;;
+            *) LLM_BACKEND=openai ;;
+        esac
+        export LLM_BACKEND
+    fi
+
+    case "${LLM_BACKEND}" in
+        openai)
+            # Default the base URL to the public API; point it at a local
+            # server to use one. The OpenAI client requires a key even when
+            # the server ignores it; local servers are typically fine with
+            # any non-empty value. Record that a defaulted URL is ours: a
+            # per-stage claude-* id in an otherwise-OpenAI run must not
+            # mistake it for a user-chosen OpenAI-compatible server.
+            if [ -n "${OPENAI_BASE_URL:-}" ]; then
+                unset KA_OPENAI_BASE_URL_DEFAULTED || true
+            else
+                export OPENAI_BASE_URL="https://api.openai.com/v1"
+                export KA_OPENAI_BASE_URL_DEFAULTED=1
+            fi
+            export OPENAI_API_KEY="${OPENAI_API_KEY:-}"
+            ;;
+        anthropic)
+            unset KA_OPENAI_BASE_URL_DEFAULTED || true
+            # An anthropic container keeps the OpenAI variables unset so
+            # the OpenAI-compatible client stays unconfigured. Exception:
+            # per-stage experiment specs (KA_GENERATION_MODEL /
+            # KA_OPTIMIZATION_MODEL) can put a stage on the openai backend
+            # in this container, and
+            # that stage needs its credentials — its stage subprocess sets
+            # LLM_BACKEND itself, so the kept variables cannot misroute the
+            # anthropic stages.
+            if [ -z "${KA_GENERATION_MODEL:-}" ] && [ -z "${KA_OPTIMIZATION_MODEL:-}" ]; then
+                unset OPENAI_BASE_URL || true
+                unset OPENAI_API_KEY || true
+            fi
+            ;;
+        *)
+            echo "ERROR: unsupported LLM_BACKEND=${LLM_BACKEND} (use openai or anthropic)" >&2
+            exit 1
+            ;;
+    esac
+fi
+
 if [ -n "$*" ]; then
+    # The Nsight UIs are wrappers on PATH (nsight-ui-launch), so make
+    # targets, `docker run <image> nsys-ui`, and typed commands all get
+    # the same venv-isolated launch; no command-specific handling here.
     exec "$@"
 else
-	cat >&2 <<EOF
-Welcome to the CUDA Triton Profiling container
-NVIDIA Nsight Systems
-    nsys                 Systems CLI
-    nsys-ui              Systems UI
-NVIDIA Nsight Compute
-    ncu                  Compute CLI
-    ncu-ui               Compute UI
-Triton Profiler
-    proton               Proton lightweight Triton profiler
-    proton-viewer        Proton profiler results viewer
+    case "${CONTAINER_WORKFLOW}" in
+        kernelagent)
+            banner_title="Welcome to the KernelAgent Triton kernel generation container
+(image shared with the CUDA profiling workflow)
+LLM model: ${OPENAI_MODEL}
+LLM backend: ${LLM_BACKEND}"
+            banner_footer="Problem specs live under /workspace/user/problems;
+results, including each problem's profiles/, live under /workspace/user/results
+(the host workspace/KernelAgent directory)."
+            ;;
+        *)
+            banner_title="Welcome to the CUDA Triton Profiling container"
+            banner_footer="The kernelagent-* make targets launch this same image with the
+KernelAgent workspace mounted and the LLM backend configured."
+            ;;
+    esac
+    cat >&2 <<EOF
+${banner_title}
+Kernel generation and optimization
+    verify-llm.py         Smoke-test the configured LLM provider
+    generate-kernel.py    Generate / verify / optimize kernels from the fixed specs
+    experiment-kernels.py Run comparison experiments (generate, optimize, profile)
+    report-experiment.py  Render a comparison report for a saved experiment
+Profiling
+    proton                Proton lightweight Triton profiler
+    proton-viewer         Proton profiler results viewer
+    nsys                  Nsight Systems CLI
+    ncu                   Nsight Compute CLI
+    nsys-ui               Nsight Systems UI (host display)
+    ncu-ui                Nsight Compute UI (host display)
 Jupyter Notebook
     start_jupyter        Start a Jupyter Notebook server
                          Set NOTEBOOK_PORT to specify the http port used
                          Default is ${NOTEBOOK_PORT}
+${banner_footer}
 EOF
     exec /bin/bash
 fi

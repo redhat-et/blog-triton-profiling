@@ -1,0 +1,107 @@
+From 44c0093741faa6ff8b02b7b490d190f89814d0cd Mon Sep 17 00:00:00 2001
+From: KernelSmith <kernelsmith@localhost>
+Date: Thu, 15 Oct 2026 09:00:00 -0400
+Subject: [PATCH 4/5] Ship and resolve packaged resources for installed wheels
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The image builds KernelAgent into a regular wheel and installs it, so
+every runtime module and resource must live inside the wheel and resolve
+through the package location instead of the source checkout:
+
+- packages.find included "utils" without a trailing star, and utils is a
+  namespace package (no __init__.py), so only top-level utils modules
+  shipped — utils/providers (get_model_provider, every LLM provider
+  class) was left out of wheels entirely and even
+  `import triton_kernel_agent` failed, since the agent pulls
+  utils.providers at import time. Match "utils*" so the subpackage ships.
+
+- pyproject.toml only declared triton_kernel_agent/templates/*.j2 as
+  package data, so the optimizer's NCU wrapper template
+  (opt_worker_component/profiling/ncu_wrapper_template.j2) never made it
+  into wheels and NCUWrapperFactory raised FileNotFoundError on the first
+  profiled kernel. Declare it.
+
+- RAGPrescriber's default database path walked up from __file__ looking
+  for a pyproject.toml to find the repo-root code_samples directory; from
+  an installed package that walk ends at the filesystem root, the RAG
+  database silently disappears, and optimization loses its pattern
+  retrieval. Resolve the default through the kernel_perf_agent package
+  location (identical in a wheel and a source checkout), keeping the
+  legacy walk as a fallback for source layouts where the package is not
+  importable.
+---
+ pyproject.toml                                |  3 +-
+ .../prescribing/RAG_based_prescriber.py       | 29 ++++++++++++++-----
+ 2 files changed, 23 insertions(+), 9 deletions(-)
+
+diff --git a/pyproject.toml b/pyproject.toml
+index 3a56232..faeda57 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -55,13 +55,14 @@ pipeline-ui = "scripts.pipeline_ui:main"
+ "Repository" = "https://github.com/pytorch-labs/KernelAgent"
+ 
+ [tool.setuptools.packages.find]
+-include = ["triton_kernel_agent*", "kernel_perf_agent*", "Fuser*", "scripts", "utils"]
++include = ["triton_kernel_agent*", "kernel_perf_agent*", "Fuser*", "scripts", "utils*"]
+ 
+ [tool.setuptools]
+ include-package-data = true
+ 
+ [tool.setuptools.package-data]
+ "triton_kernel_agent" = ["templates/*.j2"]
++"triton_kernel_agent.opt_worker_component.profiling" = ["*.j2"]
+ 
+ [tool.pytest.ini_options]
+ testpaths = ["tests"]
+diff --git a/triton_kernel_agent/opt_worker_component/prescribing/RAG_based_prescriber.py b/triton_kernel_agent/opt_worker_component/prescribing/RAG_based_prescriber.py
+index 6a6095d..43bd442 100644
+--- a/triton_kernel_agent/opt_worker_component/prescribing/RAG_based_prescriber.py
++++ b/triton_kernel_agent/opt_worker_component/prescribing/RAG_based_prescriber.py
+@@ -69,20 +69,33 @@ class RAGPrescriber:
+             OptNode, list[float]
+         ] = {}  # Precomputed L1/L2 embeddings
+ 
+-        # Default path: navigate to project root (where pyproject.toml is)
++        # Default path: the code_samples directory shipped inside the
++        # kernel_perf_agent package, resolved through the package location
++        # so it works identically in an installed wheel and a source
++        # checkout. The legacy pyproject.toml walk remains as a fallback
++        # for source layouts where the package is not importable.
+         if database_path is None:
+-            project_root = Path(__file__).resolve()
+-            while project_root.parent != project_root:
+-                if (project_root / "pyproject.toml").exists():
+-                    break
+-                project_root = project_root.parent
++            import kernel_perf_agent
++
+             database_path = (
+-                project_root
+-                / "kernel_perf_agent"
++                Path(kernel_perf_agent.__file__).resolve().parent
+                 / "kernel_opt"
+                 / "database"
+                 / "code_samples"
+             )
++            if not database_path.exists():
++                project_root = Path(__file__).resolve()
++                while project_root.parent != project_root:
++                    if (project_root / "pyproject.toml").exists():
++                        break
++                    project_root = project_root.parent
++                database_path = (
++                    project_root
++                    / "kernel_perf_agent"
++                    / "kernel_opt"
++                    / "database"
++                    / "code_samples"
++                )
+ 
+         self._initialize_database(database_path)
+ 
+-- 
+2.56.0
+

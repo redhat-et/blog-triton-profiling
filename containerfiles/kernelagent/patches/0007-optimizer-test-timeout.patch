@@ -1,0 +1,110 @@
+From 3b15e9a299a7945887b088286594ae03fff7b782 Mon Sep 17 00:00:00 2001
+From: KernelSmith <kernelsmith@localhost>
+Date: Thu, 22 Oct 2026 12:58:17 -0400
+Subject: [PATCH 7/7] Thread the per-test timeout through optimizer
+ verification
+
+OptimizationWorker built its VerificationWorker without a
+test_timeout_s argument, so the optimizer always ran the fixed test
+with upstream's 30s default; cold Triton JIT and autotuning can exceed
+it. NvidiaVerifier's manager-level initial check had the same problem.
+
+Accept test_timeout_s on OptimizationWorker and NvidiaVerifier, store
+it, and pass it to every VerificationWorker they build. OptimizationManager
+already forwards **worker_kwargs to its components, but the verifier
+factory only receives kwargs its signature accepts, so thread the value
+into registry.create_from_config explicitly.
+---
+ triton_kernel_agent/opt_manager.py     | 2 ++
+ triton_kernel_agent/opt_worker.py      | 4 ++++
+ triton_kernel_agent/platform/nvidia.py | 9 ++++++++-
+ 3 files changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/triton_kernel_agent/opt_manager.py b/triton_kernel_agent/opt_manager.py
+index 2ccd51f..30ae7a1 100644
+--- a/triton_kernel_agent/opt_manager.py
++++ b/triton_kernel_agent/opt_manager.py
+@@ -150,6 +150,7 @@ class OptimizationManager:
+                 - a string like ``"nvidia"`` — shorthand for all components
+                 - a dict like ``{"verifier": "nvidia", ...}`` — per-component
+             **worker_kwargs: Additional kwargs passed to OptimizationWorker
++                and, where accepted, the manager-level verifier
+         """
+         self.max_rounds = max_rounds
+         self.log_dir = (
+@@ -287,6 +288,7 @@ class OptimizationManager:
+             high_reasoning_effort=self.high_reasoning_effort,
+             bottleneck_override=self.bottleneck_override,
+             worker_kwargs=self.worker_kwargs,
++            test_timeout_s=self.worker_kwargs.get("test_timeout_s", 30),
+             gpu_ids=self.gpu_ids,
+             gpu_locks=self.gpu_locks,
+         )
+diff --git a/triton_kernel_agent/opt_worker.py b/triton_kernel_agent/opt_worker.py
+index ed3445b..8d4aed3 100644
+--- a/triton_kernel_agent/opt_worker.py
++++ b/triton_kernel_agent/opt_worker.py
+@@ -84,6 +84,7 @@ class OptimizationWorker:
+         divergence_threshold: float = 50.0,
+         sol_improvement_threshold: float = 5.0,
+         target_platform: str = "cuda",
++        test_timeout_s: int = 30,
+         roofline_config: RooflineConfig | None = None,
+         # BeamSearch parameters (passed by opt_manager)
+         bottleneck_id: int | None = None,
+@@ -125,6 +126,7 @@ class OptimizationWorker:
+             divergence_threshold: Max % worse performance before reverting
+             sol_improvement_threshold: Min SOL % improvement to accept kernel even if runtime doesn't improve
+             target_platform: Target platform (cuda, rocm, etc.)
++            test_timeout_s: Per-test subprocess timeout in seconds
+             roofline_config: Roofline configuration (uses defaults if None)
+             use_rag: Whether to enable RAG-based prescriber for optimization hints
+             platform_components: Dict of registry-resolved component instances
+@@ -145,6 +147,7 @@ class OptimizationWorker:
+         self.divergence_threshold = divergence_threshold
+         self.sol_improvement_threshold = sol_improvement_threshold
+         self.target_platform = target_platform
++        self.test_timeout_s = test_timeout_s
+         self.gpu_name = gpu_name
+         self.ncu_bin_path = ncu_bin_path
+         self.benchmark_warmup = benchmark_warmup
+@@ -334,6 +337,7 @@ class OptimizationWorker:
+             openai_model=self.openai_model,
+             high_reasoning_effort=self.high_reasoning_effort,
+             target_platform=self.target_platform,
++            test_timeout_s=self.test_timeout_s,
+         )
+ 
+         # Roofline analyzer
+diff --git a/triton_kernel_agent/platform/nvidia.py b/triton_kernel_agent/platform/nvidia.py
+index 1284f3c..422b856 100644
+--- a/triton_kernel_agent/platform/nvidia.py
++++ b/triton_kernel_agent/platform/nvidia.py
+@@ -49,9 +49,15 @@ from triton_kernel_agent.platform.interfaces import (
+ class NvidiaVerifier(KernelVerifier):
+     """Verifies kernel correctness using ``VerificationWorker`` on CUDA."""
+ 
+-    def __init__(self, log_dir: Path, logger: logging.Logger) -> None:
++    def __init__(
++        self,
++        log_dir: Path,
++        logger: logging.Logger,
++        test_timeout_s: int = 30,
++    ) -> None:
+         self.log_dir = log_dir
+         self.logger = logger
++        self.test_timeout_s = test_timeout_s
+ 
+     def verify(
+         self,
+@@ -70,6 +76,7 @@ class NvidiaVerifier(KernelVerifier):
+             worker_id=-1,
+             workdir=verify_dir,
+             log_dir=verify_dir,
++            test_timeout_s=self.test_timeout_s,
+         )
+ 
+         success, _, error = worker.verify_with_refinement(
+-- 
+2.56.0
+

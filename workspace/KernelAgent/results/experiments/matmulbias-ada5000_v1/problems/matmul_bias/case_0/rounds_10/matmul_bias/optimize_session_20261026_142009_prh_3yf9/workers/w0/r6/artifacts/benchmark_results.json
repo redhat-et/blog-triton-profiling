@@ -1,0 +1,14 @@
+{
+  "problem": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_10/matmul_bias/optimize_session_20261026_142009_prh_3yf9/problem.py",
+  "size": 4096,
+  "device": "cuda",
+  "dtype": "torch.bfloat16",
+  "warmup": 25,
+  "repeat": 100,
+  "kernels": {
+    "kernel_round_1": {
+      "time_ms": 0.0316559157481319,
+      "path": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_10/matmul_bias/optimize_session_20261026_142009_prh_3yf9/workers/w0/r6/artifacts/kernel_round_1.py"
+    }
+  }
+}

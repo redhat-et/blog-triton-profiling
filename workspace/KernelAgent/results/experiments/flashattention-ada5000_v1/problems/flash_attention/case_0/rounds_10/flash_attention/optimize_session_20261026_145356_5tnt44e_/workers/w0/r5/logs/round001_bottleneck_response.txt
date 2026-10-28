@@ -1,0 +1,51 @@
+[
+  {
+    "category": "memory",
+    "summary": "The profiled integer-fill kernel is limited by DRAM write bandwidth; these metrics do not characterize the supplied attention kernel.",
+    "reasoning": "DRAM throughput reaches 83.13% (467.7 GB/s), versus 4.32% SM throughput. Active-warp occupancy is 87.71%, supporting a bandwidth bottleneck rather than insufficient occupancy. The reported kernel is at::FillFunctor<int>, not _flash_attention_kernel.",
+    "root_causes": [
+      {
+        "cause": "Bulk initialization stores dominate measured memory traffic.",
+        "evidence": [
+          {
+            "metric": "dram__bytes_write.sum",
+            "value": 226839168,
+            "interpretation": "Writes account for approximately 97.9% of the measured DRAM bytes."
+          },
+          {
+            "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 83.13,
+            "interpretation": "The write-heavy operation already uses most sustained DRAM bandwidth."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Locate the integer-fill allocation in the profiled workload and eliminate its initialization if every element is overwritten before being read.",
+            "rationale": "Removing unnecessary stores reduces the dominant traffic directly; verify complete overwrite before changing initialization."
+          }
+        ]
+      },
+      {
+        "cause": "A standalone fill pass performs little computation per byte transferred.",
+        "evidence": [
+          {
+            "metric": "sm__throughput.avg.pct_of_peak_sustained_elapsed",
+            "value": 4.32,
+            "interpretation": "Compute utilization is low while DRAM throughput is high, consistent with the reported fill operation."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 87.71,
+            "interpretation": "High active-warp occupancy makes insufficient occupancy an unlikely primary limitation."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "If initialization is required, fuse it into the kernel that first uses the buffer where synchronization and semantics permit.",
+            "rationale": "Fusion can avoid a separate initialization pass and intermediate traffic. Profile _flash_attention_kernel separately before applying attention-specific tuning."
+          }
+        ]
+      }
+    ]
+  }
+]

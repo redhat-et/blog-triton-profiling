@@ -1,0 +1,66 @@
+[
+  {
+    "category": "memory",
+    "summary": "Cache-side memory throughput and load-dependency stalls limit the kernel, rather than DRAM bandwidth or compute.",
+    "reasoning": "Memory SOL is 71.35% versus 38.7% compute throughput. L2 throughput reaches 75.21%, while DRAM throughput is only 16.32% with a 95.62% L2 hit rate, locating the pressure primarily in the cache-side memory path. Long-scoreboard stalls reach 61.98%.",
+    "root_causes": [
+      {
+        "cause": "Low global-load sector utilization increases cache traffic for operand loads.",
+        "evidence": [
+          {
+            "metric": "smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct",
+            "value": 50,
+            "interpretation": "Global loads use only half of each sector on average, increasing traffic relative to useful bytes."
+          },
+          {
+            "metric": "lts__throughput.avg.pct_of_peak_sustained_active",
+            "value": 75.21,
+            "interpretation": "Elevated L2 throughput makes inefficient operand accesses costly even when DRAM traffic is low."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Profile A/B load instructions and specialize operand layouts for the actual strides, packing a poorly coalesced operand into a contiguous layout when needed.",
+            "rationale": "Improved coalescing can increase useful bytes per sector and reduce L2 traffic; include packing cost when benchmarking."
+          }
+        ]
+      },
+      {
+        "cause": "Outstanding operand-load dependencies are insufficiently hidden by active warps and pipeline overlap.",
+        "evidence": [
+          {
+            "metric": "smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct",
+            "value": 61.98,
+            "interpretation": "Warps frequently wait for dependencies associated with L1TEX operations, consistent with exposed operand-load latency."
+          },
+          {
+            "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
+            "value": 54.42,
+            "interpretation": "Moderate achieved occupancy limits the pool of warps available to hide latency."
+          },
+          {
+            "metric": "launch__occupancy_limit_shared_mem",
+            "value": 7,
+            "interpretation": "Shared memory imposes a tighter block-residency limit than registers, whose limit is nine blocks."
+          }
+        ],
+        "fixes": [
+          {
+            "fix": "Extend autotuning to compare num_stages=2 against the existing 3\u20134 stages for the same tile sizes, selecting by runtime and long-scoreboard stalls.",
+            "rationale": "Fewer stages may reduce shared-memory usage and improve residency; measurement is necessary because reduced prefetch overlap can offset that benefit."
+          }
+        ]
+      }
+    ],
+    "recommended_fixes": [
+      {
+        "fix": "Profile A/B load instructions and specialize operand layouts for the actual strides, packing a poorly coalesced operand into a contiguous layout when needed.",
+        "rationale": "Improved coalescing can increase useful bytes per sector and reduce L2 traffic; include packing cost when benchmarking."
+      },
+      {
+        "fix": "Extend autotuning to compare num_stages=2 against the existing 3\u20134 stages for the same tile sizes, selecting by runtime and long-scoreboard stalls.",
+        "rationale": "Fewer stages may reduce shared-memory usage and improve residency; measurement is necessary because reduced prefetch overlap can offset that benefit."
+      }
+    ]
+  }
+]

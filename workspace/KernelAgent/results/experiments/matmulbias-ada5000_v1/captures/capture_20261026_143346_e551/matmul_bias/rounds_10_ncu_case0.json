@@ -1,0 +1,36 @@
+{
+  "problem": "matmul_bias",
+  "case": 0,
+  "case_spec": "(1024, 1024, 1024, 'float16')",
+  "impl": "optimized",
+  "label": "rounds_10",
+  "profiler": "ncu",
+  "iters": 10,
+  "warmup": 10,
+  "ncu_set": "full",
+  "gpu": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "torch": "2.13.0+cu129",
+  "triton": "3.7.1",
+  "profiler_version": "NVIDIA (R) Nsight Compute Command Line Profiler \u2014 2025.2.1.0",
+  "report": "/workspace/user/results/experiments/matmulbias-ada5000_v1/captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.ncu-rep",
+  "kernel_path": "/workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_10/matmul_bias/optimized_kernel.py",
+  "kernel_sha256": "30091c7800b195aad30d239dc78dfe0a2b25d7c31fe690b3f0ec9f03fc495a84",
+  "exports": [
+    {
+      "name": "ncu_details_csv",
+      "status": "ok",
+      "paths": [
+        "/workspace/user/results/experiments/matmulbias-ada5000_v1/captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.details.csv"
+      ]
+    },
+    {
+      "name": "ncu_raw_csv",
+      "status": "ok",
+      "paths": [
+        "/workspace/user/results/experiments/matmulbias-ada5000_v1/captures/capture_20261026_143346_e551/matmul_bias/rounds_10_ncu_case0.raw.csv"
+      ]
+    }
+  ],
+  "command": "/usr/local/bin/profile-kernel.py matmul_bias --case 0 --impl optimized --kernel /workspace/user/results/experiments/matmulbias-ada5000_v1/problems/matmul_bias/case_0/rounds_10/matmul_bias/optimized_kernel.py --label rounds_10 --out /workspace/user/results/experiments/matmulbias-ada5000_v1/captures/capture_20261026_143346_e551 --profiler ncu --iters 10 --warmup 10 --ncu-set full",
+  "created_at": "2026-10-26T14:34:16.342557"
+}

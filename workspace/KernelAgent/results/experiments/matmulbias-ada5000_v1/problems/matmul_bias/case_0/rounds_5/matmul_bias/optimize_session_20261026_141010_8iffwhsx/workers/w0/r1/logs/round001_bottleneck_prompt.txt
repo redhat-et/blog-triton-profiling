@@ -1,0 +1,162 @@
+You are a GPU performance expert analyzing Triton kernel profiling data.
+
+## Task
+Analyze the NCU metrics and identify 1 performance bottleneck(s). For each, classify as:
+- **memory**: Memory bandwidth is the limiting factor
+- **compute**: Compute throughput is the limiting factor
+- **underutilized**: Neither saturated (<60% both), indicating stalls/occupancy issues
+
+## GPU Specifications
+- Name: NVIDIA RTX 5000 Ada Generation Laptop GPU
+- Architecture: Ada Lovelace
+- Peak Memory Bandwidth: 576 GB/s
+- Peak FP32 Performance: 42.6 TFLOPS
+- Peak FP16 Performance: 42.6 TFLOPS
+- SM Count: 76
+- Max Threads per SM: 1536
+- L1 Cache per SM: 128 KB
+- L2 Cache (Total): 64 MB
+- Memory Size: 16 GB GDDR6
+
+## Roofline Analysis
+- Bottleneck: memory
+- Compute SOL: 38.9%
+- Memory SOL: 70.8%
+- Efficiency: 70.8%
+- Headroom: 29.2%
+- At Roofline: No
+- Tensor Cores: No
+- Warnings: None
+
+## NCU Metrics
+### Other Metrics
+  - _matmul_bias_kernel: {'sm__cycles_active.avg': 63769.5, 'sm__warps_active.avg.pct_of_peak_sustained_active': 54.22, 'launch__occupancy_limit_blocks': 24, 'launch__occupancy_limit_registers': 9, 'launch__occupancy_limit_shared_mem': 7, 'launch__registers_per_thread': 53, 'sm__inst_executed.sum': 4388864, 'sm__inst_executed_pipe_tensor.avg.pct_of_peak_sustained_active': 10.82, 'dram__bytes_read.sum': 4502272, 'dram__bytes_write.sum': 102272, 'dram__throughput.avg.pct_of_peak_sustained_elapsed': 15.54, 'dram__bytes.sum.per_second': 87313106796.12, 'gpu__dram_throughput.avg.pct_of_peak_sustained_elapsed': 15.54, 'launch__shared_mem_per_block_allocated': 13312, 'l1tex__t_sector_hit_rate.pct': 0.09, 'l1tex__throughput.avg.pct_of_peak_sustained_active': 64.93, 'lts__t_sector_hit_rate.pct': 95.67, 'lts__throughput.avg.pct_of_peak_sustained_active': 75.16, 'sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed': 38.89, 'smsp__sass_average_data_bytes_per_sector_mem_global_op_ld.pct': 50, 'smsp__warp_issue_stalled_short_scoreboard_per_warp_active.pct': 5.08, 'smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct': 62.37, 'smsp__warp_issue_stalled_barrier_per_warp_active.pct': 10.97, 'smsp__warp_issue_stalled_branch_resolving_per_warp_active.pct': 0.16, 'smsp__sass_average_branch_targets_threads_uniform.pct': 100, 'sm__throughput.avg.pct_of_peak_sustained_elapsed': 38.89, 'gpu__compute_memory_throughput.avg.pct_of_peak_sustained_elapsed': 70.84}
+
+## Kernel Code
+```python
+import torch
+import triton
+import triton.language as tl
+
+
+@triton.jit
+def _matmul_bias_kernel(
+    a_ptr,
+    b_ptr,
+    bias_ptr,
+    out_ptr,
+    M: tl.constexpr,
+    N: tl.constexpr,
+    K: tl.constexpr,
+    stride_am,
+    stride_ak,
+    stride_bk,
+    stride_bn,
+    stride_bias,
+    stride_om,
+    stride_on,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+):
+    """Compute one output tile of A @ B + bias, accumulating in fp32."""
+    pid_m = tl.program_id(0)
+    pid_n = tl.program_id(1)
+
+    rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+    cols = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+    offs_k = tl.arange(0, BLOCK_K)
+
+    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+
+    for k_start in range(0, K, BLOCK_K):
+        k = k_start + offs_k
+
+        a = tl.load(
+            a_ptr + rows[:, None] * stride_am + k[None, :] * stride_ak,
+            mask=(rows[:, None] < M) & (k[None, :] < K),
+            other=0.0,
+        )
+        b = tl.load(
+            b_ptr + k[:, None] * stride_bk + cols[None, :] * stride_bn,
+            mask=(k[:, None] < K) & (cols[None, :] < N),
+            other=0.0,
+        )
+        acc = tl.dot(a, b, acc)
+
+    # Fuse the bias addition into the matmul epilogue.
+    bias = tl.load(bias_ptr + cols * stride_bias, mask=cols < N, other=0.0)
+    result = acc + bias[None, :]
+
+    out_ptrs = out_ptr + rows[:, None] * stride_om + cols[None, :] * stride_on
+    out_mask = (rows[:, None] < M) & (cols[None, :] < N)
+    tl.store(out_ptrs, result, mask=out_mask)
+
+
+def kernel_function(A: torch.Tensor, B: torch.Tensor, bias: torch.Tensor) -> torch.Tensor:
+    """Return A @ B + bias, fusing matrix multiplication and bias addition."""
+    if A.ndim != 2 or B.ndim != 2 or bias.ndim != 1:
+        raise ValueError("Expected A and B to be matrices and bias to be a vector")
+
+    M, K = A.shape
+    K_b, N = B.shape
+    if K != K_b or bias.numel() != N:
+        raise ValueError("Incompatible matrix or bias dimensions")
+    if A.device != B.device or A.device != bias.device:
+        raise ValueError("All inputs must be on the same device")
+    if A.dtype != B.dtype or A.dtype != bias.dtype:
+        raise ValueError("All inputs must have the same dtype")
+    if A.dtype not in (torch.float16, torch.bfloat16):
+        raise TypeError("Only float16 and bfloat16 inputs are supported")
+
+    output = torch.empty((M, N), device=A.device, dtype=A.dtype)
+
+    block_m, block_n, block_k = 32, 64, 32
+    grid = (triton.cdiv(M, block_m), triton.cdiv(N, block_n))
+
+    _matmul_bias_kernel[grid](
+        A,
+        B,
+        bias,
+        output,
+        M,
+        N,
+        K,
+        A.stride(0),
+        A.stride(1),
+        B.stride(0),
+        B.stride(1),
+        bias.stride(0),
+        output.stride(0),
+        output.stride(1),
+        BLOCK_M=block_m,
+        BLOCK_N=block_n,
+        BLOCK_K=block_k,
+        num_warps=4,
+    )
+    return output
+```
+
+## Output (JSON array, no markdown fence)
+[
+    {
+        "category": "memory" | "compute" | "underutilized",
+        "summary": "One-line summary",
+        "reasoning": "Explanation citing metrics",
+        "root_causes": [
+            {
+                "cause": "Description",
+                "evidence": [{"metric": "name", "value": 0.0, "interpretation": "meaning"}],
+                "fixes": [
+                    {"fix": "Actionable instruction", "rationale": "Why"}
+                ]
+            }
+        ]
+    }
+]
+
+Requirements:
+- Provide exactly 1 bottleneck analysis object(s) in the array.
+- Order by importance (most critical first).
+- Each bottleneck should have exactly 2 root cause(s), each with 1 fix(es).
+- Keep summaries and reasoning concise and grounded in the provided metrics.
