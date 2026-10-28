@@ -1,0 +1,470 @@
+{
+  "schema_version": 1,
+  "experiment_id": "flashattention-ada5000_v1",
+  "generated_at": "2026-10-28T22:14:36.167015",
+  "status": "ok",
+  "provenance": {
+    "model": "gpt-6.1-sol",
+    "backend": "openai",
+    "provider": "openai",
+    "reasoning_effort": null,
+    "prompt_version": "code-diff-llm-v1",
+    "max_prompt_chars": 32000,
+    "deterministic_fingerprint": "sha256:f86629691354120bb4be77ed2cb9746dd83028ddee2591b7bdd3c8efcb5b3d9c",
+    "deterministic_generated_at": "2026-10-28T22:12:27.821397",
+    "capture_selection": {
+      "capture_batch": {
+        "capture_id": "capture_20261026_212117_4e7d",
+        "created_at": "2026-10-26T21:21:17.381965",
+        "profilers": [
+          "ncu"
+        ],
+        "iters": {
+          "default": 10
+        },
+        "warmup": 10,
+        "ncu_set": "full",
+        "status": "completed"
+      },
+      "capture_merge": {
+        "mode": "latest-per-profiler",
+        "capture_ids": [
+          "capture_20261026_151913_e52e",
+          "capture_20261026_211955_fdad",
+          "capture_20261026_212117_4e7d"
+        ],
+        "profiler_batches": {
+          "ncu": [
+            "capture_20261026_212117_4e7d"
+          ]
+        }
+      }
+    },
+    "source_sha256": {
+      "flash_attention/generated/rounds_5": {
+        "from": "d1c93f8eb4837df3292414db089c5e46727010177ac5883913dc66d4185b0b08",
+        "to": "138f765d4df325b4ac22258049ae820cee3fdae58e1ae503ae2176663f0ea130"
+      },
+      "flash_attention/generated/rounds_10": {
+        "from": "d1c93f8eb4837df3292414db089c5e46727010177ac5883913dc66d4185b0b08",
+        "to": "9b1431e00661389fb25f70b141a99a89a54194ca048ed1e91555db98b73c953b"
+      },
+      "flash_attention/generated/vllm_triton_prefill": {
+        "from": "d1c93f8eb4837df3292414db089c5e46727010177ac5883913dc66d4185b0b08",
+        "to": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441"
+      },
+      "flash_attention/rounds_5/rounds_10": {
+        "from": "138f765d4df325b4ac22258049ae820cee3fdae58e1ae503ae2176663f0ea130",
+        "to": "9b1431e00661389fb25f70b141a99a89a54194ca048ed1e91555db98b73c953b"
+      },
+      "flash_attention/rounds_5/vllm_triton_prefill": {
+        "from": "138f765d4df325b4ac22258049ae820cee3fdae58e1ae503ae2176663f0ea130",
+        "to": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441"
+      },
+      "flash_attention/rounds_10/vllm_triton_prefill": {
+        "from": "9b1431e00661389fb25f70b141a99a89a54194ca048ed1e91555db98b73c953b",
+        "to": "2c38b86851ddf1743b3d40f7490c733f594fc04d09637d5fe9003f61f24a6441"
+      }
+    }
+  },
+  "pairs": [
+    {
+      "problem": "flash_attention",
+      "from": "generated",
+      "to": "rounds_5",
+      "status": "ok",
+      "error": null,
+      "prompt_version": "code-diff-llm-v1",
+      "prompt_sha256": "81d77a8026fec207beec150520575f15b4740a07ef5eafb304476b67e7264d42",
+      "prompt_chars": 21732,
+      "diff_truncated": false,
+      "response": {
+        "pair_summary": "For noncausal fp16 attention with B=2, H=8, S=1024, D=64, rounds_5 replaces a fixed-tile, stride-aware kernel with autotuned contiguous addressing, divisibility-specialized accesses, and revised online-softmax arithmetic. Bench reports 0.1338 \u2192 0.4374 ms, whereas NCU reports 185.454 \u2192 72.624 \u00b5s: the measurements disagree on direction, so this pair does not establish a fixed-harness win. Both sides have usable NCU captures, but their resource differences do not isolate any individual change as a measured cause.",
+        "changes": [
+          {
+            "category": "autotune_space",
+            "title": "Larger query tiles and configurable staging",
+            "why_it_matters": "Larger query tiles can reuse K/V across more query rows while increasing per-program accumulator and register demands.",
+            "evidence": "generated fixes BLOCK_M=16, BLOCK_N=64 and four warps. rounds_5 offers six configurations with BLOCK_M=32/64/128, BLOCK_N=32/64 and two or three stages. NCU grid size falls from 1024 to 128 with block size 128 on both sides; the target grid is consistent with BLOCK_M=128. Registers rise from 64 to 248 per thread and occupancy falls from 16.162% to 12.984%.",
+            "fair_note": "The captured grid does not identify BLOCK_N or staging, and the benchmark's selected configuration is not supplied."
+          },
+          {
+            "category": "mask_elision",
+            "title": "Divisibility-specialized loads, scores and stores",
+            "why_it_matters": "Compile-time divisibility branches permit unconditional accesses and omit boundary score selection for this case.",
+            "evidence": "rounds_5 guards Q/output accesses with SEQ % BLOCK_M and K/V accesses plus score masking with SEQ % BLOCK_N. S=1024 divides every offered tile size. generated explicitly supplies load/store masks and score selections.",
+            "fair_note": "Source-level mask removal does not establish an instruction-count reduction; compiler simplification of the original is not shown."
+          },
+          {
+            "category": "constexpr_addressing",
+            "title": "Contiguous offsets replace runtime strides",
+            "why_it_matters": "Direct contiguous offsets simplify address expressions and specialize sequence-dependent arithmetic.",
+            "evidence": "rounds_5 makes SEQ constexpr and uses base=head*SEQ*HEAD_DIM, replacing runtime Q/K/V stride arguments and batch/head decomposition. The grid still indexes query tiles and flattened batch-head pairs.",
+            "fair_note": "This narrows the input-layout contract: the target assumes contiguous Q/K/V, whereas generated uses their supplied strides. Layout validation is not provided."
+          },
+          {
+            "category": "softmax_arithmetic",
+            "title": "Base-two softmax and explicit dot accumulation",
+            "why_it_matters": "Equivalent softmax formulations and accumulator placement can change instruction selection, dependencies and rounding.",
+            "evidence": "rounds_5 uses exp2 with scale 1.4426950408889634*HEAD_DIM**-0.5, passes the rescaled accumulator into tl.dot, and normalizes through a reciprocal. generated uses tl.exp, adds a separate dot result, and divides by the row sum.",
+            "fair_note": "No instruction-level comparison or numerical-error results are supplied; these mechanisms cannot be assigned an isolated timing effect."
+          },
+          {
+            "category": "host_launch",
+            "title": "Validation removed; empty-input return added",
+            "why_it_matters": "The wrapper changes accepted-input checks and launch behavior independently of device arithmetic.",
+            "evidence": "rounds_5 removes rank, shape, dtype, device and CUDA checks, adds an empty-input return, and uses an autotune-dependent grid.",
+            "fair_note": "The empty-input branch is inactive for this case, and validation removal is not evidence of a device-kernel improvement."
+          }
+        ],
+        "invariants": [
+          "Both implement fused attention with online softmax and fp32 accumulation without materializing full attention matrices.",
+          "Both retain kernel_function(Q, K, V, causal).",
+          "This case is noncausal; the new causal loop split is inactive."
+        ],
+        "caveats": [
+          "Reference timings also differ: 0.0677 versus 0.3296 ms, so these records are not a same-session controlled A/B.",
+          "Target NCU duration is below its benchmark duration. Different autotune selections or clock/power conditions are plausible explanations, not established facts.",
+          "NCU reports memory-hierarchy limitation for generated and tensor-pipeline limitation for rounds_5; these characterize the captures, not isolated causal effects.",
+          "The supplied masked-store invariant conflicts with the full diff: rounds_5 retains only a fallback masked store and uses an unconditional store here."
+        ],
+        "takeaway": "The target combines larger captured query tiles, contiguous specialization and revised softmax arithmetic with higher register use and lower occupancy. NCU favors it while bench favors generated; resolve that disagreement before asserting a reproducible performance advantage."
+      },
+      "raw_response": null
+    },
+    {
+      "problem": "flash_attention",
+      "from": "generated",
+      "to": "rounds_10",
+      "status": "ok",
+      "error": null,
+      "prompt_version": "code-diff-llm-v1",
+      "prompt_sha256": "f9af9ac237520b69ede16789e9c4f0d1d38cb9f571b94e0bba77f50a6ecb87fb",
+      "prompt_chars": 22566,
+      "diff_truncated": false,
+      "response": {
+        "pair_summary": "For noncausal FP16 attention with shape (2, 8, 1024, 64), rounds_10 replaces a fixed-tile, stride-aware kernel with an autotuned implementation using contiguous addressing, divisibility-specialized accesses, and base-2 online softmax. Benchmark latency increases from 0.1338 to 0.3072 ms, while NCU kernel duration decreases from 185.454 to 68.597 \u00b5s. These measurements disagree on direction, so this pair does not establish a fixed-harness win; the mechanisms below are not isolated measured causes.",
+        "changes": [
+          {
+            "category": "autotune_space",
+            "title": "Larger tiles and configurable launch resources",
+            "why_it_matters": "Larger query tiles can reuse K/V across more query rows and reduce program count, while increasing accumulator storage and register pressure. Warp and stage choices change resource and latency-hiding tradeoffs.",
+            "evidence": "The original uses BLOCK_M=16, BLOCK_N=64 and four warps. The replacement has eight configurations spanning BLOCK_M=32\u2013128, BLOCK_N=32\u2013128, two to eight warps, and two or three stages. NCU reports grid size 1024\u2192128, registers/thread 64\u2192244, and occupancy 16.162%\u219213.308%.",
+            "fair_note": "The replacement's NCU grid is consistent with BLOCK_M=128, but does not identify BLOCK_N. NCU describes a shift from memory-hierarchy pressure to tensor-pipeline pressure; it does not isolate a tile-size effect."
+          },
+          {
+            "category": "mask_elision",
+            "title": "Compile-time divisibility removes boundary predicates",
+            "why_it_matters": "Unconditional loads and stores and omitted score selects reduce explicit boundary-handling work when sequence tiles divide the sequence length.",
+            "evidence": "SEQ is constexpr, and divisibility branches select unmasked Q/K/V loads and output stores. Every replacement candidate's BLOCK_M and BLOCK_N divides 1024; causal masking is disabled for this case. The original explicitly masks accesses and scores.",
+            "fair_note": "The full diff contradicts the supplied invariant claiming masked stores are preserved: rounds_10 uses an unconditional store for this case. Compiler-level instruction savings are not measured separately."
+          },
+          {
+            "category": "constexpr_addressing",
+            "title": "Runtime strides replaced by contiguous offsets",
+            "why_it_matters": "Compile-time sequence dimensions and direct offsets permit simpler address arithmetic, but narrow the supported input-layout assumptions.",
+            "evidence": "The original passes separate Q/K/V strides and decodes batch/head from program_id(1). The replacement uses base=batch_head*SEQ*HEAD_DIM and row*HEAD_DIM+dim offsets, without stride arguments.",
+            "fair_note": "Both retain a query-block by batch-head grid; the mapping is simplified rather than newly introduced. The provided case specifies shape and dtype, not strides, so general noncontiguous-input correctness is not established."
+          },
+          {
+            "category": "softmax_arithmetic",
+            "title": "Base-2 softmax and direct dot accumulation",
+            "why_it_matters": "Scaling scores by log2(e) permits exp2-based online softmax. Passing the rescaled accumulator directly into tl.dot changes the accumulation expression and potential instruction scheduling.",
+            "evidence": "tl.exp becomes tl.exp2 with scale=1.4426950408889634*HEAD_DIM**-0.5. The replacement uses acc=acc*alpha followed by tl.dot(p.to(q.dtype), v, acc), instead of adding a separately expressed dot result.",
+            "fair_note": "The mathematical normalization structure remains online softmax, but identical numerical results and an isolated performance contribution are not demonstrated."
+          },
+          {
+            "category": "pipelining",
+            "title": "Helper-based loop with explicit stage configurations",
+            "why_it_matters": "Loop structure, alignment hints, and stage settings offer scheduling opportunities with resource tradeoffs.",
+            "evidence": "The replacement introduces _attention_blocks, tl.range, tl.multiple_of(start, BLOCK_N), and explicit num_stages settings.",
+            "fair_note": "The source does not prove achieved load/compute overlap. The causal prefix/diagonal split is inactive for this noncausal case."
+          }
+        ],
+        "invariants": [
+          "Both expose kernel_function(Q, K, V, causal).",
+          "Both use FP32 online-softmax state and output accumulation.",
+          "Both fuse attention computation without materializing full score or probability matrices."
+        ],
+        "caveats": [
+          "Both sides have usable NCU captures, but neither capture isolates individual source changes.",
+          "Reference timings differ: 0.0677 versus 0.354 ms; these are not same-session controlled A/B records.",
+          "The replacement's NCU duration is below its benchmark latency. Different autotune selections or clock/power conditions are plausible, not established explanations.",
+          "Input validation is removed, and no correctness results are supplied."
+        ],
+        "takeaway": "NCU observes a shorter kernel duration alongside higher register use and tensor-pipeline utilization, whereas the benchmark reports longer latency. Treat this as conflicting performance evidence, not proof that any individual rewrite caused an improvement."
+      },
+      "raw_response": null
+    },
+    {
+      "problem": "flash_attention",
+      "from": "generated",
+      "to": "vllm_triton_prefill",
+      "status": "ok",
+      "error": null,
+      "prompt_version": "code-diff-llm-v1",
+      "prompt_sha256": "f9e368ae844576100051c3553d090456aa795c214563b78d68e03db69517e2a6",
+      "prompt_chars": 29013,
+      "diff_truncated": false,
+      "response": {
+        "pair_summary": "For non-causal fp16 attention with shape (2, 8, 1024, 64), the external vllm_triton_prefill baseline is faster in both supplied measurements: bench reports 0.1338 \u2192 0.0818 ms, and NCU reports 185.454 \u2192 80.74 \u00b5s. The directions agree, but the measured ratios differ: 1.6356968215158925 in bench versus 2.296928412187268 in NCU. The source replaces the generated kernel with a substantially different implementation; individual changes are mechanisms to investigate, not measured causes of the timing difference.",
+        "changes": [
+          {
+            "category": "tiling",
+            "title": "Larger query and key tiles with fewer programs",
+            "why_it_matters": "Larger query tiles offer more K/V reuse within each program, while larger key tiles change dot-product and softmax work granularity. Larger accumulators also increase resource demand.",
+            "evidence": "The generated wrapper uses BLOCK_M=16 and BLOCK_N=64. The baseline's >= sm_80 rule selects 128 for both dimensions; NCU records grid size 1024 \u2192 128, with block size 128 unchanged.",
+            "fair_note": "NCU reports registers/thread 64 \u2192 255 and occupancy 16.162% \u2192 13.894%; the faster implementation does not have higher occupancy. Tiling is not isolated experimentally."
+          },
+          {
+            "category": "softmax_arithmetic",
+            "title": "Explicit base-2 scaling and accumulator-form dot",
+            "why_it_matters": "The baseline folds the base-2 conversion into the score scale and expresses the P\u00b7V update using the dot accumulator argument, changing arithmetic expression and compiler optimization opportunities.",
+            "evidence": "Generated uses tl.exp and acc * alpha + tl.dot(...). Baseline scales sm_scale by RCP_LN2, uses tl.math.exp2, and updates with tl.dot(p, v, acc).",
+            "fair_note": "Both implement online softmax. Generated tl.exp may itself lower through base-2 instructions, so the source difference does not establish an instruction-count reduction."
+          },
+          {
+            "category": "pipelining",
+            "title": "Explicit single-stage configuration",
+            "why_it_matters": "Stage count changes the balance between load/compute overlap and resource pressure.",
+            "evidence": "Baseline explicitly passes num_stages=1; generated omits num_stages. Both pass num_warps=4 for this head dimension.",
+            "fair_note": "The generated kernel's effective stage count is not provided. Calling this an addition of software pipelining or increased overlap is not supported."
+          },
+          {
+            "category": "grid_addressing",
+            "title": "Flattened batch/head layout with sequence metadata",
+            "why_it_matters": "The baseline changes program ordering and address construction, trading direct batch/head offsets for per-program sequence metadata loads.",
+            "evidence": "Generated uses grid (query blocks, batch*heads) and batch/head decomposition. Baseline views tensors as (-1, 1, D), launches (batch, head, query blocks), and loads B_Seqlen and B_Start_Loc.",
+            "fair_note": "This adds metadata accesses rather than removing them. Both signatures use runtime strides; the diff does not establish a general removal of constexpr addressing."
+          },
+          {
+            "category": "masking",
+            "title": "Masks retained; causal pruning inactive",
+            "why_it_matters": "Mask handling and loop bounds can affect work, but only active paths are relevant to this case.",
+            "evidence": "Both retain masked Q/K/V loads and output stores. Baseline uses runtime sequence-length masks and adds causal loop-bound pruning, while this case has causal=false.",
+            "fair_note": "The supplied 'mask-free fast path added' label is not supported by the full diff. Divisible dimensions alone do not prove runtime sequence masks are eliminated; causal pruning cannot explain this non-causal comparison."
+          }
+        ],
+        "invariants": [
+          "Both use tiled online softmax without materializing the full score matrix.",
+          "Both maintain fp32 accumulation and return output with the input dtype.",
+          "Both preserve masked output stores and the kernel_function(Q, K, V, causal) entry signature."
+        ],
+        "caveats": [
+          "Both sides have usable NCU captures, but profiling observations do not isolate individual mechanisms.",
+          "NCU classifies generated as memory-hierarchy limited and baseline as compute limited; these are profile classifications, not causal proofs.",
+          "This is an archived external baseline comparison, not a controlled one-change A/B.",
+          "Baseline metadata tensors are memoized during warmup; first-call setup cost is not represented by the steady-state comparison.",
+          "Additional baseline capabilities include variable sequence lengths, GQA, sliding windows, and attention sinks; these are not active benefits for this case."
+        ],
+        "takeaway": "Both bench and NCU support a measured advantage for the external baseline on this case, with different magnitudes. Larger tiles, changed arithmetic expression, launch mapping, and stage configuration are plausible mechanisms, but none is established as the cause."
+      },
+      "raw_response": null
+    },
+    {
+      "problem": "flash_attention",
+      "from": "rounds_5",
+      "to": "rounds_10",
+      "status": "ok",
+      "error": null,
+      "prompt_version": "code-diff-llm-v1",
+      "prompt_sha256": "e1d50ab15108e62833be88218441bbee14211a2336201f0d256d135a7da03f0e",
+      "prompt_chars": 18718,
+      "diff_truncated": false,
+      "response": {
+        "pair_summary": "For non-causal fp16 attention with B=2, H=8, S=1024, and D=64, rounds_10 measures faster than rounds_5 in both datasets: benchmark time is 0.4374 \u2192 0.3072 ms, and NCU kernel duration is 72.624 \u2192 68.597 \u00b5s. The measurements agree on direction but differ substantially in magnitude. The diff changes autotune candidates, adds a loop-alignment hint, and rewrites softmax scaling and output normalization; no individual edit is established as the measured cause.",
+        "changes": [
+          {
+            "category": "autotune_space",
+            "title": "Tile, warp, and stage candidates revised",
+            "why_it_matters": "Different candidates offer different reuse, parallelism, and resource-pressure tradeoffs.",
+            "evidence": "The candidate list grows from six to eight configurations, introduces BLOCK_N=128 and two-warp candidates, and mostly uses three stages. NCU reports registers/thread 248 \u2192 244, occupancy 12.984% \u2192 13.308%, and SM utilization 54.565% \u2192 58.061%.",
+            "fair_note": "Both captures report grid=128 and block=128. The selected configuration is not explicitly supplied, and these resource changes do not isolate an autotuning effect."
+          },
+          {
+            "category": "loop_alignment",
+            "title": "Explicit BLOCK_N alignment hint added",
+            "why_it_matters": "The compiler receives additional information about loop-index alignment, potentially affecting address generation or optimization.",
+            "evidence": "The new inner loop adds `start = tl.multiple_of(start, BLOCK_N)`. Both versions retain a `tl.range` traversal.",
+            "fair_note": "The loop form itself is not newly pipelined. Stage-count changes belong to the candidate configurations, and no generated-code evidence isolates the hint's effect."
+          },
+          {
+            "category": "online_softmax",
+            "title": "Score scaling moved before the row maximum",
+            "why_it_matters": "Moving scaling changes the expression graph used by the stable online-softmax recurrence and may affect scheduling or floating-point behavior.",
+            "evidence": "Previously, raw dot products fed `tl.max(scores) * scale`, while probabilities used `scores * scale`. The new version computes `scores = tl.dot(q, k) * scale` before the maximum and exponentials.",
+            "fair_note": "Online softmax already existed; it was rewritten, not added. The recurrence remains mathematically equivalent for these finite inputs, but no numerical-error results are provided."
+          },
+          {
+            "category": "output_normalization",
+            "title": "Reciprocal multiplication replaced by division",
+            "why_it_matters": "Expression form and explicit conversion can affect lowering and numerical rounding.",
+            "evidence": "`reciprocal = 1.0 / normalizer; result = acc * reciprocal[:, None]` becomes `(acc / l[:, None]).to(O.dtype.element_ty)`.",
+            "fair_note": "Source syntax alone does not establish different machine instructions or a timing contribution."
+          },
+          {
+            "category": "causal_specialization",
+            "title": "Existing causal split receives aligned prefix bounds",
+            "why_it_matters": "Aligning the prefix boundary changes which causal blocks use masking, particularly when tile dimensions differ.",
+            "evidence": "The prefix endpoint changes from `tile * BLOCK_M` to `(query_block * BLOCK_M // BLOCK_N) * BLOCK_N`. Both versions already have unmasked-prefix and masked-diagonal calls.",
+            "fair_note": "CAUSAL=false here, so this branch is inactive and cannot explain this case's hot-loop measurements."
+          },
+          {
+            "category": "masking_and_addressing",
+            "title": "Flagged mask and grid edits are largely nonfunctional here",
+            "why_it_matters": "Separating renaming from substantive changes avoids attributing performance to unsupported mechanisms.",
+            "evidence": "Program IDs and address formulas are unchanged apart from names. Masked-load fallback values change from `0.0` to `0`; both versions already bypass load masks when tile dimensions divide SEQ.",
+            "fair_note": "All listed tile dimensions divide 1024. The diff does not demonstrate new mask elimination or a changed grid mapping."
+          }
+        ],
+        "invariants": [
+          "FP32 accumulation is preserved.",
+          "Autotune keys remain SEQ, HEAD_DIM, BATCH_HEADS, and CAUSAL.",
+          "The kernel_function signature and two-dimensional launch-grid formula are preserved.",
+          "Both retain conditional unmasked stores for divisible sequence lengths and masked fallback stores otherwise."
+        ],
+        "caveats": [
+          "Both sides have usable NCU captures, but profiling does not isolate individual edits.",
+          "NCU durations are substantially below benchmark times; different autotune selections or clocks are possible explanations, not established facts.",
+          "Both profiles remain compute-bound with low occupancy and high register pressure.",
+          "The empty-input early return is removed, but this case is nonempty."
+        ],
+        "takeaway": "rounds_10 has lower measured times in both datasets, with a much smaller relative improvement under NCU. The source offers plausible optimization mechanisms, but the evidence does not identify a particular change as the cause."
+      },
+      "raw_response": null
+    },
+    {
+      "problem": "flash_attention",
+      "from": "rounds_5",
+      "to": "vllm_triton_prefill",
+      "status": "ok",
+      "error": null,
+      "prompt_version": "code-diff-llm-v1",
+      "prompt_sha256": "53418139308b67b318c722447581752c4f76678c9f64874ed48cb95f848a7746",
+      "prompt_chars": 31256,
+      "diff_truncated": false,
+      "response": {
+        "pair_summary": "This compares rounds_5 with an archived vLLM prefill baseline for non-causal FP16 attention at (B,H,S,D)=(2,8,1024,64). Bench reports 0.4374 \u2192 0.0818 ms, but NCU reports 72.624 \u2192 80.74 \u00b5s, reversing the ordering; no fixed-harness win is claimed. The full diff shows changes to tiling, staging, masking, addressing, and softmax expression, not a controlled single-change experiment.",
+        "changes": [
+          {
+            "category": "autotune_space_and_pipelining",
+            "title": "Autotuned configurations replaced by heuristic tiling and one stage",
+            "why_it_matters": "Tile sizes and pipeline depth change reuse, loop work, and register/shared-memory demands. These are plausible mechanisms, not established explanations for the timing difference.",
+            "evidence": "rounds_5 has six configurations with BLOCK_M=32/64/128, BLOCK_N=32/64, four warps, and two or three stages. The baseline uses heuristic BLOCK_M=BLOCK_N, four warps for D=64, and num_stages=1; its heuristic selects 128 on CUDA capability >=8. Both NCU captures report grid=128 and block=128.",
+            "fair_note": "The exact rounds_5 autotune selection is not supplied. NCU registers increase from 248 to 255 per thread, while occupancy increases from 12.984% to 13.894%; neither establishes a staging benefit."
+          },
+          {
+            "category": "masking",
+            "title": "Compile-time mask-free paths replaced by runtime sequence masking",
+            "why_it_matters": "Runtime bounds predicates and score selects can add work compared with compile-time divisibility specialization.",
+            "evidence": "rounds_5 uses SEQ % BLOCK_M/BLOCK_N guards, which resolve to unconditional accesses for this case. The baseline loads sequence lengths from B_Seqlen and predicates Q/K/V loads, score selection, and output stores against them.",
+            "fair_note": "The supplied 'mask-free fast path added' label reverses the direction visible in the full diff. D=64 permits dimension predicates to simplify, but sequence length is runtime metadata in the baseline."
+          },
+          {
+            "category": "grid_addressing",
+            "title": "Direct offsets replaced by metadata-driven sequence addressing",
+            "why_it_matters": "Program mapping and per-program metadata loads change address-generation work and tile traversal.",
+            "evidence": "rounds_5 maps program IDs to query tile and flattened batch/head with base=head*SEQ*HEAD_DIM. The baseline uses batch/head/query-tile axes and loads B_Seqlen and B_Start_Loc; its wrapper flattens B*H into sequences through zero-copy views.",
+            "fair_note": "Both profiled launches contain 128 CTAs with 128 threads each. Metadata tensors are cached after warmup, so their construction is not represented as recurring work in the captured region."
+          },
+          {
+            "category": "online_softmax",
+            "title": "Online recurrence retained, with changed scaling and operation ordering",
+            "why_it_matters": "Scaling placement, accumulator update ordering, and normalization expression affect arithmetic and scheduling while remaining correctness-sensitive.",
+            "evidence": "Both maintain running maxima, normalization sums, and FP32 output accumulators using exp2. The baseline scales qk before its maximum reduction, loads V later in the loop, and ends with acc/l_i; rounds_5 scales the reduced maximum and ends with reciprocal multiplication.",
+            "fair_note": "The recurrence was not removed. Constants also differ in their source representation, and no numerical-error or correctness-test results are supplied."
+          },
+          {
+            "category": "causal_specialization",
+            "title": "Split causal prefix/diagonal replaced by a masked loop",
+            "why_it_matters": "For causal inputs, unmasked-prefix specialization differs from applying causal predicates throughout the bounded loop.",
+            "evidence": "rounds_5 invokes separate unmasked-prefix and masked-diagonal helper passes. The baseline bounds end_n and applies pos_q >= pos_k inside its loop.",
+            "fair_note": "This case is non-causal, so causal specialization cannot explain its hot-loop timing. Sliding-window and sink features are also disabled by this wrapper call."
+          }
+        ],
+        "invariants": [
+          "Same kernel_function(Q, K, V, causal) contract and output shape/dtype.",
+          "FP32 accumulation and tiled online softmax are preserved.",
+          "Both sources support bounds-masked output stores; rounds_5 selects an unconditional store for this divisible case."
+        ],
+        "caveats": [
+          "Both sides have usable NCU captures, but individual-change attribution remains unisolated.",
+          "Reference timings differ: 0.3296 versus 0.0638 ms, so this is not a same-session controlled A/B.",
+          "rounds_5 NCU duration is below its bench duration. Different autotune selections or clock/power conditions are possible explanations, not established facts.",
+          "NCU classifies both kernels as compute-bound with low occupancy and high register pressure."
+        ],
+        "takeaway": "The strongest supported result is disagreement between bench and NCU, not a demonstrated performance win. The source identifies concrete scheduling and masking mechanisms, but does not establish which change explains either timing ordering."
+      },
+      "raw_response": null
+    },
+    {
+      "problem": "flash_attention",
+      "from": "rounds_10",
+      "to": "vllm_triton_prefill",
+      "status": "ok",
+      "error": null,
+      "prompt_version": "code-diff-llm-v1",
+      "prompt_sha256": "c09021195cdf9f8259b5551f6175a843e53083e3efc8331fa939097c443772e1",
+      "prompt_chars": 31116,
+      "diff_truncated": false,
+      "response": {
+        "pair_summary": "This compares rounds_10 with the archived external vllm_triton_prefill baseline for non-causal FP16 attention at (B,H,S,D)=(2,8,1024,64). Bench reports 0.3072 \u2192 0.0818 ms, favoring the external baseline, but usable NCU captures report 68.597 \u2192 80.740 \u00b5s, favoring rounds_10. The measurements disagree on direction, so this pair does not establish a fixed-harness win.",
+        "changes": [
+          {
+            "category": "autotune_space_and_pipelining",
+            "title": "Autotuning replaced by heuristic tiles and one stage",
+            "why_it_matters": "Tile dimensions and pipeline depth alter loop count, operand reuse, overlap, and resource pressure; these are mechanisms, not isolated measured causes.",
+            "evidence": "rounds_10 has eight configurations with two or three stages. The external baseline uses heuristic block sizes, four warps for D=64, and num_stages=1. Both NCU captures report grid=128 and block=128; registers increase from 244 to 255, while occupancy changes from 13.308% to 13.894%.",
+            "fair_note": "The original selected configuration is not explicitly reported. Equal launch counts and thread counts do not establish identical KV tiles or compiled scheduling, and one stage does not prove all compiler overlap is absent."
+          },
+          {
+            "category": "masking",
+            "title": "Compile-time mask elision replaced by runtime sequence checks",
+            "why_it_matters": "Runtime bounds introduce predicates and score selection where the original can use unconditional accesses for divisible dimensions.",
+            "evidence": "rounds_10 guards Q/K/V accesses and output stores with constexpr SEQ divisibility checks; all listed candidate tiles divide 1024. The external kernel loads sequence length from B_Seqlen and predicates Q/K/V, scores, and stores against it.",
+            "fair_note": "The full diff contradicts the supplied 'mask-free fast path added' label: that fast path exists on the original side. D=64 matches the external padded dimension, so dimension predicates may simplify; sequence predicates depend on loaded metadata."
+          },
+          {
+            "category": "grid_addressing",
+            "title": "Direct flattened offsets replaced by metadata-driven addressing",
+            "why_it_matters": "Per-program metadata loads and stride-based addressing support variable-length sequences but add address-construction work and change program ordering.",
+            "evidence": "The original maps query blocks and batch-heads onto two axes with base=batch_head*SEQ*HEAD_DIM. The external wrapper views tensors without copying, folds B*H into sequences, and launches batch/head/query-block axes; each program loads B_Seqlen and B_Start_Loc.",
+            "fair_note": "Metadata tensors are cached after warmup. NCU reports one kernel on each side and the same total grid size, not evidence of extra metadata-construction launches in the captured region."
+          },
+          {
+            "category": "online_softmax",
+            "title": "Online softmax retained with arithmetic and load-order differences",
+            "why_it_matters": "Both kernels rescale running maxima, denominators, and FP32 accumulators; arithmetic details and operand lifetimes can affect numerical behavior and scheduling.",
+            "evidence": "Both use exp2, cast probabilities to FP16, and accumulate probability-value products in FP32. The external kernel loads V later, uses RCP_LN2=1.4426950216 rather than 1.4426950408889634, and uses -1.0e8 for masked scores rather than negative infinity.",
+            "fair_note": "The recurrence is not removed despite the supplied label. No correctness-test result or isolated performance attribution is provided."
+          },
+          {
+            "category": "causal_specialization",
+            "title": "Split causal prefix replaced by per-iteration masking",
+            "why_it_matters": "For causal inputs, the original separates an unmasked prefix from a masked diagonal; the external kernel prunes the loop endpoint and applies causal masking within iterations.",
+            "evidence": "rounds_10 calls _attention_blocks with separate MASK_CAUSAL settings. The external loop checks IS_CAUSAL when forming its mask.",
+            "fair_note": "This case is non-causal, so these causal branches do not explain its timing differences. Sliding windows and sinks are also disabled by this wrapper invocation."
+          }
+        ],
+        "invariants": [
+          "The kernel_function(Q, K, V, causal) interface and output shape/dtype contract are preserved.",
+          "Both implement tiled attention with online softmax and FP32 accumulation.",
+          "Both provide output bounds protection, although the original elides its store mask for this divisible case."
+        ],
+        "caveats": [
+          "Bench reference times differ: 0.354 versus 0.0638 ms; this is not a same-session controlled A/B.",
+          "rounds_10 NCU duration is below its bench time. Different autotune selections or clock/power conditions are possible explanations, not established causes.",
+          "NCU labels both compute-bound with low occupancy and high register pressure; these observations do not isolate individual source changes.",
+          "This is a multi-change source comparison against a more general external baseline."
+        ],
+        "takeaway": "The diff supports concrete masking, addressing, scheduling, and arithmetic mechanisms, but no individual change is established as a measured cause. Conflicting bench and NCU directions prevent a fixed-harness win claim."
+      },
+      "raw_response": null
+    }
+  ],
+  "summary": "LLM commentary for 6 of 6 pairs; 0 failed, 0 analysis-failed, 0 skipped.",
+  "paths": {
+    "markdown": "reports/code-diff-analysis.llm.md",
+    "json": "reports/code-diff-analysis.llm.json"
+  }
+}
