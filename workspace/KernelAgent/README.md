@@ -28,6 +28,9 @@ workspace/KernelAgent/
     experiment-kernels.py  Comparison experiments: run, add capture batches,
                            add external baselines
     report-experiment.py   Render an experiment's Markdown/JSON report
+    diff_analysis.py       Deterministic pairwise kernel-diff analysis used by
+                           the report
+    enrich-code-diffs.py   Optional LLM commentary sidecars for that analysis
     ka_common.py           Helpers the CLIs share (atomic writes, spec loading,
                            the CUDA probe) — imported, not run directly
   results/            KernelAgent sessions, kernels, verification records,
@@ -606,6 +609,12 @@ results/experiments/webinar-v1/
   reports/
     comparison.md                 The rendered comparison report
     comparison.json               The same data, machine-readable
+    code-diff-analysis.md         Deterministic analysis of every pairwise
+    code-diff-analysis.json       kernel diff, with excerpts, mechanism
+                                  text, evidence, and caveats
+    code-diff-analysis.llm.md     Optional LLM commentary sidecars written by
+    code-diff-analysis.llm.json   kernelagent-report-llm (deterministic files
+                                  remain authoritative)
     roofline-<problem>.svg        Generated roofline chart
     source-diffs/                 Pairwise diffs of the archived kernels
 ```
@@ -670,6 +679,66 @@ launches, peaks are duration-weighted, and the `Limiter` column adds
 heuristic occupancy/register notes rather than a second model. The SVG
 is written under `<experiment>/reports/` even when `KA_REPORT_OUT`
 points elsewhere, and the Markdown link follows the report file.
+
+### Code diff analysis
+
+Every report run also writes `reports/code-diff-analysis.md` and
+`reports/code-diff-analysis.json`: a deterministic, offline analysis of
+every pairwise kernel diff (`generated` → each optimized variant, each
+optimized pair, and every variant → external baseline). It mirrors the
+manual slide notes' structure:
+
+- curated `diff` excerpts of the changed regions, with `...` marking
+  omitted lines;
+- a "why it matters" mechanism for each recognized Triton construct
+  (autotune/tile space, mask and predication elision, constexpr strides,
+  pipelining, grid/addressing, causal-loop specialization, grouped CTA
+  order, online-softmax invariants, dtype/math, host launch);
+- a benchmark and NCU evidence table, with the two methodologies kept
+  separate;
+- explicit caveats: "inferred, not measured on both sides" when a variant
+  lacks a usable capture, a fixed-harness/NCU direction conflict, an
+  external baseline's broader generality, and causal-only changes that do
+  not affect a non-causal case;
+- "what did not change" invariants detected on both sides.
+
+The analysis is advisory: a mechanism explains what a change can affect,
+not what caused a measured delta. `-`/`+` in each pair heading name the
+`from`/`to` variants, not worse/better. Optimization budgets that started
+from the same generated source are marked as independent runs, not a
+chain. The report links the analysis from its `## Source diffs` section.
+It is regenerated automatically by `kernelagent-experiment`,
+`kernelagent-experiment-profile`, `kernelagent-experiment-baseline`, and
+`kernelagent-report`; it needs no GPU or LLM.
+
+### LLM diff analysis (optional)
+
+The deterministic analysis can be expanded with model-authored prose:
+
+```bash
+make kernelagent-report-llm KA_EXPERIMENT=webinar-v1 \
+  OPENAI_MODEL=gpt-5.2
+```
+
+This runs `enrich-code-diffs.py` in the KernelAgent container with the
+configured LLM, regenerates the deterministic analysis in memory, and
+writes **sidecar** files:
+
+- `reports/code-diff-analysis.llm.md` — the deterministic report plus a
+  clearly separated LLM commentary block per pair;
+- `reports/code-diff-analysis.llm.json` — per-pair status, prompt hash,
+  and provenance (model, backend, provider, reasoning effort, prompt
+  version, deterministic fingerprint, source hashes).
+
+The deterministic `code-diff-analysis.{md,json}` files are never
+overwritten and remain authoritative. The command does not modify the
+manifest, kernels, records, or experiment status. It makes one model call
+per pair (12 pairs in the checked-in experiments); the standalone CLI
+accepts `--max-pairs N` for cost control. A pair that fails is recorded as
+an error and the rest continue, producing a `partial` sidecar and exit
+code 1. A missing model or credential fails before anything is written.
+If a capture batch changes, re-run the target so the sidecar's
+fingerprint matches the current deterministic report.
 
 ### Additional capture batches
 
@@ -824,7 +893,11 @@ From there the baseline flows through the rest of the workflow for
 free: `kernelagent-experiment-profile` captures it alongside the
 variants, and the report renders it as a row marked
 *(external baseline)* with its benchmark numbers, its source path, and
-source diffs against every other kernel in the experiment.
+source diffs against every other kernel in the experiment. The generated
+code-diff analysis compares it with the other variants and adds a
+fairness note when the external kernel supports features (variable
+sequence lengths, GQA, sliding windows, sinks) that the specialized
+kernel does not.
 
 The same kernel can be inspected outside any experiment:
 

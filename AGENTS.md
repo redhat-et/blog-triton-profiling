@@ -31,9 +31,11 @@ Validate changes by running the demo:
   `make kernelagent-*` target.
 - LLM-free targets: `kernelagent-verify`, `kernelagent-profile*`,
   `kernelagent-experiment-profile`, `kernelagent-experiment-baseline`,
-  `kernelagent-report`.
-- LLM/GPU targets: `kernelagent-test OPENAI_MODEL=...`, then generation,
-  verification, optimization, and profiling.
+  `kernelagent-report` (which also regenerates the deterministic code-diff
+  analysis).
+- LLM targets: `kernelagent-test OPENAI_MODEL=...`, then generation,
+  verification, optimization, profiling, and the optional
+  `kernelagent-report-llm OPENAI_MODEL=...`.
 
 A host-side developer test suite was deliberately removed. Do not restore it:
 `containerfiles/test_entrypoint_cuda.py`,
@@ -139,7 +141,16 @@ Never move prompt text into documentation or AGENTS.md.
   untouched. Results use atomic writes and a per-problem lock, so shared
   summaries always describe the kernel on disk.
 - `report-experiment.py` must remain host-side standard-library-only.
-  Experiment and report CLIs must not import torch or triton at module level.
+  `diff_analysis.py` is part of that offline report path and is
+  standard-library-only too. Experiment and report CLIs must not import torch
+  or triton at module level.
+- The deterministic code-diff analysis is advisory: it explains mechanisms a
+  change can affect, never asserts that a mechanism caused a measured delta,
+  and keeps benchmark and profiler evidence separate. It must not alter
+  kernels, records, acceptance, or the manifest.
+- `enrich-code-diffs.py` writes only the `.llm.md`/`.llm.json` sidecars. It
+  never overwrites the deterministic analysis and never mutates experiment
+  state; a failed pair is recorded and the run continues.
 
 ## Configuration and environment
 
@@ -173,6 +184,9 @@ Never move prompt text into documentation or AGENTS.md.
 - Do not hand-edit `containerfiles/kernelagent/requirements.lock`.
 - Do not casually edit `problem.txt`, `test_fixed.py`, `bench.py`, or `spec.py`;
   they define the runtime acceptance contract.
+- Do not hand-edit `reports/code-diff-analysis.{md,json}` or their
+  `.llm.{md,json}` sidecars; regenerate them with `kernelagent-report` or
+  `kernelagent-report-llm`.
 - Do not move runtime prompts into docs or this file.
 
 ## Documentation rules

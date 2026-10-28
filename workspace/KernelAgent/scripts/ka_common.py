@@ -1,11 +1,11 @@
 """Helpers shared by the KernelAgent CLIs.
 
-The four CLIs (generate-kernel.py, profile-kernel.py,
-experiment-kernels.py, report-experiment.py) ship together in one
-directory — workspace/KernelAgent/scripts/ in the repository,
-/usr/local/bin in the image — so a plain ``import ka_common`` resolves
-via sys.path[0] in every real invocation. They previously duplicated
-these helpers with drifting semantics (two _atomic_write_json
+The CLIs (generate-kernel.py, profile-kernel.py,
+experiment-kernels.py, report-experiment.py, enrich-code-diffs.py)
+ship together in one directory — workspace/KernelAgent/scripts/ in the
+repository, /usr/local/bin in the image — so a plain ``import ka_common``
+resolves via sys.path[0] in every real invocation. They previously
+duplicated these helpers with drifting semantics (two _atomic_write_json
 implementations that differed on mode preservation and parent creation,
 two CUDA probe scripts kept in sync by comment only); this module holds
 the superset implementation of each, parameterized where a caller's

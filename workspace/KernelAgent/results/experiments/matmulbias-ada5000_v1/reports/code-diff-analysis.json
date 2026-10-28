@@ -1,0 +1,1649 @@
+{
+  "schema_version": 1,
+  "experiment_id": "matmulbias-ada5000_v1",
+  "generated_at": "2026-10-28T17:19:40.569925",
+  "capture_selection": {
+    "capture_batch": {
+      "capture_id": "capture_20261026_153544_0129",
+      "created_at": "2026-10-26T15:35:44.653910",
+      "profilers": [
+        "ncu"
+      ],
+      "iters": {
+        "default": 10
+      },
+      "warmup": 10,
+      "ncu_set": "full",
+      "status": "completed"
+    },
+    "capture_merge": {
+      "mode": "latest-per-profiler",
+      "capture_ids": [
+        "capture_20261026_143346_e551",
+        "capture_20261026_153544_0129"
+      ],
+      "profiler_batches": {
+        "ncu": [
+          "capture_20261026_143346_e551",
+          "capture_20261026_153544_0129"
+        ]
+      }
+    }
+  },
+  "fingerprint": "sha256:b7190918fcd2d4d16905ac0a3d5e11aed8710acc079c98b3cfe9263e02368527",
+  "coverage": {
+    "variants_total": 4,
+    "variants_with_source": 4,
+    "pairs_expected": 6,
+    "pairs_analyzed": 6,
+    "skipped": []
+  },
+  "problems": [
+    {
+      "problem": "matmul_bias",
+      "case": 0,
+      "case_spec": "(1024, 1024, 1024, 'float16')",
+      "case_context": {
+        "case_spec": "(1024, 1024, 1024, 'float16')",
+        "fields": {
+          "M": 1024,
+          "N": 1024,
+          "K": 1024,
+          "dtype": "float16"
+        },
+        "integer_fields": {
+          "M": 1024,
+          "N": 1024,
+          "K": 1024
+        },
+        "causal": null,
+        "tiles": {
+          "BK": [
+            64,
+            128
+          ],
+          "BLOCK_K": [
+            32,
+            64
+          ],
+          "BLOCK_M": [
+            32,
+            64,
+            128
+          ],
+          "BLOCK_N": [
+            64,
+            128
+          ],
+          "BM": [
+            128
+          ],
+          "BN": [
+            128,
+            256
+          ]
+        },
+        "divisibility": [
+          {
+            "symbol": "K",
+            "dim": 1024,
+            "tile_symbol": "BLOCK_K",
+            "tile_values": [
+              32,
+              64
+            ],
+            "all_divide": true
+          },
+          {
+            "symbol": "M",
+            "dim": 1024,
+            "tile_symbol": "BLOCK_M",
+            "tile_values": [
+              32,
+              64,
+              128
+            ],
+            "all_divide": true
+          },
+          {
+            "symbol": "N",
+            "dim": 1024,
+            "tile_symbol": "BLOCK_N",
+            "tile_values": [
+              64,
+              128
+            ],
+            "all_divide": true
+          }
+        ]
+      },
+      "siblings": [
+        {
+          "source_kernel_sha256": "5ba2fb340021645983fbd0519bd2c31b1829979724947b7f27b005b98da9f3bd",
+          "variants": [
+            "rounds_5",
+            "rounds_10"
+          ]
+        }
+      ],
+      "pairs": [
+        {
+          "problem": "matmul_bias",
+          "from": "generated",
+          "to": "rounds_5",
+          "from_role": "internal",
+          "to_role": "internal",
+          "diff_path": "reports/source-diffs/matmul_bias__generated_to_rounds_5.diff",
+          "diff_link": "source-diffs/matmul_bias__generated_to_rounds_5.diff",
+          "source": {
+            "from": {
+              "path": "problems/matmul_bias/generated/matmul_bias/final_kernel.py",
+              "sha256": "5ba2fb340021645983fbd0519bd2c31b1829979724947b7f27b005b98da9f3bd",
+              "link": "../problems/matmul_bias/generated/matmul_bias/final_kernel.py"
+            },
+            "to": {
+              "path": "problems/matmul_bias/case_0/rounds_5/matmul_bias/optimized_kernel.py",
+              "sha256": "e71fe54ed298b313df7d04c170a5ac2c8c4acc9ff7559be753704e006216fa5d",
+              "link": "../problems/matmul_bias/case_0/rounds_5/matmul_bias/optimized_kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 58,
+            "added": 102
+          },
+          "external": {
+            "from": false,
+            "to": false,
+            "source_path": null
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.0404,
+              "to_ms": 0.0253,
+              "from_tflops": 53.1,
+              "to_tflops": 85.05,
+              "from_ref_ms": 0.0262,
+              "to_ref_ms": 0.0241,
+              "ratio_from_over_to": 1.5968379446640315,
+              "delta_pct": -37.37623762376238,
+              "faster_side": "to",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_matmul_bias_kernel",
+                "duration_avg_us": 53.15599999999999,
+                "sm_pct": 38.158,
+                "mem_pct": 69.74,
+                "dram_pct": 14.9,
+                "occupancy_pct": 53.983000000000004,
+                "regs": 53.0,
+                "tflops": 40.400255252543495,
+                "sol_pct": 69.74,
+                "bound": "memory",
+                "limiter": "memory hierarchy (69.7%); cache-level pressure (DRAM 14.9%)",
+                "grid": 512.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_matmul_bias_kernel",
+                "duration_avg_us": 35.613,
+                "sm_pct": 57.470000000000006,
+                "mem_pct": 53.678999999999995,
+                "dram_pct": 22.131,
+                "occupancy_pct": 14.208000000000002,
+                "regs": 150.0,
+                "tflops": 60.30089316200917,
+                "sol_pct": 57.470000000000006,
+                "bound": "compute",
+                "limiter": "tensor pipelines (57.5%); low occupancy (14.2%); register pressure (150/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 1.4926010164827448,
+              "delta_pct": -33.00285950786363,
+              "faster_side": "to",
+              "material": true,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_matmul_bias_kernel",
+                "to": "_matmul_bias_kernel"
+              }
+            },
+            "methodology_conflict": null,
+            "ncu_below_fixed_harness": [],
+            "caveats": []
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 35,
+                "from_end": 35,
+                "to_start": 72,
+                "to_end": 92
+              },
+              "excerpt": "+    for block in range(tl.cdiv(K, BLOCK_K)):\n+        if M % BLOCK_M == 0 and K % BLOCK_K == 0:\n+            a = tl.load(a_ptrs)\n+        else:\n+            a = tl.load(\n+                a_ptrs,\n+                mask=(rows[:, None] < M)\n+                & (block * BLOCK_K + ks[None, :] < K),\n+                other=0,\n+            )\n+\n+        if N % BLOCK_N == 0 and K % BLOCK_K == 0:\n+            b = tl.load(b_ptrs)\n+        else:\n+            b = tl.load(\n+                b_ptrs,\n+                mask=(block * BLOCK_K + ks[:, None] < K)\n+                & (cols[None, :] < N),\n+                other=0,\n+            )",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space expanded or changed",
+              "direction": "to_adds",
+              "matched_categories": [
+                "autotune_space",
+                "pipelining"
+              ],
+              "line_ranges": {
+                "from_start": 5,
+                "from_end": 5,
+                "to_start": 5,
+                "to_end": 34
+              },
+              "excerpt": " import triton.language as tl\n \n \n+@triton.autotune(\n+    configs=[\n+        triton.Config(\n+            {\"BLOCK_M\": 64, \"BLOCK_N\": 64, \"BLOCK_K\": 32},\n+            num_warps=4, num_stages=3,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 64, \"BLOCK_N\": 64, \"BLOCK_K\": 64},\n+            num_warps=4, num_stages=4,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 64, \"BLOCK_N\": 128, \"BLOCK_K\": 32},\n... 5 changed lines omitted ...\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 128, \"BLOCK_N\": 64, \"BLOCK_K\": 32},\n+            num_warps=4, num_stages=4,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 128, \"BLOCK_N\": 128, \"BLOCK_K\": 32},\n+            num_warps=8, num_stages=3,\n+        ),\n+    ],\n+    key=[\"M\", \"N\", \"K\"],\n+)\n @triton.jit\n def _matmul_bias_kernel(",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "grouped_swizzle",
+              "priority": 8,
+              "title": "Grouped CTA order \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "grid_addressing",
+                "grouped_swizzle"
+              ],
+              "line_ranges": {
+                "from_start": 25,
+                "from_end": 28,
+                "to_start": 52,
+                "to_end": 62
+              },
+              "excerpt": "     BLOCK_N: tl.constexpr,\n     BLOCK_K: tl.constexpr,\n ):\n-    \"\"\"Compute one output tile of A @ B + bias, accumulating in fp32.\"\"\"\n-    pid_m = tl.program_id(0)\n-    pid_n = tl.program_id(1)\n+    pid = tl.program_id(0)\n+    num_m = tl.cdiv(M, BLOCK_M)\n+    num_n = tl.cdiv(N, BLOCK_N)\n+    group_size = 8 * num_n\n+    group_id = pid // group_size\n+    first_m = group_id * 8\n+    group_m = tl.minimum(num_m - first_m, 8)\n+    local_pid = pid % group_size\n+    pid_m = first_m + local_pid % group_m\n+    pid_n = local_pid // group_m\n \n     rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)\n     cols = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)",
+              "why_it_matters": "Grouped CTA ordering changes which output tiles run concurrently. This is an L2-reuse heuristic for the A/B panels, not an arithmetic change.",
+              "repeated_from": null
+            },
+            {
+              "category": "constexpr_addressing",
+              "priority": 7,
+              "title": "Compile-time strides and index arithmetic \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 14,
+                "from_end": 21,
+                "to_start": 43,
+                "to_end": 48
+              },
+              "excerpt": "     M: tl.constexpr,\n     N: tl.constexpr,\n     K: tl.constexpr,\n-    stride_am,\n-    stride_ak,\n-    stride_bk,\n-    stride_bn,\n-    stride_bias,\n-    stride_om,\n-    stride_on,\n+    STRIDE_AM: tl.constexpr,\n+    STRIDE_AK: tl.constexpr,\n+    STRIDE_BK: tl.constexpr,\n+    STRIDE_BN: tl.constexpr,\n+    STRIDE_BIAS: tl.constexpr,\n     BLOCK_M: tl.constexpr,\n     BLOCK_N: tl.constexpr,\n     BLOCK_K: tl.constexpr,",
+              "why_it_matters": "Runtime dimensions/strides become `tl.constexpr` and/or modulo wrapping is removed. Compile-time constants let Triton fold address arithmetic, remove integer divide/modulo from every element's index path, and prove alignment.",
+              "repeated_from": null
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "grid_addressing",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 76,
+                "from_end": 80,
+                "to_start": 123,
+                "to_end": 130
+              },
+              "excerpt": " \n     output = torch.empty((M, N), device=A.device, dtype=A.dtype)\n-\n-    block_m, block_n, block_k = 32, 64, 32\n-    grid = (triton.cdiv(M, block_m), triton.cdiv(N, block_n))\n-\n+    if M == 0 or N == 0:\n+        return output\n+\n+    grid = lambda meta: (\n+        triton.cdiv(M, meta[\"BLOCK_M\"])\n+        * triton.cdiv(N, meta[\"BLOCK_N\"]),\n+    )\n     _matmul_bias_kernel[grid](\n         A,\n         B,",
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": null
+            },
+            {
+              "category": "dtype_math",
+              "priority": 5,
+              "title": "Dtype and math path \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "dtype_math",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 66,
+                "from_end": 68,
+                "to_start": 113,
+                "to_end": 119
+              },
+              "excerpt": "     M, K = A.shape\n     K_b, N = B.shape\n-    if K != K_b or bias.numel() != N:\n-        raise ValueError(\"Incompatible matrix or bias dimensions\")\n+    if K != K_b or bias.ndim != 1 or bias.numel() != N:\n+        raise ValueError(\"Incompatible matrix or bias dimensions\")\n+    if A.dtype not in (torch.float16, torch.bfloat16):\n+        raise TypeError(\"Only float16 and bfloat16 inputs are supported\")\n+    if A.dtype != B.dtype or A.dtype != bias.dtype:\n+        raise ValueError(\"All inputs must have the same dtype\")\n     if A.device != B.device or A.device != bias.device:\n         raise ValueError(\"All inputs must be on the same device\")",
+              "why_it_matters": "Dtype conversion points or math functions change. fp32 accumulation and fewer conversions trade precision against conversion/instruction cost; `exp2` avoids a base conversion.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 34,
+              "to_line": 71
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 57,
+              "to_line": 104
+            }
+          ],
+          "caveats": [],
+          "takeaway": "Detected mask_elision, autotune_space, grouped_swizzle, constexpr_addressing, grid_addressing, dtype_math; fixed harness 0.040 \u2192 0.025 ms; NCU 53.156 \u2192 35.613 \u00b5s.",
+          "error": null
+        },
+        {
+          "problem": "matmul_bias",
+          "from": "generated",
+          "to": "rounds_10",
+          "from_role": "internal",
+          "to_role": "internal",
+          "diff_path": "reports/source-diffs/matmul_bias__generated_to_rounds_10.diff",
+          "diff_link": "source-diffs/matmul_bias__generated_to_rounds_10.diff",
+          "source": {
+            "from": {
+              "path": "problems/matmul_bias/generated/matmul_bias/final_kernel.py",
+              "sha256": "5ba2fb340021645983fbd0519bd2c31b1829979724947b7f27b005b98da9f3bd",
+              "link": "../problems/matmul_bias/generated/matmul_bias/final_kernel.py"
+            },
+            "to": {
+              "path": "problems/matmul_bias/case_0/rounds_10/matmul_bias/optimized_kernel.py",
+              "sha256": "30091c7800b195aad30d239dc78dfe0a2b25d7c31fe690b3f0ec9f03fc495a84",
+              "link": "../problems/matmul_bias/case_0/rounds_10/matmul_bias/optimized_kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 63,
+            "added": 118
+          },
+          "external": {
+            "from": false,
+            "to": false,
+            "source_path": null
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.0404,
+              "to_ms": 0.0249,
+              "from_tflops": 53.1,
+              "to_tflops": 86.09,
+              "from_ref_ms": 0.0262,
+              "to_ref_ms": 0.0243,
+              "ratio_from_over_to": 1.6224899598393574,
+              "delta_pct": -38.366336633663366,
+              "faster_side": "to",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_matmul_bias_kernel",
+                "duration_avg_us": 53.15599999999999,
+                "sm_pct": 38.158,
+                "mem_pct": 69.74,
+                "dram_pct": 14.9,
+                "occupancy_pct": 53.983000000000004,
+                "regs": 53.0,
+                "tflops": 40.400255252543495,
+                "sol_pct": 69.74,
+                "bound": "memory",
+                "limiter": "memory hierarchy (69.7%); cache-level pressure (DRAM 14.9%)",
+                "grid": 512.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_matmul_bias_kernel",
+                "duration_avg_us": 35.589999999999996,
+                "sm_pct": 57.547000000000004,
+                "mem_pct": 53.720000000000006,
+                "dram_pct": 21.779,
+                "occupancy_pct": 14.225999999999999,
+                "regs": 150.0,
+                "tflops": 60.338845531379256,
+                "sol_pct": 57.547000000000004,
+                "bound": "compute",
+                "limiter": "tensor pipelines (57.5%); low occupancy (14.2%); register pressure (150/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 1.4935656083169428,
+              "delta_pct": -33.046128376853034,
+              "faster_side": "to",
+              "material": true,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_matmul_bias_kernel",
+                "to": "_matmul_bias_kernel"
+              }
+            },
+            "methodology_conflict": null,
+            "ncu_below_fixed_harness": [],
+            "caveats": []
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "constexpr_addressing",
+                "dtype_math",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 31,
+                "from_end": 31,
+                "to_start": 75,
+                "to_end": 95
+              },
+              "excerpt": "+    ks = tl.arange(0, BLOCK_K)\n+\n+    a_ptrs = A + rows[:, None] * STRIDE_AM + ks[None, :] * STRIDE_AK\n+    b_ptrs = B + ks[:, None] * STRIDE_BK + cols[None, :] * STRIDE_BN\n+\n+    acc = tl.zeros((BLOCK_M, BLOCK_N), tl.float32)\n+\n+    for block in range(tl.cdiv(K, BLOCK_K)):\n+        if M % BLOCK_M == 0 and K % BLOCK_K == 0:\n+            a = tl.load(a_ptrs)\n+        else:\n+            a = tl.load(\n+                a_ptrs,\n+                mask=(rows[:, None] < M)\n+                & (block * BLOCK_K + ks[None, :] < K),\n+                other=0.0,\n+            )\n+\n+        if N % BLOCK_N == 0 and K % BLOCK_K == 0:\n+            b = tl.load(b_ptrs)",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space expanded or changed",
+              "direction": "to_adds",
+              "matched_categories": [
+                "autotune_space",
+                "pipelining"
+              ],
+              "line_ranges": {
+                "from_start": 5,
+                "from_end": 5,
+                "to_start": 5,
+                "to_end": 42
+              },
+              "excerpt": " import triton.language as tl\n \n \n+@triton.autotune(\n+    configs=[\n+        triton.Config(\n+            {\"BLOCK_M\": 32, \"BLOCK_N\": 64, \"BLOCK_K\": 32},\n+            num_warps=4, num_stages=3,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 32, \"BLOCK_N\": 64, \"BLOCK_K\": 64},\n+            num_warps=4, num_stages=3,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 32, \"BLOCK_N\": 64, \"BLOCK_K\": 64},\n... 13 changed lines omitted ...\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 64, \"BLOCK_N\": 128, \"BLOCK_K\": 64},\n+            num_warps=4, num_stages=3,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 64, \"BLOCK_N\": 128, \"BLOCK_K\": 64},\n+            num_warps=8, num_stages=3,\n+        ),\n+    ],\n+    key=[\"M\", \"N\", \"K\"],\n+)\n @triton.jit\n def _matmul_bias_kernel(",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "grouped_swizzle",
+              "priority": 8,
+              "title": "Grouped CTA order \u2014 added in `to`",
+              "direction": "to_adds",
+              "matched_categories": [
+                "grid_addressing",
+                "constexpr_addressing",
+                "grouped_swizzle"
+              ],
+              "line_ranges": {
+                "from_start": 25,
+                "from_end": 28,
+                "to_start": 60,
+                "to_end": 72
+              },
+              "excerpt": "     BLOCK_N: tl.constexpr,\n     BLOCK_K: tl.constexpr,\n ):\n-    \"\"\"Compute one output tile of A @ B + bias, accumulating in fp32.\"\"\"\n-    pid_m = tl.program_id(0)\n-    pid_n = tl.program_id(1)\n+    pid = tl.program_id(0)\n+    num_m = tl.cdiv(M, BLOCK_M)\n+    num_n = tl.cdiv(N, BLOCK_N)\n+\n+    group_size: tl.constexpr = 8\n+    group_width = group_size * num_n\n+    group_id = pid // group_width\n+    first_m = group_id * group_size\n+    active_m = tl.minimum(num_m - first_m, group_size)\n+    local_pid = pid % group_width\n+    pid_m = first_m + local_pid % active_m\n+    pid_n = local_pid // active_m\n \n     rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)\n     cols = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)",
+              "why_it_matters": "Grouped CTA ordering changes which output tiles run concurrently. This is an L2-reuse heuristic for the A/B panels, not an arithmetic change.",
+              "repeated_from": null
+            },
+            {
+              "category": "constexpr_addressing",
+              "priority": 7,
+              "title": "Compile-time strides and index arithmetic \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 14,
+                "from_end": 21,
+                "to_start": 51,
+                "to_end": 56
+              },
+              "excerpt": null,
+              "why_it_matters": "Runtime dimensions/strides become `tl.constexpr` and/or modulo wrapping is removed. Compile-time constants let Triton fold address arithmetic, remove integer divide/modulo from every element's index path, and prove alignment.",
+              "repeated_from": "`generated` \u2192 `rounds_5`"
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "grid_addressing",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 76,
+                "from_end": 80,
+                "to_start": 134,
+                "to_end": 141
+              },
+              "excerpt": null,
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": "`generated` \u2192 `rounds_5`"
+            },
+            {
+              "category": "dtype_math",
+              "priority": 5,
+              "title": "Dtype and math path \u2014 changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "dtype_math",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 66,
+                "from_end": 74,
+                "to_start": 124,
+                "to_end": 132
+              },
+              "excerpt": "     M, K = A.shape\n     K_b, N = B.shape\n-    if K != K_b or bias.numel() != N:\n-        raise ValueError(\"Incompatible matrix or bias dimensions\")\n-    if A.device != B.device or A.device != bias.device:\n-        raise ValueError(\"All inputs must be on the same device\")\n-    if A.dtype != B.dtype or A.dtype != bias.dtype:\n-        raise ValueError(\"All inputs must have the same dtype\")\n-    if A.dtype not in (torch.float16, torch.bfloat16):\n-        raise TypeError(\"Only float16 and bfloat16 inputs are supported\")\n+    if K != K_b or bias.ndim != 1 or bias.numel() != N:\n+        raise ValueError(\"Incompatible input shapes\")\n+    if A.dtype not in (torch.float16, torch.bfloat16):\n+        raise TypeError(\"Expected float16 or bfloat16 inputs\")\n+    if B.dtype != A.dtype or bias.dtype != A.dtype:\n+        raise TypeError(\"Input dtypes must match\")\n+    if A.device != B.device or A.device != bias.device:\n+        raise ValueError(\"Input devices must match\")\n \n     output = torch.empty((M, N), device=A.device, dtype=A.dtype)",
+              "why_it_matters": "Dtype conversion points or math functions change. fp32 accumulation and fewer conversions trade precision against conversion/instruction cost; `exp2` avoids a base conversion.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 34,
+              "to_line": 81
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 57,
+              "to_line": 115
+            }
+          ],
+          "caveats": [],
+          "takeaway": "Detected mask_elision, autotune_space, grouped_swizzle, constexpr_addressing, grid_addressing, dtype_math; fixed harness 0.040 \u2192 0.025 ms; NCU 53.156 \u2192 35.590 \u00b5s.",
+          "error": null
+        },
+        {
+          "problem": "matmul_bias",
+          "from": "generated",
+          "to": "rocm_blog_fusion",
+          "from_role": "internal",
+          "to_role": "external",
+          "diff_path": "reports/source-diffs/matmul_bias__generated_to_rocm_blog_fusion.diff",
+          "diff_link": "source-diffs/matmul_bias__generated_to_rocm_blog_fusion.diff",
+          "source": {
+            "from": {
+              "path": "problems/matmul_bias/generated/matmul_bias/final_kernel.py",
+              "sha256": "5ba2fb340021645983fbd0519bd2c31b1829979724947b7f27b005b98da9f3bd",
+              "link": "../problems/matmul_bias/generated/matmul_bias/final_kernel.py"
+            },
+            "to": {
+              "path": "problems/matmul_bias/baselines/rocm_blog_fusion/matmul_bias/kernel.py",
+              "sha256": "ef1f4165e29f73e060cfa8d140d72416fd335d428ac524c26fc81d5fff585b22",
+              "link": "../problems/matmul_bias/baselines/rocm_blog_fusion/matmul_bias/kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 95,
+            "added": 132
+          },
+          "external": {
+            "from": false,
+            "to": true,
+            "source_path": "matmul_bias/baselines/rocm_blog_fusion.py"
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.0404,
+              "to_ms": 0.0429,
+              "from_tflops": 53.1,
+              "to_tflops": 50.1,
+              "from_ref_ms": 0.0262,
+              "to_ref_ms": 0.1819,
+              "ratio_from_over_to": 0.9417249417249417,
+              "delta_pct": 6.188118811881194,
+              "faster_side": "from",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_matmul_bias_kernel",
+                "duration_avg_us": 53.15599999999999,
+                "sm_pct": 38.158,
+                "mem_pct": 69.74,
+                "dram_pct": 14.9,
+                "occupancy_pct": 53.983000000000004,
+                "regs": 53.0,
+                "tflops": 40.400255252543495,
+                "sol_pct": 69.74,
+                "bound": "memory",
+                "limiter": "memory hierarchy (69.7%); cache-level pressure (DRAM 14.9%)",
+                "grid": 512.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "matmulbias_kernel",
+                "duration_avg_us": 34.956,
+                "sm_pct": 59.414,
+                "mem_pct": 38.108,
+                "dram_pct": 24.226999999999997,
+                "occupancy_pct": 8.317,
+                "regs": 255.0,
+                "tflops": 61.4325009154156,
+                "sol_pct": 59.414,
+                "bound": "compute",
+                "limiter": "tensor pipelines (59.4%); low occupancy (8.3%); register pressure (255/thread)",
+                "grid": 64.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 1.5206545371323947,
+              "delta_pct": -34.238844156821415,
+              "faster_side": "to",
+              "material": true,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_matmul_bias_kernel",
+                "to": "matmulbias_kernel"
+              }
+            },
+            "methodology_conflict": {
+              "bench_faster_side": "from",
+              "ncu_faster_side": "to"
+            },
+            "ncu_below_fixed_harness": [
+              "rocm_blog_fusion"
+            ],
+            "caveats": [
+              "The PyTorch reference times differ between the two records (0.026 ms vs 0.182 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+              "The fixed harness and NCU disagree on direction. NCU locks clocks at or below boost, so its duration should be greater than or equal to the fixed-harness time; this pattern is most plausibly a different autotune configuration or a clock/power difference. Use NCU for code-level attribution and do not claim a fixed-harness win for this pair.",
+              "NCU duration is below the fixed-harness time for `rocm_blog_fusion`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks.",
+              "`rocm_blog_fusion` is an archived external baseline (`matmul_bias/baselines/rocm_blog_fusion.py`). This is a source comparison, not a controlled one-change A/B."
+            ]
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path removed",
+              "direction": "to_removes",
+              "matched_categories": [
+                "mask_elision",
+                "constexpr_addressing",
+                "grouped_swizzle",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 28,
+                "from_end": 49,
+                "to_start": 31,
+                "to_end": 31
+              },
+              "excerpt": "-\n-    rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)\n-    cols = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)\n-    offs_k = tl.arange(0, BLOCK_K)\n-\n-    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)\n-\n-    for k_start in range(0, K, BLOCK_K):\n-        k = k_start + offs_k\n-\n-        a = tl.load(\n-            a_ptr + rows[:, None] * stride_am + k[None, :] * stride_ak,\n-            mask=(rows[:, None] < M) & (k[None, :] < K),\n-            other=0.0,\n-        )\n-        b = tl.load(\n-            b_ptr + k[:, None] * stride_bk + cols[None, :] * stride_bn,\n-            mask=(k[:, None] < K) & (cols[None, :] < N),\n-            other=0.0,\n-        )\n-        acc = tl.dot(a, b, acc)",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary.",
+              "repeated_from": null
+            },
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path removed",
+              "direction": "to_removes",
+              "matched_categories": [
+                "mask_elision",
+                "constexpr_addressing"
+              ],
+              "line_ranges": {
+                "from_start": 49,
+                "from_end": 57,
+                "to_start": 31,
+                "to_end": 31
+              },
+              "excerpt": "-\n-    # Fuse the bias addition into the matmul epilogue.\n-    bias = tl.load(bias_ptr + cols * stride_bias, mask=cols < N, other=0.0)\n-    result = acc + bias[None, :]\n-\n-    out_ptrs = out_ptr + rows[:, None] * stride_om + cols[None, :] * stride_on\n-    out_mask = (rows[:, None] < M) & (cols[None, :] < N)\n-    tl.store(out_ptrs, result, mask=out_mask)",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space expanded or changed",
+              "direction": "to_adds",
+              "matched_categories": [
+                "autotune_space",
+                "grid_addressing",
+                "constexpr_addressing",
+                "grouped_swizzle",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 59,
+                "from_end": 59,
+                "to_start": 46,
+                "to_end": 83
+              },
+              "excerpt": "+def matmul_autotune_config(pre_hook=None):\n+    return [\n+        triton.Config({'BLOCK_SIZE_M': BM, 'BLOCK_SIZE_N': BN, \"BLOCK_SIZE_K\": BK, \"GROUP_SIZE_M\": 8}, num_stages=s,\n+            num_warps=w, pre_hook=pre_hook)\n+        for BM in [128]\n+        for BN in [128, 256]\n+        for BK in [64, 128]\n+        for s in ([3, 4, 5])\n+        for w in [4, 8]\n+    ]\n+\n+\n... 13 changed lines omitted ...\n+        BLOCK_SIZE_M: tl.constexpr, BLOCK_SIZE_N: tl.constexpr, BLOCK_SIZE_K: tl.constexpr,\n+        GROUP_SIZE_M: tl.constexpr\n+):\n+    pid = tl.program_id(axis=0)\n+    num_pid_m = tl.cdiv(M, BLOCK_SIZE_M)\n+    num_pid_n = tl.cdiv(N, BLOCK_SIZE_N)\n+    num_pid_in_group = GROUP_SIZE_M * num_pid_n\n+    group_id = pid // num_pid_in_group\n+    first_pid_m = group_id * GROUP_SIZE_M\n+    group_size_m = min(num_pid_m - first_pid_m, GROUP_SIZE_M)\n+    pid_m = first_pid_m + ((pid % num_pid_in_group) % group_size_m)\n+    pid_n = (pid % num_pid_in_group) // group_size_m",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "grouped_swizzle",
+              "priority": 8,
+              "title": "Grouped CTA order \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "grid_addressing",
+                "constexpr_addressing",
+                "grouped_swizzle",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 5,
+                "from_end": 28,
+                "to_start": 31,
+                "to_end": 31
+              },
+              "excerpt": "-@triton.jit\n-def _matmul_bias_kernel(\n-    a_ptr,\n-    b_ptr,\n-    bias_ptr,\n-    out_ptr,\n-    M: tl.constexpr,\n-    N: tl.constexpr,\n-    K: tl.constexpr,\n-    stride_am,\n-    stride_ak,\n-    stride_bk,\n-    stride_bn,\n-    stride_bias,\n-    stride_om,\n-    stride_on,\n-    BLOCK_M: tl.constexpr,\n-    BLOCK_N: tl.constexpr,\n-    BLOCK_K: tl.constexpr,\n-):\n-    \"\"\"Compute one output tile of A @ B + bias, accumulating in fp32.\"\"\"\n-    pid_m = tl.program_id(0)\n-    pid_n = tl.program_id(1)",
+              "why_it_matters": "Grouped CTA ordering changes which output tiles run concurrently. This is an L2-reuse heuristic for the A/B panels, not an arithmetic change.",
+              "repeated_from": null
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "grid_addressing",
+                "dtype_math",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 59,
+                "from_end": 79,
+                "to_start": 46,
+                "to_end": 46
+              },
+              "excerpt": "-def kernel_function(A: torch.Tensor, B: torch.Tensor, bias: torch.Tensor) -> torch.Tensor:\n-    \"\"\"Return A @ B + bias, fusing matrix multiplication and bias addition.\"\"\"\n-    if A.ndim != 2 or B.ndim != 2 or bias.ndim != 1:\n-        raise ValueError(\"Expected A and B to be matrices and bias to be a vector\")\n-\n-    M, K = A.shape\n-    K_b, N = B.shape\n-    if K != K_b or bias.numel() != N:\n-        raise ValueError(\"Incompatible matrix or bias dimensions\")\n-    if A.device != B.device or A.device != bias.device:\n-        raise ValueError(\"All inputs must be on the same device\")\n-    if A.dtype != B.dtype or A.dtype != bias.dtype:\n-        raise ValueError(\"All inputs must have the same dtype\")\n-    if A.dtype not in (torch.float16, torch.bfloat16):\n-        raise TypeError(\"Only float16 and bfloat16 inputs are supported\")\n-\n-    output = torch.empty((M, N), device=A.device, dtype=A.dtype)\n-\n-    block_m, block_n, block_k = 32, 64, 32\n-    grid = (triton.cdiv(M, block_m), triton.cdiv(N, block_n))",
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": null
+            },
+            {
+              "category": "host_launch",
+              "priority": 4,
+              "title": "Host wrapper and launch contract \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 79,
+                "from_end": 100,
+                "to_start": 46,
+                "to_end": 46
+              },
+              "excerpt": "-\n-    _matmul_bias_kernel[grid](\n-        A,\n-        B,\n-        bias,\n-        output,\n-        M,\n-        N,\n-        K,\n-        A.stride(0),\n-        A.stride(1),\n-        B.stride(0),\n-        B.stride(1),\n-        bias.stride(0),\n-        output.stride(0),\n-        output.stride(1),\n-        BLOCK_M=block_m,\n-        BLOCK_N=block_n,\n-        BLOCK_K=block_k,\n-        num_warps=4,\n-    )",
+              "why_it_matters": "Host-side wrapper, launch geometry, or contract checks change. This can alter grid shape and argument passing without changing device code; assertions and validation are not performance-relevant.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 34,
+              "to_line": 100
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 57,
+              "to_line": 116
+            }
+          ],
+          "caveats": [
+            "The PyTorch reference times differ between the two records (0.026 ms vs 0.182 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+            "The fixed harness and NCU disagree on direction. NCU locks clocks at or below boost, so its duration should be greater than or equal to the fixed-harness time; this pattern is most plausibly a different autotune configuration or a clock/power difference. Use NCU for code-level attribution and do not claim a fixed-harness win for this pair.",
+            "NCU duration is below the fixed-harness time for `rocm_blog_fusion`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks.",
+            "`rocm_blog_fusion` is an archived external baseline (`matmul_bias/baselines/rocm_blog_fusion.py`). This is a source comparison, not a controlled one-change A/B."
+          ],
+          "takeaway": "Detected mask_elision, autotune_space, grouped_swizzle, grid_addressing, host_launch; fixed harness 0.040 \u2192 0.043 ms; NCU 53.156 \u2192 34.956 \u00b5s.",
+          "error": null
+        },
+        {
+          "problem": "matmul_bias",
+          "from": "rounds_5",
+          "to": "rounds_10",
+          "from_role": "internal",
+          "to_role": "internal",
+          "diff_path": "reports/source-diffs/matmul_bias__rounds_5_to_rounds_10.diff",
+          "diff_link": "source-diffs/matmul_bias__rounds_5_to_rounds_10.diff",
+          "source": {
+            "from": {
+              "path": "problems/matmul_bias/case_0/rounds_5/matmul_bias/optimized_kernel.py",
+              "sha256": "e71fe54ed298b313df7d04c170a5ac2c8c4acc9ff7559be753704e006216fa5d",
+              "link": "../problems/matmul_bias/case_0/rounds_5/matmul_bias/optimized_kernel.py"
+            },
+            "to": {
+              "path": "problems/matmul_bias/case_0/rounds_10/matmul_bias/optimized_kernel.py",
+              "sha256": "30091c7800b195aad30d239dc78dfe0a2b25d7c31fe690b3f0ec9f03fc495a84",
+              "link": "../problems/matmul_bias/case_0/rounds_10/matmul_bias/optimized_kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 27,
+            "added": 38
+          },
+          "external": {
+            "from": false,
+            "to": false,
+            "source_path": null
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.0253,
+              "to_ms": 0.0249,
+              "from_tflops": 85.05,
+              "to_tflops": 86.09,
+              "from_ref_ms": 0.0241,
+              "to_ref_ms": 0.0243,
+              "ratio_from_over_to": 1.0160642570281124,
+              "delta_pct": -1.5810276679841937,
+              "faster_side": "to",
+              "material": false
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_matmul_bias_kernel",
+                "duration_avg_us": 35.613,
+                "sm_pct": 57.470000000000006,
+                "mem_pct": 53.678999999999995,
+                "dram_pct": 22.131,
+                "occupancy_pct": 14.208000000000002,
+                "regs": 150.0,
+                "tflops": 60.30089316200917,
+                "sol_pct": 57.470000000000006,
+                "bound": "compute",
+                "limiter": "tensor pipelines (57.5%); low occupancy (14.2%); register pressure (150/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_matmul_bias_kernel",
+                "duration_avg_us": 35.589999999999996,
+                "sm_pct": 57.547000000000004,
+                "mem_pct": 53.720000000000006,
+                "dram_pct": 21.779,
+                "occupancy_pct": 14.225999999999999,
+                "regs": 150.0,
+                "tflops": 60.338845531379256,
+                "sol_pct": 57.547000000000004,
+                "bound": "compute",
+                "limiter": "tensor pipelines (57.5%); low occupancy (14.2%); register pressure (150/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 1.0006462489463332,
+              "delta_pct": -0.06458315783563093,
+              "faster_side": "to",
+              "material": false,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_matmul_bias_kernel",
+                "to": "_matmul_bias_kernel"
+              }
+            },
+            "methodology_conflict": null,
+            "ncu_below_fixed_harness": [],
+            "caveats": []
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Masking or predication changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "mask_elision"
+              ],
+              "line_ranges": {
+                "from_start": 80,
+                "from_end": 81,
+                "to_start": 90,
+                "to_end": 91
+              },
+              "excerpt": "                 a_ptrs,\n                 mask=(rows[:, None] < M)\n                 & (block * BLOCK_K + ks[None, :] < K),\n-                other=0,\n+                other=0.0,\n             )\n \n         if N % BLOCK_N == 0 and K % BLOCK_K == 0:",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Masking or predication changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "mask_elision"
+              ],
+              "line_ranges": {
+                "from_start": 90,
+                "from_end": 91,
+                "to_start": 100,
+                "to_end": 101
+              },
+              "excerpt": "                 b_ptrs,\n                 mask=(block * BLOCK_K + ks[:, None] < K)\n                 & (cols[None, :] < N),\n-                other=0,\n+                other=0.0,\n             )\n \n         acc = tl.dot(a, b, acc)",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Masking or predication changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "mask_elision"
+              ],
+              "line_ranges": {
+                "from_start": 100,
+                "from_end": 101,
+                "to_start": 110,
+                "to_end": 111
+              },
+              "excerpt": "     bias = tl.load(\n         Bias + cols * STRIDE_BIAS,\n         mask=cols < N,\n-        other=0,\n+        other=0.0,\n     ).to(tl.float32)\n     result = (acc + bias[None, :]).to(C.dtype.element_ty)",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space expanded or changed",
+              "direction": "to_adds",
+              "matched_categories": [
+                "autotune_space",
+                "pipelining"
+              ],
+              "line_ranges": {
+                "from_start": 12,
+                "from_end": 13,
+                "to_start": 12,
+                "to_end": 17
+              },
+              "excerpt": "             num_warps=4, num_stages=3,\n         ),\n         triton.Config(\n-            {\"BLOCK_M\": 64, \"BLOCK_N\": 64, \"BLOCK_K\": 64},\n+            {\"BLOCK_M\": 32, \"BLOCK_N\": 64, \"BLOCK_K\": 64},\n+            num_warps=4, num_stages=3,\n+        ),\n+        triton.Config(\n+            {\"BLOCK_M\": 32, \"BLOCK_N\": 64, \"BLOCK_K\": 64},\n             num_warps=4, num_stages=4,\n         ),\n         triton.Config(",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "grouped_swizzle",
+              "priority": 8,
+              "title": "Grouped CTA order \u2014 changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "constexpr_addressing",
+                "grouped_swizzle"
+              ],
+              "line_ranges": {
+                "from_start": 55,
+                "from_end": 62,
+                "to_start": 63,
+                "to_end": 72
+              },
+              "excerpt": "     pid = tl.program_id(0)\n     num_m = tl.cdiv(M, BLOCK_M)\n     num_n = tl.cdiv(N, BLOCK_N)\n-    group_size = 8 * num_n\n-    group_id = pid // group_size\n-    first_m = group_id * 8\n-    group_m = tl.minimum(num_m - first_m, 8)\n-    local_pid = pid % group_size\n-    pid_m = first_m + local_pid % group_m\n-    pid_n = local_pid // group_m\n+\n+    group_size: tl.constexpr = 8\n+    group_width = group_size * num_n\n+    group_id = pid // group_width\n+    first_m = group_id * group_size\n+    active_m = tl.minimum(num_m - first_m, group_size)\n+    local_pid = pid % group_width\n+    pid_m = first_m + local_pid % active_m\n+    pid_n = local_pid // active_m\n \n     rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)\n     cols = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)",
+              "why_it_matters": "Grouped CTA ordering changes which output tiles run concurrently. This is an L2-reuse heuristic for the A/B panels, not an arithmetic change.",
+              "repeated_from": null
+            },
+            {
+              "category": "dtype_math",
+              "priority": 5,
+              "title": "Dtype and math path \u2014 changed",
+              "direction": "mixed",
+              "matched_categories": [
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 70,
+                "from_end": 71,
+                "to_start": 80,
+                "to_end": 81
+              },
+              "excerpt": "     a_ptrs = A + rows[:, None] * STRIDE_AM + ks[None, :] * STRIDE_AK\n     b_ptrs = B + ks[:, None] * STRIDE_BK + cols[None, :] * STRIDE_BN\n \n-    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)\n+    acc = tl.zeros((BLOCK_M, BLOCK_N), tl.float32)\n \n     for block in range(tl.cdiv(K, BLOCK_K)):\n         if M % BLOCK_M == 0 and K % BLOCK_K == 0:",
+              "why_it_matters": "Dtype conversion points or math functions change. fp32 accumulation and fewer conversions trade precision against conversion/instruction cost; `exp2` avoids a base conversion.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "grouped_cta_swizzle",
+              "title": "Grouped CTA order preserved",
+              "detail": "Both keep a grouped CTA order (`group_id`/`pid_m`) for L2 reuse.",
+              "from_line": 57,
+              "to_line": 67
+            },
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 71,
+              "to_line": 81
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 104,
+              "to_line": 115
+            },
+            {
+              "key": "autotune_key",
+              "title": "Autotune key preserved",
+              "detail": "Both autotune on the same key list.",
+              "from_line": 33,
+              "to_line": 41
+            },
+            {
+              "key": "kernel_entry",
+              "title": "Kernel entry signature preserved",
+              "detail": "Both expose the same `kernel_function` signature.",
+              "from_line": 111,
+              "to_line": 122
+            }
+          ],
+          "caveats": [],
+          "takeaway": "Detected mask_elision, autotune_space, grouped_swizzle, dtype_math; fixed harness 0.025 \u2192 0.025 ms; NCU 35.613 \u2192 35.590 \u00b5s.",
+          "error": null
+        },
+        {
+          "problem": "matmul_bias",
+          "from": "rounds_5",
+          "to": "rocm_blog_fusion",
+          "from_role": "internal",
+          "to_role": "external",
+          "diff_path": "reports/source-diffs/matmul_bias__rounds_5_to_rocm_blog_fusion.diff",
+          "diff_link": "source-diffs/matmul_bias__rounds_5_to_rocm_blog_fusion.diff",
+          "source": {
+            "from": {
+              "path": "problems/matmul_bias/case_0/rounds_5/matmul_bias/optimized_kernel.py",
+              "sha256": "e71fe54ed298b313df7d04c170a5ac2c8c4acc9ff7559be753704e006216fa5d",
+              "link": "../problems/matmul_bias/case_0/rounds_5/matmul_bias/optimized_kernel.py"
+            },
+            "to": {
+              "path": "problems/matmul_bias/baselines/rocm_blog_fusion/matmul_bias/kernel.py",
+              "sha256": "ef1f4165e29f73e060cfa8d140d72416fd335d428ac524c26fc81d5fff585b22",
+              "link": "../problems/matmul_bias/baselines/rocm_blog_fusion/matmul_bias/kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 139,
+            "added": 132
+          },
+          "external": {
+            "from": false,
+            "to": true,
+            "source_path": "matmul_bias/baselines/rocm_blog_fusion.py"
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.0253,
+              "to_ms": 0.0429,
+              "from_tflops": 85.05,
+              "to_tflops": 50.1,
+              "from_ref_ms": 0.0241,
+              "to_ref_ms": 0.1819,
+              "ratio_from_over_to": 0.5897435897435898,
+              "delta_pct": 69.56521739130436,
+              "faster_side": "from",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_matmul_bias_kernel",
+                "duration_avg_us": 35.613,
+                "sm_pct": 57.470000000000006,
+                "mem_pct": 53.678999999999995,
+                "dram_pct": 22.131,
+                "occupancy_pct": 14.208000000000002,
+                "regs": 150.0,
+                "tflops": 60.30089316200917,
+                "sol_pct": 57.470000000000006,
+                "bound": "compute",
+                "limiter": "tensor pipelines (57.5%); low occupancy (14.2%); register pressure (150/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "matmulbias_kernel",
+                "duration_avg_us": 34.956,
+                "sm_pct": 59.414,
+                "mem_pct": 38.108,
+                "dram_pct": 24.226999999999997,
+                "occupancy_pct": 8.317,
+                "regs": 255.0,
+                "tflops": 61.4325009154156,
+                "sol_pct": 59.414,
+                "bound": "compute",
+                "limiter": "tensor pipelines (59.4%); low occupancy (8.3%); register pressure (255/thread)",
+                "grid": 64.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 1.0187950566426363,
+              "delta_pct": -1.8448319433914482,
+              "faster_side": "to",
+              "material": false,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_matmul_bias_kernel",
+                "to": "matmulbias_kernel"
+              }
+            },
+            "methodology_conflict": null,
+            "ncu_below_fixed_harness": [
+              "rocm_blog_fusion"
+            ],
+            "caveats": [
+              "The PyTorch reference times differ between the two records (0.024 ms vs 0.182 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+              "NCU duration is below the fixed-harness time for `rocm_blog_fusion`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks.",
+              "`rocm_blog_fusion` is an archived external baseline (`matmul_bias/baselines/rocm_blog_fusion.py`). This is a source comparison, not a controlled one-change A/B."
+            ]
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "constexpr_addressing",
+                "grouped_swizzle",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 5,
+                "from_end": 5,
+                "to_start": 83,
+                "to_end": 107
+              },
+              "excerpt": "+\n+    tl.assume(pid_m >= 0)\n+    tl.assume(pid_n >= 0)\n+    tl.assume(stride_am > 0)\n+    tl.assume(stride_ak > 0)\n+    tl.assume(stride_bn > 0)\n+    tl.assume(stride_bk > 0)\n+    tl.assume(stride_cm > 0)\n+    tl.assume(stride_cn > 0)\n+\n+    offs_am = (pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)) % M\n+    offs_bn = (pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)) % N\n+    offs_k = tl.arange(0, BLOCK_SIZE_K)\n+    a_ptrs = a_ptr + (offs_am[:, None] * stride_am + offs_k[None, :] * stride_ak)\n+    b_ptrs = b_ptr + (offs_k[:, None] * stride_bk + offs_bn[None, :] * stride_bn)\n+\n+    accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)\n+    for k in range(0, tl.cdiv(K, BLOCK_SIZE_K)):\n+        a = tl.load(a_ptrs, mask=offs_k[None, :] < K - k * BLOCK_SIZE_K, other=0.0)\n+        b = tl.load(b_ptrs, mask=offs_k[:, None] < K - k * BLOCK_SIZE_K, other=0.0)\n+        accumulator = tl.dot(a, b, accumulator)\n+        a_ptrs += BLOCK_SIZE_K * stride_ak\n+        b_ptrs += BLOCK_SIZE_K * stride_bk\n+    c = accumulator.to(c_ptr.dtype.element_ty)",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "grid_addressing",
+                "constexpr_addressing",
+                "grouped_swizzle",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 5,
+                "from_end": 5,
+                "to_start": 107,
+                "to_end": 135
+              },
+              "excerpt": "+\n+    bias = tl.load(bias_ptr + offs_bn, mask=offs_bn < N, other=0.0)\n+    output = c + bias[None, :]\n+\n+    offs_cm = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)\n+    offs_cn = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)\n+    c_ptrs = c_ptr + stride_cm * offs_cm[:, None] + stride_cn * offs_cn[None, :]\n+    c_mask = (offs_cm[:, None] < M) & (offs_cn[None, :] < N)\n+    tl.store(c_ptrs, output, mask=c_mask)\n+\n+\n+# MatMulBias kernel wrapper function (the blog's fusion_matmulbias,\n... 4 changed lines omitted ...\n+    M, K = a.shape\n+    K, N = b.shape\n+    assert bias.shape[0] == N, \"BIAS has incompatible dimensions\"\n+    o = torch.empty((M, N), device=a.device, dtype=a.dtype)\n+    grid = lambda META: (triton.cdiv(M, META['BLOCK_SIZE_M']) * triton.cdiv(N, META['BLOCK_SIZE_N']), )\n+    matmulbias_kernel[grid](\n+        a, b, o,\n+        bias,\n+        M, N, K,\n+        a.stride(0), a.stride(1),\n+        b.stride(0), b.stride(1),\n+        o.stride(0), o.stride(1),",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path removed",
+              "direction": "to_removes",
+              "matched_categories": [
+                "mask_elision",
+                "constexpr_addressing",
+                "grouped_swizzle",
+                "dtype_math",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 62,
+                "from_end": 82,
+                "to_start": 31,
+                "to_end": 31
+              },
+              "excerpt": "-\n-    rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)\n-    cols = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)\n-    ks = tl.arange(0, BLOCK_K)\n-\n-    a_ptrs = A + rows[:, None] * STRIDE_AM + ks[None, :] * STRIDE_AK\n-    b_ptrs = B + ks[:, None] * STRIDE_BK + cols[None, :] * STRIDE_BN\n-\n-    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)\n-\n-    for block in range(tl.cdiv(K, BLOCK_K)):\n-        if M % BLOCK_M == 0 and K % BLOCK_K == 0:\n-            a = tl.load(a_ptrs)\n-        else:\n-            a = tl.load(\n-                a_ptrs,\n-                mask=(rows[:, None] < M)\n-                & (block * BLOCK_K + ks[None, :] < K),\n-                other=0,\n-            )",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space expanded or changed",
+              "direction": "to_adds",
+              "matched_categories": [
+                "autotune_space",
+                "grouped_swizzle"
+              ],
+              "line_ranges": {
+                "from_start": 5,
+                "from_end": 5,
+                "to_start": 31,
+                "to_end": 51
+              },
+              "excerpt": "+def _matmul_launch_metadata(grid, kernel, args):\n+    ret = {}\n+    M, N, K, WS = args[\"M\"], args[\"N\"], args[\"K\"], args.get(\"WARP_SPECIALIZE\", False)\n+    BM, BN, BK = args[\"BLOCK_SIZE_M\"], args[\"BLOCK_SIZE_N\"], args[\"BLOCK_SIZE_K\"]\n+    ws_str = \"_ws\" if WS else \"\"\n+    ret[\"name\"] = f\"{kernel.name}{ws_str} [M={M}, N={N}, K={K}] [BM={BM}, BN={BN} BK={BK}]\"\n+    if \"output_ptr\" in args:\n+        bytes_per_elem = args[\"output_ptr\"].element_size()\n+    else:\n+        bytes_per_elem = 2\n+    ret[f\"flops{bytes_per_elem * 8}\"] = 2. * M * N * K\n+    ret[\"bytes\"] = bytes_per_elem * (M * K + N * K + M * N)\n+    return ret\n+\n+\n+def matmul_autotune_config(pre_hook=None):\n+    return [\n+        triton.Config({'BLOCK_SIZE_M': BM, 'BLOCK_SIZE_N': BN, \"BLOCK_SIZE_K\": BK, \"GROUP_SIZE_M\": 8}, num_stages=s,\n+            num_warps=w, pre_hook=pre_hook)\n+        for BM in [128]",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "grouped_swizzle",
+              "priority": 8,
+              "title": "Grouped CTA order \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "grid_addressing",
+                "constexpr_addressing",
+                "grouped_swizzle",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 34,
+                "from_end": 62,
+                "to_start": 31,
+                "to_end": 31
+              },
+              "excerpt": "-@triton.jit\n-def _matmul_bias_kernel(\n-    A,\n-    B,\n-    Bias,\n-    C,\n-    M: tl.constexpr,\n-    N: tl.constexpr,\n-    K: tl.constexpr,\n-    STRIDE_AM: tl.constexpr,\n-    STRIDE_AK: tl.constexpr,\n-    STRIDE_BK: tl.constexpr,\n... 4 changed lines omitted ...\n-    BLOCK_K: tl.constexpr,\n-):\n-    pid = tl.program_id(0)\n-    num_m = tl.cdiv(M, BLOCK_M)\n-    num_n = tl.cdiv(N, BLOCK_N)\n-    group_size = 8 * num_n\n-    group_id = pid // group_size\n-    first_m = group_id * 8\n-    group_m = tl.minimum(num_m - first_m, 8)\n-    local_pid = pid % group_size\n-    pid_m = first_m + local_pid % group_m\n-    pid_n = local_pid // group_m",
+              "why_it_matters": "Grouped CTA ordering changes which output tiles run concurrently. This is an L2-reuse heuristic for the A/B panels, not an arithmetic change.",
+              "repeated_from": null
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "grid_addressing",
+                "dtype_math",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 109,
+                "from_end": 145,
+                "to_start": 137,
+                "to_end": 138
+              },
+              "excerpt": "     )\n \n-\n-def kernel_function(A, B, bias):\n-    M, K = A.shape\n-    K_b, N = B.shape\n-    if K != K_b or bias.ndim != 1 or bias.numel() != N:\n-        raise ValueError(\"Incompatible matrix or bias dimensions\")\n-    if A.dtype not in (torch.float16, torch.bfloat16):\n-        raise TypeError(\"Only float16 and bfloat16 inputs are supported\")\n-    if A.dtype != B.dtype or A.dtype != bias.dtype:\n-        raise ValueError(\"All inputs must have the same dtype\")\n-    if A.device != B.device or A.device != bias.device:\n-        raise ValueError(\"All inputs must be on the same device\")\n... 13 changed lines omitted ...\n-        output,\n-        M,\n-        N,\n-        K,\n-        A.stride(0),\n-        A.stride(1),\n-        B.stride(0),\n-        B.stride(1),\n-        bias.stride(0),\n-    )\n-    return output\n+    return o",
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "grouped_cta_swizzle",
+              "title": "Grouped CTA order preserved",
+              "detail": "Both keep a grouped CTA order (`group_id`/`pid_m`) for L2 reuse.",
+              "from_line": 57,
+              "to_line": 79
+            },
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 71,
+              "to_line": 100
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 104,
+              "to_line": 116
+            }
+          ],
+          "caveats": [
+            "The PyTorch reference times differ between the two records (0.024 ms vs 0.182 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+            "NCU duration is below the fixed-harness time for `rocm_blog_fusion`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks.",
+            "`rocm_blog_fusion` is an archived external baseline (`matmul_bias/baselines/rocm_blog_fusion.py`). This is a source comparison, not a controlled one-change A/B."
+          ],
+          "takeaway": "Detected mask_elision, autotune_space, grouped_swizzle, grid_addressing; fixed harness 0.025 \u2192 0.043 ms; NCU 35.613 \u2192 34.956 \u00b5s.",
+          "error": null
+        },
+        {
+          "problem": "matmul_bias",
+          "from": "rounds_10",
+          "to": "rocm_blog_fusion",
+          "from_role": "internal",
+          "to_role": "external",
+          "diff_path": "reports/source-diffs/matmul_bias__rounds_10_to_rocm_blog_fusion.diff",
+          "diff_link": "source-diffs/matmul_bias__rounds_10_to_rocm_blog_fusion.diff",
+          "source": {
+            "from": {
+              "path": "problems/matmul_bias/case_0/rounds_10/matmul_bias/optimized_kernel.py",
+              "sha256": "30091c7800b195aad30d239dc78dfe0a2b25d7c31fe690b3f0ec9f03fc495a84",
+              "link": "../problems/matmul_bias/case_0/rounds_10/matmul_bias/optimized_kernel.py"
+            },
+            "to": {
+              "path": "problems/matmul_bias/baselines/rocm_blog_fusion/matmul_bias/kernel.py",
+              "sha256": "ef1f4165e29f73e060cfa8d140d72416fd335d428ac524c26fc81d5fff585b22",
+              "link": "../problems/matmul_bias/baselines/rocm_blog_fusion/matmul_bias/kernel.py"
+            }
+          },
+          "changed_lines": {
+            "removed": 150,
+            "added": 132
+          },
+          "external": {
+            "from": false,
+            "to": true,
+            "source_path": "matmul_bias/baselines/rocm_blog_fusion.py"
+          },
+          "evidence": {
+            "bench": {
+              "measured_both": true,
+              "from_ms": 0.0249,
+              "to_ms": 0.0429,
+              "from_tflops": 86.09,
+              "to_tflops": 50.1,
+              "from_ref_ms": 0.0243,
+              "to_ref_ms": 0.1819,
+              "ratio_from_over_to": 0.5804195804195804,
+              "delta_pct": 72.28915662650604,
+              "faster_side": "from",
+              "material": true
+            },
+            "ncu": {
+              "measured_both": true,
+              "from": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "_matmul_bias_kernel",
+                "duration_avg_us": 35.589999999999996,
+                "sm_pct": 57.547000000000004,
+                "mem_pct": 53.720000000000006,
+                "dram_pct": 21.779,
+                "occupancy_pct": 14.225999999999999,
+                "regs": 150.0,
+                "tflops": 60.338845531379256,
+                "sol_pct": 57.547000000000004,
+                "bound": "compute",
+                "limiter": "tensor pipelines (57.5%); low occupancy (14.2%); register pressure (150/thread)",
+                "grid": 128.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "to": {
+                "status": "ok",
+                "kernels_count": 1,
+                "kernel": "matmulbias_kernel",
+                "duration_avg_us": 34.956,
+                "sm_pct": 59.414,
+                "mem_pct": 38.108,
+                "dram_pct": 24.226999999999997,
+                "occupancy_pct": 8.317,
+                "regs": 255.0,
+                "tflops": 61.4325009154156,
+                "sol_pct": 59.414,
+                "bound": "compute",
+                "limiter": "tensor pipelines (59.4%); low occupancy (8.3%); register pressure (255/thread)",
+                "grid": 64.0,
+                "block": 128.0,
+                "launches": 10.0
+              },
+              "ratio_from_over_to": 1.0181370866231831,
+              "delta_pct": -1.7813992694576941,
+              "faster_side": "to",
+              "material": false,
+              "kernels_compared": {
+                "from": 1,
+                "to": 1
+              },
+              "kernel_names": {
+                "from": "_matmul_bias_kernel",
+                "to": "matmulbias_kernel"
+              }
+            },
+            "methodology_conflict": null,
+            "ncu_below_fixed_harness": [
+              "rocm_blog_fusion"
+            ],
+            "caveats": [
+              "The PyTorch reference times differ between the two records (0.024 ms vs 0.182 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+              "NCU duration is below the fixed-harness time for `rocm_blog_fusion`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks.",
+              "`rocm_blog_fusion` is an archived external baseline (`matmul_bias/baselines/rocm_blog_fusion.py`). This is a source comparison, not a controlled one-change A/B."
+            ]
+          },
+          "changes": [
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "constexpr_addressing",
+                "grouped_swizzle",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 5,
+                "from_end": 5,
+                "to_start": 83,
+                "to_end": 107
+              },
+              "excerpt": "+\n+    tl.assume(pid_m >= 0)\n+    tl.assume(pid_n >= 0)\n+    tl.assume(stride_am > 0)\n+    tl.assume(stride_ak > 0)\n+    tl.assume(stride_bn > 0)\n+    tl.assume(stride_bk > 0)\n+    tl.assume(stride_cm > 0)\n+    tl.assume(stride_cn > 0)\n+\n+    offs_am = (pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)) % M\n+    offs_bn = (pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)) % N\n+    offs_k = tl.arange(0, BLOCK_SIZE_K)\n+    a_ptrs = a_ptr + (offs_am[:, None] * stride_am + offs_k[None, :] * stride_ak)\n+    b_ptrs = b_ptr + (offs_k[:, None] * stride_bk + offs_bn[None, :] * stride_bn)\n+\n+    accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)\n+    for k in range(0, tl.cdiv(K, BLOCK_SIZE_K)):\n+        a = tl.load(a_ptrs, mask=offs_k[None, :] < K - k * BLOCK_SIZE_K, other=0.0)\n+        b = tl.load(b_ptrs, mask=offs_k[:, None] < K - k * BLOCK_SIZE_K, other=0.0)\n+        accumulator = tl.dot(a, b, accumulator)\n+        a_ptrs += BLOCK_SIZE_K * stride_ak\n+        b_ptrs += BLOCK_SIZE_K * stride_bk\n+    c = accumulator.to(c_ptr.dtype.element_ty)",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "mask_elision",
+              "priority": 10,
+              "title": "Mask-free fast path added",
+              "direction": "to_adds",
+              "matched_categories": [
+                "mask_elision",
+                "grid_addressing",
+                "constexpr_addressing",
+                "grouped_swizzle",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 5,
+                "from_end": 5,
+                "to_start": 107,
+                "to_end": 135
+              },
+              "excerpt": "+\n+    bias = tl.load(bias_ptr + offs_bn, mask=offs_bn < N, other=0.0)\n+    output = c + bias[None, :]\n+\n+    offs_cm = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)\n+    offs_cn = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)\n+    c_ptrs = c_ptr + stride_cm * offs_cm[:, None] + stride_cn * offs_cn[None, :]\n+    c_mask = (offs_cm[:, None] < M) & (offs_cn[None, :] < N)\n+    tl.store(c_ptrs, output, mask=c_mask)\n+\n+\n+# MatMulBias kernel wrapper function (the blog's fusion_matmulbias,\n... 4 changed lines omitted ...\n+    M, K = a.shape\n+    K, N = b.shape\n+    assert bias.shape[0] == N, \"BIAS has incompatible dimensions\"\n+    o = torch.empty((M, N), device=a.device, dtype=a.dtype)\n+    grid = lambda META: (triton.cdiv(M, META['BLOCK_SIZE_M']) * triton.cdiv(N, META['BLOCK_SIZE_N']), )\n+    matmulbias_kernel[grid](\n+        a, b, o,\n+        bias,\n+        M, N, K,\n+        a.stride(0), a.stride(1),\n+        b.stride(0), b.stride(1),\n+        o.stride(0), o.stride(1),",
+              "why_it_matters": "Predicated loads/stores or tensor selects are added or removed. When the case dimensions divide the tile, a `% == 0` guard can resolve at compile time and the hot loop issues unconditional accesses; otherwise the masked path remains necessary. For this case, every detected candidate tile divides the guarded dimension, so the guard can resolve at compile time.",
+              "repeated_from": null
+            },
+            {
+              "category": "autotune_space",
+              "priority": 9,
+              "title": "Autotune candidate space expanded or changed",
+              "direction": "to_adds",
+              "matched_categories": [
+                "autotune_space",
+                "grouped_swizzle"
+              ],
+              "line_ranges": {
+                "from_start": 5,
+                "from_end": 5,
+                "to_start": 31,
+                "to_end": 51
+              },
+              "excerpt": "+def _matmul_launch_metadata(grid, kernel, args):\n+    ret = {}\n+    M, N, K, WS = args[\"M\"], args[\"N\"], args[\"K\"], args.get(\"WARP_SPECIALIZE\", False)\n+    BM, BN, BK = args[\"BLOCK_SIZE_M\"], args[\"BLOCK_SIZE_N\"], args[\"BLOCK_SIZE_K\"]\n+    ws_str = \"_ws\" if WS else \"\"\n+    ret[\"name\"] = f\"{kernel.name}{ws_str} [M={M}, N={N}, K={K}] [BM={BM}, BN={BN} BK={BK}]\"\n+    if \"output_ptr\" in args:\n+        bytes_per_elem = args[\"output_ptr\"].element_size()\n+    else:\n+        bytes_per_elem = 2\n+    ret[f\"flops{bytes_per_elem * 8}\"] = 2. * M * N * K\n+    ret[\"bytes\"] = bytes_per_elem * (M * K + N * K + M * N)\n+    return ret\n+\n+\n+def matmul_autotune_config(pre_hook=None):\n+    return [\n+        triton.Config({'BLOCK_SIZE_M': BM, 'BLOCK_SIZE_N': BN, \"BLOCK_SIZE_K\": BK, \"GROUP_SIZE_M\": 8}, num_stages=s,\n+            num_warps=w, pre_hook=pre_hook)\n+        for BM in [128]",
+              "why_it_matters": "The candidate tile/warp/stage space changes. A different candidate set can select a better register/shared-memory/occupancy balance. The source alone does not prove which configuration ran; NCU grid/block/occupancy is the evidence.",
+              "repeated_from": null
+            },
+            {
+              "category": "grouped_swizzle",
+              "priority": 8,
+              "title": "Grouped CTA order \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "constexpr_addressing",
+                "grouped_swizzle",
+                "dtype_math"
+              ],
+              "line_ranges": {
+                "from_start": 63,
+                "from_end": 83,
+                "to_start": 31,
+                "to_end": 31
+              },
+              "excerpt": "-\n-    group_size: tl.constexpr = 8\n-    group_width = group_size * num_n\n-    group_id = pid // group_width\n-    first_m = group_id * group_size\n-    active_m = tl.minimum(num_m - first_m, group_size)\n-    local_pid = pid % group_width\n-    pid_m = first_m + local_pid % active_m\n-    pid_n = local_pid // active_m\n-\n-    rows = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)\n-    cols = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)\n-    ks = tl.arange(0, BLOCK_K)\n-\n-    a_ptrs = A + rows[:, None] * STRIDE_AM + ks[None, :] * STRIDE_AK\n-    b_ptrs = B + ks[:, None] * STRIDE_BK + cols[None, :] * STRIDE_BN\n-\n-    acc = tl.zeros((BLOCK_M, BLOCK_N), tl.float32)\n-\n-    for block in range(tl.cdiv(K, BLOCK_K)):",
+              "why_it_matters": "Grouped CTA ordering changes which output tiles run concurrently. This is an L2-reuse heuristic for the A/B panels, not an arithmetic change.",
+              "repeated_from": null
+            },
+            {
+              "category": "constexpr_addressing",
+              "priority": 7,
+              "title": "Compile-time strides and index arithmetic \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "grid_addressing",
+                "constexpr_addressing",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 42,
+                "from_end": 63,
+                "to_start": 31,
+                "to_end": 31
+              },
+              "excerpt": "-@triton.jit\n-def _matmul_bias_kernel(\n-    A,\n-    B,\n-    Bias,\n-    C,\n-    M: tl.constexpr,\n-    N: tl.constexpr,\n-    K: tl.constexpr,\n-    STRIDE_AM: tl.constexpr,\n-    STRIDE_AK: tl.constexpr,\n-    STRIDE_BK: tl.constexpr,\n-    STRIDE_BN: tl.constexpr,\n-    STRIDE_BIAS: tl.constexpr,\n-    BLOCK_M: tl.constexpr,\n-    BLOCK_N: tl.constexpr,\n-    BLOCK_K: tl.constexpr,\n-):\n-    pid = tl.program_id(0)\n-    num_m = tl.cdiv(M, BLOCK_M)\n-    num_n = tl.cdiv(N, BLOCK_N)",
+              "why_it_matters": "Runtime dimensions/strides become `tl.constexpr` and/or modulo wrapping is removed. Compile-time constants let Triton fold address arithmetic, remove integer divide/modulo from every element's index path, and prove alignment.",
+              "repeated_from": null
+            },
+            {
+              "category": "grid_addressing",
+              "priority": 7,
+              "title": "Grid and program addressing \u2014 removed in `to`",
+              "direction": "to_removes",
+              "matched_categories": [
+                "grid_addressing",
+                "dtype_math",
+                "host_launch"
+              ],
+              "line_ranges": {
+                "from_start": 120,
+                "from_end": 156,
+                "to_start": 137,
+                "to_end": 138
+              },
+              "excerpt": "     )\n \n-\n-def kernel_function(A, B, bias):\n-    M, K = A.shape\n-    K_b, N = B.shape\n-    if K != K_b or bias.ndim != 1 or bias.numel() != N:\n-        raise ValueError(\"Incompatible input shapes\")\n-    if A.dtype not in (torch.float16, torch.bfloat16):\n-        raise TypeError(\"Expected float16 or bfloat16 inputs\")\n-    if B.dtype != A.dtype or bias.dtype != A.dtype:\n-        raise TypeError(\"Input dtypes must match\")\n-    if A.device != B.device or A.device != bias.device:\n-        raise ValueError(\"Input devices must match\")\n... 13 changed lines omitted ...\n-        output,\n-        M,\n-        N,\n-        K,\n-        A.stride(0),\n-        A.stride(1),\n-        B.stride(0),\n-        B.stride(1),\n-        bias.stride(0),\n-    )\n-    return output\n+    return o",
+              "why_it_matters": "Program-ID mapping, launch geometry, or address construction changes. Flattening axes or replacing per-program metadata loads with direct offsets removes fixed integer/global-load work per CTA and changes how tiles map to L2.",
+              "repeated_from": null
+            }
+          ],
+          "invariants": [
+            {
+              "key": "grouped_cta_swizzle",
+              "title": "Grouped CTA order preserved",
+              "detail": "Both keep a grouped CTA order (`group_id`/`pid_m`) for L2 reuse.",
+              "from_line": 67,
+              "to_line": 79
+            },
+            {
+              "key": "fp32_accumulation",
+              "title": "fp32 accumulation preserved",
+              "detail": "Both accumulate in fp32.",
+              "from_line": 81,
+              "to_line": 100
+            },
+            {
+              "key": "masked_store",
+              "title": "Masked output store preserved",
+              "detail": "Both mask the output store.",
+              "from_line": 115,
+              "to_line": 116
+            }
+          ],
+          "caveats": [
+            "The PyTorch reference times differ between the two records (0.024 ms vs 0.182 ms); the kernel ratio is fixed-harness evidence, not a same-session controlled A/B.",
+            "NCU duration is below the fixed-harness time for `rocm_blog_fusion`; the benchmark and profiler likely selected different autotune configurations or ran at different clocks.",
+            "`rocm_blog_fusion` is an archived external baseline (`matmul_bias/baselines/rocm_blog_fusion.py`). This is a source comparison, not a controlled one-change A/B."
+          ],
+          "takeaway": "Detected mask_elision, autotune_space, grouped_swizzle, constexpr_addressing, grid_addressing; fixed harness 0.025 \u2192 0.043 ms; NCU 35.590 \u2192 34.956 \u00b5s.",
+          "error": null
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "pairs_analyzed": 6,
+    "changes_detected": 36,
+    "changes_by_category": {
+      "mask_elision": 12,
+      "autotune_space": 6,
+      "grouped_swizzle": 6,
+      "constexpr_addressing": 3,
+      "grid_addressing": 5,
+      "dtype_math": 3,
+      "host_launch": 1
+    },
+    "methodology_conflicts": 1
+  },
+  "paths": {
+    "markdown": "reports/code-diff-analysis.md",
+    "json": "reports/code-diff-analysis.json"
+  },
+  "error": null
+}

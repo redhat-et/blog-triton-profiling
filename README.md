@@ -48,6 +48,7 @@ make kernelagent-experiment KA_EXPERIMENT=webinar-v1 KA_CASE=3 KA_OPT_ROUNDS="5 
 make kernelagent-experiment-profile KA_EXPERIMENT=webinar-v1 KA_PROFILER="nsys proton"
 make kernelagent-experiment-baseline KA_EXPERIMENT=webinar-v1 KA_PROBLEM=matmul_bias KA_LABEL=rocm_blog_fusion KA_KERNEL_SOURCE=matmul_bias/baselines/rocm_blog_fusion.py
 make kernelagent-report KA_EXPERIMENT=webinar-v1
+make kernelagent-report-llm KA_EXPERIMENT=webinar-v1 OPENAI_MODEL=gpt-5.2
 ```
 
 `OPENAI_MODEL` selects both the model and its backend (`claude-*` ids use the
@@ -61,6 +62,8 @@ See the [KernelAgent guide](workspace/KernelAgent/README.md) for provider
 configuration, the pinned in-image KernelAgent build, problem specs,
 optimization, profiling, and the comparison-experiment workflow
 (`kernelagent-experiment` / `kernelagent-report`, including external
-baseline kernels such as the ROCm blog's).
+baseline kernels such as the ROCm blog's). `kernelagent-report` also
+writes a deterministic code-diff analysis; `kernelagent-report-llm` adds
+optional model-authored commentary in sidecar files.
 
 Run `make help` for the complete target and variable list.
